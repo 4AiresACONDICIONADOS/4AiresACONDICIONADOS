@@ -24,7 +24,7 @@ namespace BreathOfEclipse.CameraSystem
 
         /// <summary>
         /// Picks the noise seed. Uses the Unity API, so it must run from Awake/Start and never from a constructor or
-        /// field initializer (the shaker is created by <see cref="CameraRig"/>'s field initializers).
+        /// field initializer (<see cref="CameraRig"/> calls it from Awake).
         /// </summary>
         public void Initialize() => _seed = Random.value * 100f;
 

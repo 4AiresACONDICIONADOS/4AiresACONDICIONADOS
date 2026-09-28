@@ -57,8 +57,10 @@ namespace BreathOfEclipse.CameraSystem
         public readonly FirstPersonCameraMode First = new FirstPersonCameraMode();
         public readonly SecondPersonCameraMode Second = new SecondPersonCameraMode();
         public readonly CinematicCombatCamera Cinematic = new CinematicCombatCamera();
-        private readonly CameraShaker _shaker = new CameraShaker();
-        private readonly List<ZoomRequest> _zooms = new List<ZoomRequest>();
+        // Created in Awake, not in field initializers: those run inside the MonoBehaviour constructor, where Unity
+        // restricts its API, and a failure there leaves every later field unassigned.
+        private CameraShaker _shaker;
+        private List<ZoomRequest> _zooms;
 
         private ICameraMode _active;
         private Transform _player;
@@ -107,7 +109,9 @@ namespace BreathOfEclipse.CameraSystem
         {
             Instance = this;
             if (Camera == null) Camera = GetComponent<Camera>();
+            _shaker = new CameraShaker();
             _shaker.Initialize();
+            _zooms = new List<ZoomRequest>();
             _active = Third;
             _current = new CameraPose(transform.position, transform.rotation, 60f);
         }

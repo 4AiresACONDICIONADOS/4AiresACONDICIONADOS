@@ -5,6 +5,62 @@ primera versión verificada como jugable dentro del Editor de Unity.**
 
 ---
 
+## v0.1.1 — Playtest tooling (2026-09-28)
+
+Sin contenido de juego nuevo: herramientas para validar v0.1.0 en Unity con el mínimo esfuerzo.
+
+### Added
+
+- **RuntimePlaytestSystem** (Editor / Development builds únicamente, ensamblado `BreathOfEclipse.Playtest`):
+  modos MANUAL, AUTO, VFX, CAMERA, AI, BOSS, FULL y Rising Serpent Visual; velocidades NORMAL / FAST / VISUAL;
+  botón **DEVELOPER PLAYTEST** en el menú principal; HUD de validación arriba a la izquierda
+  (TEST n / N, test actual, estado, FPS, errores, últimos resultados).
+- **FULL TEST** automático en Play Mode real: Boot → Menú → CombatTest → movimiento, sprint, salto, ataques, combos
+  obligatorios, esquiva, bloqueo, parry y esquiva perfecta simulados, lock-on, Rising Serpent, Flash Breaker,
+  3 cámaras, Nightspawn, The Hollow Oni (fase 2, Eclipse Cleave, ultimate, derrota), UI, audio, guardado,
+  VFX y Moonlit Forest. Resultados PASS / FAIL / WARNING / NOT TESTED con recuperación y continuación ante fallos.
+- **AutoPlaytestDriver**: conduce al jugador a través de la nueva capa `SimulatedInput` de `InputReader`
+  (mismo buffer y eventos que el teclado; sin duplicar lógica de combate).
+- **Test_RisingSerpent**: 12 comprobaciones (inicio, estado, fases, dash, VFX, trails, daño, lanzamiento, cámara,
+  hit stop, final, control devuelto).
+- **VFX Lab**: 25 técnicas por estilo y ranura, REPEAT RISING SERPENT, auto-repetición 2 / 3 / 5 s, velocidad
+  0.25x–1.5x, FREEZE VFX y NEXT FRAME (también en F1 → TIME).
+- **Camera Lab**: teclas 1 / 2 / 3 + C, diagnóstico (modo, objetivo, distancia, FOV, colisión, lock-on) y aviso
+  SECOND PERSON TARGET LOST con comprobación del regreso a tercera persona.
+- **Manual Test**: checklist que se marca sola al jugar.
+- **PlaytestLogger** (TXT + JSON en `PlaytestReports/`, captura de Exception / Error / Assert),
+  **RuntimePerformanceMonitor** (FPS medio / mínimo / máximo, tiempo de frame, picos, enemigos, VFX, partículas,
+  memoria), **capturas** F8 y automáticas (≤15) en `PlaytestCaptures/`, **SceneSanityChecker** por componentes.
+- Teclas de sesión: F8 captura, F9 pausa, F10 continuar, F11 saltar test, F12 abortar / salir.
+- Menú de Editor **Breath of Eclipse → Playtest** (Full Visual Test, Rising Serpent Visual Test, etc.): abre
+  CombatTest, entra en Play y arranca la sesión en un clic.
+- Tests EditMode de los planes de playtest; proyecto de compile check del ensamblado de playtest como Development build.
+- `Documentation/PLAYTEST_SYSTEM.md`.
+
+### Changed
+
+- Ganchos de observación sin efecto en gameplay: `DevTelemetry` (hit stop, cámara, VFX, telegrafías),
+  `InputReader` (entrada simulada, supresión de teclas / mirada para laboratorios), `TimeController`
+  (`DevFrozen`, `StepFrame`), `EnemyController` (`StateChanged`, `ForcedNextAttackId`), `CameraRig`
+  (`SecondPersonTargetLost`, diagnóstico), lecturas de diagnóstico en `PlayerController`, `AudioManager`,
+  `HUDController` y `PoolManager`; `MainMenuController` expone sus botones y un punto de extensión.
+- Versión 0.1.1. Los ajustes durante una sesión de playtest se guardan en una copia temporal.
+
+### Fixed
+
+- `00_Boot`: faltaba AudioListener en la cámara del splash (aviso en cada frame).
+
+### Known Issues
+
+- **El juego sigue sin haberse ejecutado en Unity** (no hay Editor en el entorno de desarrollo). El sistema de
+  playtest está compilado pero **tampoco se ha ejecutado**; su primera ejecución puede revelar ajustes necesarios
+  en los propios tests (tiempos de espera, distancias).
+- Los tests automáticos no evalúan calidad visual, sensación ni sonido: requieren revisión humana (modo VISUAL,
+  VFX Lab, capturas).
+- NEXT FRAME avanza aproximadamente un frame de 1/60 s (depende del orden de actualización de Unity).
+
+---
+
 ## v0.1.0 — Vertical slice inicial (2026-09-28)
 
 ### Added

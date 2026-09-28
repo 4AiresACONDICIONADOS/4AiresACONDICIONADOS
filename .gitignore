@@ -52,3 +52,7 @@ Thumbs.db
 # Python caches (Tools/)
 __pycache__/
 *.pyc
+
+# Playtest output (runtime playtest system)
+/PlaytestCaptures/
+/PlaytestReports/

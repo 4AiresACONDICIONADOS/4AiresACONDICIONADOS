@@ -43,6 +43,16 @@ namespace BreathOfEclipse.CameraSystem
         public Func<bool> PlayerSprintingProvider;
         public Func<bool> PlayerAttackingProvider;
 
+        /// <summary>Raised when second person loses its target and the rig falls back to third person.</summary>
+        public event Action SecondPersonTargetLost;
+
+        /// <summary>Diagnostics: current lock-on target seen by the camera (null when none).</summary>
+        public Transform LockTarget => CurrentLockTarget();
+        /// <summary>Diagnostics: distance from the camera to the followed player.</summary>
+        public float DistanceToPlayer => _player != null ? Vector3.Distance(transform.position, _player.position + Vector3.up * 1.5f) : 0f;
+        /// <summary>Diagnostics: third-person collision pulled the camera in this frame.</summary>
+        public bool CollisionActive => Mode == CameraMode.ThirdPerson && !CinematicActive && Third.Obstructed;
+
         public readonly ThirdPersonCameraMode Third = new ThirdPersonCameraMode();
         public readonly FirstPersonCameraMode First = new FirstPersonCameraMode();
         public readonly SecondPersonCameraMode Second = new SecondPersonCameraMode();
@@ -187,6 +197,7 @@ namespace BreathOfEclipse.CameraSystem
             if (shot == CinematicShot.None || _player == null) return false;
             if (SaveSystem.Settings.skipUltimateCinematics) return false;
             Cinematic.SetShot(shot, distance, height, _player, focus, _current, CinematicActive ? 0.22f : 0.3f);
+            DevTelemetry.ReportCameraCue("cinematic", duration);
             if (!CinematicActive)
             {
                 CinematicActive = true;
@@ -222,6 +233,7 @@ namespace BreathOfEclipse.CameraSystem
             float scale = SaveSystem.Settings.cameraShake;
             if (Mode == CameraMode.FirstPerson && !CinematicActive) scale *= 0.35f;
             _shaker.AddTrauma(amount * scale);
+            DevTelemetry.ReportCameraCue("shake", amount);
         }
 
         public void Impulse(Vector3 worldDirection, float strength)
@@ -229,15 +241,21 @@ namespace BreathOfEclipse.CameraSystem
             float scale = SaveSystem.Settings.cameraShake;
             if (Mode == CameraMode.FirstPerson && !CinematicActive) scale *= 0.3f;
             _shaker.AddImpulse(worldDirection.normalized * strength * scale);
+            DevTelemetry.ReportCameraCue("impulse", strength);
         }
 
-        public void FovPunch(float degrees) => _fovPunch = Mathf.Abs(degrees) > Mathf.Abs(_fovPunch) ? degrees : _fovPunch;
+        public void FovPunch(float degrees)
+        {
+            _fovPunch = Mathf.Abs(degrees) > Mathf.Abs(_fovPunch) ? degrees : _fovPunch;
+            DevTelemetry.ReportCameraCue("fov", degrees);
+        }
 
         /// <summary>Distance multiplier over time: &lt;1 moves closer (parry, finisher), &gt;1 wider (giant attacks).</summary>
         public void Zoom(float multiplier, float duration, float blendIn = 0.08f, float blendOut = 0.35f)
         {
             if (multiplier <= 0f || Mathf.Approximately(multiplier, 1f) || duration <= 0f) return;
             float now = Time.unscaledTime;
+            DevTelemetry.ReportCameraCue("zoom", multiplier);
             _zooms.Add(new ZoomRequest { Multiplier = multiplier, Start = now, End = now + duration, BlendIn = blendIn, BlendOut = blendOut });
         }
 
@@ -310,6 +328,7 @@ namespace BreathOfEclipse.CameraSystem
             {
                 SetMode(CameraMode.ThirdPerson);
                 GameEvents.Notify("Target lost: back to third person");
+                SecondPersonTargetLost?.Invoke();
             }
 
             CameraPose pose = _active.Evaluate(ctx);

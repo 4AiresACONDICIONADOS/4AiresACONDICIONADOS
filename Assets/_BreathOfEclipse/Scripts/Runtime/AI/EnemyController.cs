@@ -34,6 +34,15 @@ namespace BreathOfEclipse.AI
         public int Phase { get; set; } = 1;
         public float StateTime => _stateTime;
 
+        /// <summary>(previous, next) — raised on every FSM transition (HUD / diagnostics / playtest).</summary>
+        public event System.Action<EnemyStateId, EnemyStateId> StateChanged;
+
+        /// <summary>
+        /// Development hook: when set, the next attack choice picks this attack whenever it is usable at the
+        /// current distance (deterministic playtests). Cleared once used. Gameplay never sets it.
+        /// </summary>
+        public string ForcedNextAttackId { get; set; }
+
         public Transform LockOnPoint => Rig != null ? Rig.LockOnPoint : transform;
         public bool IsTargetable => IsAlive && gameObject.activeInHierarchy;
         public bool IsBoss => Data != null && Data.isBoss;
@@ -105,10 +114,12 @@ namespace BreathOfEclipse.AI
         {
             if (!_states.TryGetValue(id, out var next)) return;
             if (_current != null && _current.Id == EnemyStateId.Dead) return;
+            var previous = _current != null ? _current.Id : id;
             _current?.Exit();
             _current = next;
             _stateTime = 0f;
             _current.Enter();
+            StateChanged?.Invoke(previous, id);
         }
 
         public T GetState<T>(EnemyStateId id) where T : EnemyState => _states.TryGetValue(id, out var s) ? s as T : null;
@@ -195,6 +206,15 @@ namespace BreathOfEclipse.AI
         public EnemyAttackData ChooseAttack(float distance)
         {
             var list = CurrentAttacks;
+            if (!string.IsNullOrEmpty(ForcedNextAttackId))
+            {
+                foreach (var a in list)
+                {
+                    if (a.attackId != ForcedNextAttackId || !AttackUsable(a, distance)) continue;
+                    ForcedNextAttackId = null;
+                    return a;
+                }
+            }
             float total = 0f;
             foreach (var a in list)
                 if (AttackUsable(a, distance)) total += a.weight;

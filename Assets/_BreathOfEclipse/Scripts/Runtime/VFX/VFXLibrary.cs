@@ -182,6 +182,7 @@ namespace BreathOfEclipse.VFX
 
             var go = pool.Spawn(key, factory, position, rotation);
             if (go == null) return null;
+            DevTelemetry.ReportVfx(id, position);
             go.transform.localScale = Vector3.one * scale * (overrideData != null ? overrideData.scale : 1f);
             var inst = go.GetComponent<VFXInstance>();
             if (lifetime > 0f) inst.SetLifetime(lifetime);

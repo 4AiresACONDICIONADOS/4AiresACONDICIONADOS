@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using BreathOfEclipse.Audio;
 using BreathOfEclipse.CameraSystem;
 using BreathOfEclipse.Characters;
@@ -36,8 +38,49 @@ namespace BreathOfEclipse.Scenes
         private ProceduralAnimator _animator;
         private SwordTrail _trail;
         private RectTransform _menu;
+        private RectTransform _buttonList;
         private SettingsPanel _settings;
         private Button _first;
+        private readonly Dictionary<string, Button> _buttons = new Dictionary<string, Button>();
+
+        /// <summary>
+        /// Raised after the menu UI is built. Development tools use it to add entries (e.g. DEVELOPER PLAYTEST in
+        /// Editor / Development builds) without the game depending on them.
+        /// </summary>
+        public static event Action<MainMenuController> MenuBuilt;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => MenuBuilt = null;
+
+        /// <summary>Main menu buttons by id: "Play", "Training", "Settings", "Quit" (+ entries added by tools).</summary>
+        public IReadOnlyDictionary<string, Button> Buttons => _buttons;
+        public bool SettingsOpen => _settings != null && _settings.gameObject.activeSelf;
+
+        /// <summary>Adds a button to the menu list (before QUIT). Returns the existing one if the id is taken.</summary>
+        public Button AddMenuButton(string id, string label, Action onClick)
+        {
+            if (_buttons.TryGetValue(id, out var existing)) return existing;
+            var b = UIFactory.Button(id, _buttonList, label, new Vector2(420f, 58f), onClick, 26);
+            if (_buttons.TryGetValue("Quit", out var quit)) b.transform.SetSiblingIndex(quit.transform.GetSiblingIndex());
+            _buttons[id] = b;
+            _buttonList.sizeDelta += new Vector2(0f, 76f);
+            return b;
+        }
+
+        /// <summary>Shows or hides the main button list (development panels drawn on top of the menu).</summary>
+        public void SetMenuVisible(bool visible)
+        {
+            if (_menu != null) _menu.gameObject.SetActive(visible);
+        }
+
+        public void OpenSettingsPanel() => OpenSettings();
+
+        public void CloseSettingsPanel()
+        {
+            if (_settings == null || !_settings.gameObject.activeSelf) return;
+            _settings.Hide();
+            _menu.gameObject.SetActive(true);
+        }
         private float _orbit;
         private float _nextKata = 2.5f;
         private int _kataIndex;
@@ -141,11 +184,13 @@ namespace BreathOfEclipse.Scenes
             UIFactory.Text("Subtitle", _menu, "ANIME SWORD ACTION RPG — VERTICAL SLICE", 26, UIColors.Accent, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(116f, 222f), new Vector2(1000f, 40f), TextAnchor.MiddleLeft, FontStyle.Normal);
 
             var list = UIFactory.Rect("Buttons", _menu, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(110f, -60f), new Vector2(460f, 420f));
+            _buttonList = list;
             UIFactory.Vertical(list, 18f, TextAnchor.UpperLeft);
             _first = UIFactory.Button("Play", list, "PLAY", new Vector2(420f, 74f), () => Load(SceneNames.MoonlitForest), 34);
-            UIFactory.Button("Training", list, "TRAINING", new Vector2(420f, 74f), () => Load(SceneNames.CombatTest), 34);
-            UIFactory.Button("Settings", list, "SETTINGS", new Vector2(420f, 74f), OpenSettings, 34);
-            UIFactory.Button("Quit", list, "QUIT", new Vector2(420f, 74f), Quit, 34);
+            _buttons["Play"] = _first;
+            _buttons["Training"] = UIFactory.Button("Training", list, "TRAINING", new Vector2(420f, 74f), () => Load(SceneNames.CombatTest), 34);
+            _buttons["Settings"] = UIFactory.Button("Settings", list, "SETTINGS", new Vector2(420f, 74f), OpenSettings, 34);
+            _buttons["Quit"] = UIFactory.Button("Quit", list, "QUIT", new Vector2(420f, 74f), Quit, 34);
 
             UIFactory.Text("Version", _menu, $"v{GameManager.Version}  —  prototype build (editable project)", 20, UIColors.TextDim,
                 new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-30f, 24f), new Vector2(800f, 30f), TextAnchor.LowerRight, FontStyle.Normal);
@@ -157,6 +202,7 @@ namespace BreathOfEclipse.Scenes
                 _menu.gameObject.SetActive(true);
                 if (EventSystem.current != null && _first != null) EventSystem.current.SetSelectedGameObject(_first.gameObject);
             });
+            MenuBuilt?.Invoke(this);
         }
 
         private void OpenSettings()

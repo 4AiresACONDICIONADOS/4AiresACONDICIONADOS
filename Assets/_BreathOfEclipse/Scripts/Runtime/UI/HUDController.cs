@@ -65,6 +65,9 @@ namespace BreathOfEclipse.UI
         private float _hpShown = 1f, _stShown = 1f;
         private float _hpTrailValue = 1f, _bossTrailValue = 1f;
 
+        /// <summary>Diagnostics: the boss health bar is shown.</summary>
+        public bool BossBarVisible => _bossRoot != null && _bossRoot.gameObject.activeSelf;
+
         public static HUDController Create()
         {
             var canvas = UIFactory.Canvas("HUD", 100);

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compile-check of the development-only playtest assembly as a DEVELOPMENT_BUILD player (no UNITY_EDITOR),
+       as a separate assembly referencing the runtime (validates assembly boundaries / access modifiers). -->
+  <PropertyGroup>
+    <UnityProject>true</UnityProject>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>BreathOfEclipse.Playtest</AssemblyName>
+    <DefineConstants>$(UnityDefines);DEVELOPMENT_BUILD</DefineConstants>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../Assets/_BreathOfEclipse/Scripts/Playtest/**/*.cs" />
+    <ProjectReference Include="../Runtime/BreathOfEclipse.Runtime.csproj" Private="false" />
+    <Reference Include="$(CompileCheckOut)/UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(CompileCheckOut)/Unity.InputSystem.dll" Private="false" />
+    <Reference Include="$(CompileCheckOut)/Unity.RenderPipelines.Universal.Runtime.dll" Private="false" />
+  </ItemGroup>
+</Project>

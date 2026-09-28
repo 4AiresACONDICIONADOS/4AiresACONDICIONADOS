@@ -195,6 +195,21 @@ namespace BreathOfEclipse.Audio
 
         public string CurrentMusic => _currentMusic;
 
+        /// <summary>Diagnostics: a music source is playing.</summary>
+        public bool MusicPlaying => (_musicA != null && _musicA.isPlaying) || (_musicB != null && _musicB.isPlaying);
+        /// <summary>Diagnostics: volume of the active music source.</summary>
+        public float MusicSourceVolume => _musicAActive ? (_musicA != null ? _musicA.volume : 0f) : (_musicB != null ? _musicB.volume : 0f);
+        /// <summary>Diagnostics: number of pooled SFX sources currently playing.</summary>
+        public int PlayingSfxCount
+        {
+            get
+            {
+                int n = 0;
+                foreach (var s in _sources) if (s != null && s.isPlaying) n++;
+                return n;
+            }
+        }
+
         public void PlayMusic(string id, float fade = 1.5f)
         {
             if (string.IsNullOrEmpty(id) || id == _currentMusic || id == _pendingMusic) return;

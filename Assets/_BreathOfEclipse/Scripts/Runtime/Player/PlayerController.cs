@@ -62,6 +62,10 @@ namespace BreathOfEclipse.Player
         public Vector3 SpawnPoint { get; set; }
         public Quaternion SpawnRotation { get; set; } = Quaternion.identity;
         public IInteractable NearbyInteractable { get; private set; }
+        /// <summary>Diagnostics: the katana trail is emitting.</summary>
+        public bool SwordTrailEmitting => _swordTrail != null && _swordTrail.Emitting;
+        /// <summary>Diagnostics: the breathing-style element trail is emitting.</summary>
+        public bool ElementTrailEmitting => _elementTrail != null && _elementTrail.Emitting;
 
         private SwordTrail _swordTrail;
         private SwordTrail _elementTrail;

@@ -4,6 +4,7 @@
     "references": [
         "BreathOfEclipse.Logic",
         "BreathOfEclipse.Runtime",
+        "BreathOfEclipse.Playtest",
         "Unity.InputSystem",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.Universal.Runtime"

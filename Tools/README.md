@@ -24,7 +24,8 @@ antes de la primera importación.
 | `ThirdParty/InputSystem`, `ThirdParty/UGUI` | Compilan el código fuente de esos paquetes a DLLs de referencia (`bin/refs`) |
 | `UrpStubs` | Firma de la API de URP usada por el juego (Volume overrides, datos de cámara) |
 | `Runtime` | `Scripts/Logic` + `Scripts/Runtime` como build de jugador (sin `UNITY_EDITOR`) |
-| `RuntimeEditor` | Runtime + `Scripts/Editor` + `Scripts/Tests` con `UNITY_EDITOR` |
+| `Playtest` | `Scripts/Playtest` como ensamblado separado en **Development build** (`DEVELOPMENT_BUILD`, sin editor), referenciando el runtime compilado |
+| `RuntimeEditor` | Runtime + `Scripts/Playtest` + `Scripts/Editor` + `Scripts/Tests` con `UNITY_EDITOR` |
 | `LogicTests` | Ejecuta los tests NUnit de la capa `Logic` con `dotnet test` |
 
 Rutas configurables en `Directory.Build.props` (`UnityManaged`, `UnityBuiltInPackages`, `InputSystemSource`).
@@ -34,6 +35,7 @@ cd Tools/CompileCheck/ThirdParty/InputSystem && dotnet build -c Release
 cd ../UGUI && dotnet build -c Release
 cd ../../UrpStubs && dotnet build -c Release
 cd ../Runtime && dotnet build -c Release
+cd ../Playtest && dotnet build -c Release
 cd ../RuntimeEditor && dotnet build -c Release
 cd ../LogicTests && dotnet test -c Release
 ```

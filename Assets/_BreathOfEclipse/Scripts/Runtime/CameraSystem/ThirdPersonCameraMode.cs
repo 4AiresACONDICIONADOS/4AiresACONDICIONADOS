@@ -26,6 +26,8 @@ namespace BreathOfEclipse.CameraSystem
         private float _recenterUntil;
 
         public float Yaw => _yaw;
+        /// <summary>Diagnostics: geometry is pulling the camera closer than desired.</summary>
+        public bool Obstructed { get; private set; }
         public float Pitch => _pitch;
 
         public void Enter(CameraPose current, CameraContext ctx)
@@ -113,6 +115,7 @@ namespace BreathOfEclipse.CameraSystem
             Vector3 pivot = _pivotSmoothed + rot * Vector3.right * _shoulder;
 
             float safe = CameraCollision.SafeDistance(pivot, rot * Vector3.back, desiredDistance, CollisionRadius, Layers.CameraObstacleMask);
+            Obstructed = safe < desiredDistance - 0.05f;
             // Pull in instantly when blocked, ease back out when clear.
             _currentDistance = safe < _currentDistance ? safe : Mathf.Lerp(_currentDistance, safe, 1f - Mathf.Exp(-4f * dt));
 

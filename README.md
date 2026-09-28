@@ -8,4 +8,5 @@ Action RPG anime de espadachín — vertical slice en **Unity 6.3 LTS + URP**. P
 - Estado de desarrollo: [Documentation/DEV_STATUS.md](Documentation/DEV_STATUS.md)
 - Cambios: [Documentation/CHANGELOG.md](Documentation/CHANGELOG.md)
 
-Versión actual: **v0.1.0** (compilado y validado offline; pendiente de la primera prueba de juego en el Editor).
+Versión actual: **v0.1.1** — herramientas de playtest. El juego aún no se ha ejecutado en Unity: la primera
+prueba es **Breath of Eclipse → Playtest → Full Visual Test** ([Documentation/PLAYTEST_SYSTEM.md](Documentation/PLAYTEST_SYSTEM.md)).

@@ -1,0 +1,23 @@
+{
+    "name": "BreathOfEclipse.Playtest",
+    "rootNamespace": "BreathOfEclipse.Playtest",
+    "references": [
+        "BreathOfEclipse.Logic",
+        "BreathOfEclipse.Runtime",
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITY_EDITOR || DEVELOPMENT_BUILD"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -139,6 +139,16 @@ namespace BreathOfEclipse.Core
                     time.DebugScale = preset;
             }
             GUILayout.EndHorizontal();
+            if (time != null)
+            {
+                GUILayout.BeginHorizontal();
+                bool frozen = GUILayout.Toggle(time.DevFrozen, time.DevFrozen ? "FROZEN (click to resume)" : "Freeze / Pause", GUI.skin.button);
+                if (frozen != time.DevFrozen) time.DevFrozen = frozen;
+                GUI.enabled = time.DevFrozen;
+                if (GUILayout.Button("Next Frame")) time.StepFrame();
+                GUI.enabled = true;
+                GUILayout.EndHorizontal();
+            }
 
             GUILayout.Space(4f);
             GUILayout.Label("VIEW", _header);

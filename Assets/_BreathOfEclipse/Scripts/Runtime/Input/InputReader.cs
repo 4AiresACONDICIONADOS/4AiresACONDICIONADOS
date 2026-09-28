@@ -1,9 +1,49 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace BreathOfEclipse.Core
 {
+    /// <summary>Discrete presses a development tool can simulate (same meaning as the physical actions).</summary>
+    public enum InputCommand
+    {
+        LightAttack, HeavyAttack, Dodge, Jump, Skill1, Skill2, Skill3, Skill4, Ultimate, Block,
+        LockOn, NextTarget, PreviousTarget, CameraMode, Interact, NextStyle, PreviousStyle, Pause, DebugMenu
+    }
+
+    /// <summary>
+    /// Virtual input for development tools (auto playtest). Presses are processed by <see cref="InputReader"/>
+    /// exactly like physical presses (same buffer, same events, same enabled/disabled rules); held values and
+    /// the move vector are combined with the physical devices.
+    /// </summary>
+    public sealed class SimulatedInput
+    {
+        /// <summary>Move vector (-1..1). Overrides the physical stick/WASD while non-zero.</summary>
+        public Vector2 Move;
+        public bool Sprint;
+        public bool Block;
+        public bool Jump;
+        public bool Light;
+        public bool Heavy;
+
+        internal readonly List<InputCommand> Pending = new List<InputCommand>();
+        internal Vector2 PendingLook;
+
+        public void Press(InputCommand command) => Pending.Add(command);
+
+        /// <summary>Rotates the camera by the given degrees (yaw, pitch) on the next frame.</summary>
+        public void AddLook(Vector2 degrees) => PendingLook += degrees;
+
+        public void ReleaseAll()
+        {
+            Move = Vector2.zero;
+            Sprint = Block = Jump = Light = Heavy = false;
+            Pending.Clear();
+            PendingLook = Vector2.zero;
+        }
+    }
+
     /// <summary>
     /// Reads the "BreathOfEclipseControls" Input Actions asset and exposes gameplay input in a form the game uses:
     /// continuous values (move, look), held states, buffered presses and discrete events.
@@ -59,6 +99,39 @@ namespace BreathOfEclipse.Core
         private InputAction _skill1, _skill2, _skill3, _skill4, _ultimate, _cameraMode, _interact, _nextStyle, _prevStyle;
         private InputAction _pause, _debugMenu, _toggleFps;
         private float _switchCooldown;
+        private readonly HashSet<BufferedAction> _suppressedPhysical = new HashSet<BufferedAction>();
+
+        /// <summary>
+        /// Ignores physical mouse / stick look (development labs with a free cursor over their panels).
+        /// Simulated look is still applied.
+        /// </summary>
+        public bool PhysicalLookSuppressed { get; set; }
+
+        /// <summary>Active simulated input, or null. Development tools only.</summary>
+        public SimulatedInput Simulation { get; private set; }
+
+        /// <summary>Starts (or returns) the simulated input layer used by the auto playtest.</summary>
+        public SimulatedInput BeginSimulation()
+        {
+            if (Simulation == null) Simulation = new SimulatedInput();
+            return Simulation;
+        }
+
+        public void EndSimulation()
+        {
+            Simulation?.ReleaseAll();
+            Simulation = null;
+        }
+
+        /// <summary>
+        /// Ignores a physical press (development labs that reuse a key, e.g. 1/2/3 for camera modes).
+        /// Simulated presses are not affected.
+        /// </summary>
+        public void SetPhysicalPressSuppressed(BufferedAction action, bool suppressed)
+        {
+            if (suppressed) _suppressedPhysical.Add(action);
+            else _suppressedPhysical.Remove(action);
+        }
 
         private void Awake()
         {
@@ -177,17 +250,25 @@ namespace BreathOfEclipse.Core
 
         private void Update()
         {
+            var sim = Simulation;
             if (_system.enabled)
             {
                 if (_pause.WasPressedThisFrame()) PausePressed?.Invoke();
                 if (_debugMenu.WasPressedThisFrame()) DebugMenuPressed?.Invoke();
                 if (_toggleFps.WasPressedThisFrame()) ToggleFpsPressed?.Invoke();
+                if (sim != null) ProcessSimulatedSystemPresses(sim);
             }
 
             if (!_gameplay.enabled)
             {
                 Move = Vector2.zero;
                 LookDelta = Vector2.zero;
+                // Like physical keys, simulated gameplay presses do nothing while gameplay input is disabled.
+                if (sim != null)
+                {
+                    sim.Pending.Clear();
+                    sim.PendingLook = Vector2.zero;
+                }
                 return;
             }
 
@@ -195,9 +276,10 @@ namespace BreathOfEclipse.Core
             float now = Time.unscaledTime;
 
             Move = Vector2.ClampMagnitude(_move.ReadValue<Vector2>(), 1f);
+            if (sim != null && sim.Move.sqrMagnitude > 0.0001f) Move = Vector2.ClampMagnitude(sim.Move, 1f);
 
-            Vector2 mouse = _look.ReadValue<Vector2>();
-            Vector2 stick = _lookStick.ReadValue<Vector2>();
+            Vector2 mouse = PhysicalLookSuppressed ? Vector2.zero : _look.ReadValue<Vector2>();
+            Vector2 stick = PhysicalLookSuppressed ? Vector2.zero : _lookStick.ReadValue<Vector2>();
             Vector2 look = mouse * (MouseDegreesPerPixel * settings.mouseSensitivity);
             if (stick.sqrMagnitude > 0.02f)
             {
@@ -211,14 +293,19 @@ namespace BreathOfEclipse.Core
                 UsingGamepad = false;
             }
             if (settings.invertY) look.y = -look.y;
+            if (sim != null && sim.PendingLook.sqrMagnitude > 0f)
+            {
+                look += sim.PendingLook;
+                sim.PendingLook = Vector2.zero;
+            }
             LookDelta = look;
             if (look.sqrMagnitude > 0.0001f) LastLookTime = now;
 
-            SprintHeld = _sprint.IsPressed();
-            BlockHeld = _block.IsPressed();
-            JumpHeld = _jump.IsPressed();
-            LightHeld = _light.IsPressed();
-            HeavyHeld = _heavy.IsPressed();
+            SprintHeld = _sprint.IsPressed() || (sim != null && sim.Sprint);
+            BlockHeld = _block.IsPressed() || (sim != null && sim.Block);
+            JumpHeld = _jump.IsPressed() || (sim != null && sim.Jump);
+            LightHeld = _light.IsPressed() || (sim != null && sim.Light);
+            HeavyHeld = _heavy.IsPressed() || (sim != null && sim.Heavy);
 
             Record(_light, BufferedAction.LightAttack, now);
             Record(_heavy, BufferedAction.HeavyAttack, now);
@@ -229,7 +316,7 @@ namespace BreathOfEclipse.Core
             Record(_skill3, BufferedAction.Skill3, now);
             Record(_skill4, BufferedAction.Skill4, now);
             Record(_ultimate, BufferedAction.Ultimate, now);
-            if (_block.WasPressedThisFrame())
+            if (_block.WasPressedThisFrame() && !_suppressedPhysical.Contains(BufferedAction.Block))
             {
                 Buffer.Record(BufferedAction.Block, now);
                 BlockPressed?.Invoke();
@@ -240,6 +327,7 @@ namespace BreathOfEclipse.Core
             if (_interact.WasPressedThisFrame()) InteractPressed?.Invoke();
             if (_nextStyle.WasPressedThisFrame()) NextStylePressed?.Invoke();
             if (_prevStyle.WasPressedThisFrame()) PrevStylePressed?.Invoke();
+            if (sim != null) ProcessSimulatedGameplayPresses(sim, now);
 
             // Target switching: mouse wheel or a flick of the right stick.
             _switchCooldown -= Time.unscaledDeltaTime;
@@ -261,7 +349,53 @@ namespace BreathOfEclipse.Core
 
         private void Record(InputAction action, BufferedAction buffered, float now)
         {
-            if (action.WasPressedThisFrame()) Buffer.Record(buffered, now);
+            if (action.WasPressedThisFrame() && !_suppressedPhysical.Contains(buffered)) Buffer.Record(buffered, now);
+        }
+
+        private void ProcessSimulatedSystemPresses(SimulatedInput sim)
+        {
+            for (int i = sim.Pending.Count - 1; i >= 0; i--)
+            {
+                var c = sim.Pending[i];
+                if (c != InputCommand.Pause && c != InputCommand.DebugMenu) continue;
+                sim.Pending.RemoveAt(i);
+                if (c == InputCommand.Pause) PausePressed?.Invoke();
+                else DebugMenuPressed?.Invoke();
+            }
+        }
+
+        private void ProcessSimulatedGameplayPresses(SimulatedInput sim, float now)
+        {
+            if (sim.Pending.Count == 0) return;
+            // Copy first: handlers may queue new presses.
+            var pending = sim.Pending.ToArray();
+            sim.Pending.Clear();
+            foreach (var c in pending)
+            {
+                switch (c)
+                {
+                    case InputCommand.LightAttack: Buffer.Record(BufferedAction.LightAttack, now); break;
+                    case InputCommand.HeavyAttack: Buffer.Record(BufferedAction.HeavyAttack, now); break;
+                    case InputCommand.Dodge: Buffer.Record(BufferedAction.Dodge, now); break;
+                    case InputCommand.Jump: Buffer.Record(BufferedAction.Jump, now); break;
+                    case InputCommand.Skill1: Buffer.Record(BufferedAction.Skill1, now); break;
+                    case InputCommand.Skill2: Buffer.Record(BufferedAction.Skill2, now); break;
+                    case InputCommand.Skill3: Buffer.Record(BufferedAction.Skill3, now); break;
+                    case InputCommand.Skill4: Buffer.Record(BufferedAction.Skill4, now); break;
+                    case InputCommand.Ultimate: Buffer.Record(BufferedAction.Ultimate, now); break;
+                    case InputCommand.Block:
+                        Buffer.Record(BufferedAction.Block, now);
+                        BlockPressed?.Invoke();
+                        break;
+                    case InputCommand.LockOn: LockOnPressed?.Invoke(); break;
+                    case InputCommand.NextTarget: SwitchTargetRequested?.Invoke(1); break;
+                    case InputCommand.PreviousTarget: SwitchTargetRequested?.Invoke(-1); break;
+                    case InputCommand.CameraMode: CameraModePressed?.Invoke(); break;
+                    case InputCommand.Interact: InteractPressed?.Invoke(); break;
+                    case InputCommand.NextStyle: NextStylePressed?.Invoke(); break;
+                    case InputCommand.PreviousStyle: PrevStylePressed?.Invoke(); break;
+                }
+            }
         }
     }
 }

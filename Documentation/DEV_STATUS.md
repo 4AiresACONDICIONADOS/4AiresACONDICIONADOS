@@ -1,19 +1,36 @@
 # DEV STATUS — Breath of Eclipse
 
-**Versión actual: v0.1.0** · Fecha: 2026-09-28 · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
+**Versión actual: v0.1.1 — Playtest tooling** · Fecha: 2026-09-28 · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
 
-## Cómo se verificó esta versión
+## ⚠️ NO REAL UNITY PLAYTEST PERFORMED BY CLAUDE
+
+El entorno donde se desarrolla no tiene el Editor de Unity (ni licencia, ni GPU). **Nadie ha ejecutado todavía el
+juego en Unity.** Ningún resultado de juego está verificado: arranque, menú, CombatTest, bosque, combate, cámaras,
+IA, jefe, VFX, audio y UI siguen **sin probar en ejecución**.
+
+## ✅ PLAYTEST INFRASTRUCTURE READY
+
+v0.1.1 añade el sistema de validación en tiempo de ejecución (ver [PLAYTEST_SYSTEM.md](PLAYTEST_SYSTEM.md)).
+Primera prueba recomendada al abrir el proyecto:
+
+1. **Breath of Eclipse → Playtest → Full Visual Test** (≈5 min, sin tocar el teclado).
+2. Revisar `PlaytestReports/…txt` y las capturas de `PlaytestCaptures/`.
+3. **Breath of Eclipse → Playtest → Rising Serpent Visual Test** para observar la técnica una y otra vez.
+4. Compartir el informe: con él se corrigen los fallos y se prepara v0.2.0.
+
+## Cómo se verificó esta versión (sin Unity)
 
 | Verificación | Resultado |
 |---|---|
 | Compilación runtime (player build, sin `UNITY_EDITOR`) contra `UnityEngine.*.dll` de Unity 6.3 + Input System + uGUI + URP | ✅ 0 errores, 0 warnings |
-| Compilación editor + tests (con `UNITY_EDITOR`, `UnityEditor.*.dll`, NUnit de Unity) | ✅ 0 errores, 0 warnings |
+| Compilación del ensamblado de playtest como **Development build** separado (valida límites entre ensamblados) | ✅ 0 errores, 0 warnings |
+| Compilación editor + playtest + tests (con `UNITY_EDITOR`, `UnityEditor.*.dll`, NUnit de Unity) | ✅ 0 errores, 0 warnings |
 | Tests de la capa Logic (`dotnet test`) | ✅ 39/39 |
-| Shaders: 12 shaders × pases × variantes (incluye instancing, Forward+, sombras, SSAO, niebla) compilados con DXC contra la ShaderLibrary de URP 17.3 | ✅ 62 compilaciones, 0 fallos |
-| Coherencia de contenido (ids de animación / VFX / sonido referenciados) | ✅ revisión estática; test EditMode incluido |
-| **Abrir y jugar en el Editor de Unity** | ⚠️ **Pendiente** (no había Editor disponible) |
+| Tests EditMode (lógica, guardado, contenido, planes de playtest) | ⏳ escritos; se ejecutan en el Test Runner de Unity |
+| Shaders (12) compilados con DXC contra la ShaderLibrary de URP 17.3 | ✅ 62 compilaciones, 0 fallos (sin cambios en v0.1.1) |
+| **Abrir y jugar en el Editor de Unity** | ❌ **No realizado** |
 
-Por eso la versión se mantiene en **v0.1.0**; la v0.2.0 se publicará cuando se confirme jugable en el Editor.
+La v0.2.0 empezará después de la primera prueba visual real.
 
 ## Estado por fase
 
@@ -26,9 +43,10 @@ Por eso la versión se mantiene en **v0.1.0**; la v0.2.0 se publicará cuando se
 | 5 | Nightspawn (FSM), EncounterDirector, lock-on, The Hollow Oni con fase 2 | ✅ Implementado |
 | 6 | EMBER, GALE y MOONLIGHT; ultimates de los 5 estilos | ✅ Implementado |
 | 7 | Moonlit Forest, menú, HUD, ajustes, audio, guardado, debug, documentación | ✅ Implementado |
-| — | Prueba de juego, ajuste fino y rendimiento en el Editor | ⏳ Siguiente paso (ver TODO.md) |
+| v0.1.1 | Playtest tooling: auto test, laboratorios VFX / cámara, IA, jefe, capturas, reportes, rendimiento | ✅ Implementado (compilado, no ejecutado) |
+| — | Prueba de juego real, ajuste fino y rendimiento en el Editor | ⏳ Siguiente paso: Full Visual Test (ver arriba) |
 
-## Sesión de prueba solicitada (2026-09-28) — NO REALIZADA
+## Sesión de prueba solicitada para v0.1.0 (2026-09-28) — NO REALIZADA
 
 Se pidió abrir el proyecto en Unity 6.3 y jugarlo. **No fue posible en el entorno de desarrollo**: no tiene el
 Editor de Unity instalado, ni licencia de Unity para activarlo, ni GPU. Por tanto **ninguna casilla de juego está

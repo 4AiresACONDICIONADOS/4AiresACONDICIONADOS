@@ -97,6 +97,15 @@ namespace BreathOfEclipse.Core
 
         public bool HasPool(string key) => _pools.ContainsKey(key);
 
+        /// <summary>Diagnostics: active (spawned) objects in pools whose key starts with <paramref name="keyPrefix"/>.</summary>
+        public int CountActive(string keyPrefix)
+        {
+            int n = 0;
+            foreach (var kv in _pools)
+                if (kv.Key.StartsWith(keyPrefix, StringComparison.Ordinal)) n += kv.Value.Active.Count;
+            return n;
+        }
+
         /// <summary>Registers a factory for a key (optional; <see cref="Spawn"/> can register lazily).</summary>
         public void Register(string key, Func<GameObject> factory, int prewarm = 0)
         {

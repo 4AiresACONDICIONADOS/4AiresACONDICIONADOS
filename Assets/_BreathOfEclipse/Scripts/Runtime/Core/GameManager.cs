@@ -15,7 +15,7 @@ namespace BreathOfEclipse.Core
     public sealed class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }
-        public const string Version = "0.1.0";
+        public const string Version = "0.1.1";
 
         public GameDatabase Database { get; private set; }
 

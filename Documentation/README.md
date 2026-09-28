@@ -1,13 +1,14 @@
-# BREATH OF ECLIPSE — Vertical Slice (v0.1.0)
+# BREATH OF ECLIPSE — Vertical Slice (v0.1.1)
 
 Action RPG anime de espadachín en **Unity 6.3 LTS + URP**. Proyecto 100 % editable: sin instalador, sin
 empaquetado final. Se abre con Unity Hub y se juega pulsando **PLAY**.
 
 > Estado honesto de esta versión: el código se ha **compilado contra los ensamblados reales de Unity 6.3**
 > (0 errores, 0 warnings), los shaders se han **compilado con DXC contra la ShaderLibrary de URP 17.3** y la lógica
-> pura pasa **39 tests**. **No se ha podido abrir en el Editor de Unity** en el entorno donde se generó
-> (no hay Editor con licencia), por eso la versión se queda en **v0.1.0** y no sube a v0.2.0 ("jugable
-> verificado"). Ver [DEV_STATUS.md](DEV_STATUS.md) y la sección *Known Issues* del [CHANGELOG](CHANGELOG.md).
+> pura pasa **39 tests**. **El juego todavía no se ha ejecutado en el Editor de Unity** (el entorno donde se generó
+> no tiene Editor). v0.1.1 añade las herramientas para hacer esa primera prueba en un clic:
+> **Breath of Eclipse → Playtest → Full Visual Test** ([PLAYTEST_SYSTEM.md](PLAYTEST_SYSTEM.md)).
+> Ver [DEV_STATUS.md](DEV_STATUS.md) y la sección *Known Issues* del [CHANGELOG](CHANGELOG.md).
 
 ## Requisitos
 
@@ -27,6 +28,9 @@ empaquetado final. Se abre con Unity Hub y se juega pulsando **PLAY**.
 4. Abre `Assets/_BreathOfEclipse/Scenes/00_Boot.unity` (o usa el menú **Breath of Eclipse → Play From Boot**) y pulsa **PLAY**.
    Cualquier escena funciona también por separado: `GameManager` se crea antes de cargar la escena.
 5. Si algo no se ve bien: **Breath of Eclipse → Setup → Validate Project** revisa URP, shaders, escenas e input.
+6. **Primera validación recomendada:** **Breath of Eclipse → Playtest → Full Visual Test** recorre todo el juego
+   solo y deja un informe en `PlaytestReports/` y capturas en `PlaytestCaptures/`.
+   **Breath of Eclipse → Playtest → Rising Serpent Visual Test** repite la técnica para observarla.
 
 ## Escenas
 
@@ -45,6 +49,7 @@ por un modelo/prefab real más adelante (ver [ARCHITECTURE.md](ARCHITECTURE.md#s
 
 | Documento | Tema |
 |---|---|
+| [PLAYTEST_SYSTEM.md](PLAYTEST_SYSTEM.md) | Auto test, laboratorios VFX / cámara, reportes, capturas (v0.1.1) |
 | [CONTROLS.md](CONTROLS.md) | Teclado/ratón, mando, reasignación, modos de esquiva |
 | [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md) | Combos, cancel windows, hit detection, hit stop, parry, esquiva perfecta, respiraciones, enemigos, jefe |
 | [VFX_SYSTEM.md](VFX_SYSTEM.md) | Librería de VFX, trails, flash frames, shaders, post-proceso |
@@ -64,7 +69,8 @@ Assets/_BreathOfEclipse/
   Scenes/                           00_Boot, 01_MainMenu, 02_MoonlitForest, 03_CombatTest
   Scripts/Logic/                    C# puro sin UnityEngine (modelos de vida, stamina, combos...) + tests
   Scripts/Runtime/                  Juego (namespaces BreathOfEclipse.*)
-  Scripts/Editor/                   Menús, exportador de contenido, validador
+  Scripts/Playtest/                 Herramientas de playtest (solo Editor / Development builds)
+  Scripts/Editor/                   Menús, exportador de contenido, validador, playtest en un clic
   Scripts/Tests/EditMode/           Tests NUnit (lógica, guardado, validación de contenido)
   Settings/                         Assets de URP (PC / Mobile), perfiles de volumen
   Shaders/                          Shaders HLSL de URP escritos a mano
@@ -74,7 +80,7 @@ Tools/                              Compile check offline, shader check (DXC), g
 
 ## Tests
 
-- **Window → General → Test Runner → EditMode → Run All**: lógica de combate/recursos, sistema de guardado y
-  validación de contenido (cada id de animación, VFX y sonido usado por ataques, técnicas y enemigos existe; los
+- **Window → General → Test Runner → EditMode → Run All**: lógica de combate/recursos, sistema de guardado,
+  planes de playtest y validación de contenido (cada id de animación, VFX y sonido usado por ataques, técnicas y enemigos existe; los
   combos obligatorios resuelven).
 - Fuera de Unity: `dotnet test Tools/CompileCheck/LogicTests` ejecuta los tests de la capa `Logic`.

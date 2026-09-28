@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="../../../Assets/_BreathOfEclipse/Scripts/Logic/**/*.cs" />
     <Compile Include="../../../Assets/_BreathOfEclipse/Scripts/Runtime/**/*.cs" />
+    <Compile Include="../../../Assets/_BreathOfEclipse/Scripts/Playtest/**/*.cs" />
     <Compile Include="../../../Assets/_BreathOfEclipse/Scripts/Editor/**/*.cs" />
     <Compile Include="../../../Assets/_BreathOfEclipse/Scripts/Tests/**/*.cs" />
     <Reference Include="$(CompileCheckOut)/UnityEngine.UI.dll" Private="false" />

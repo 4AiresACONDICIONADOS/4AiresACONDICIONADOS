@@ -5,7 +5,8 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "BreathOfEclipse.Logic",
-        "BreathOfEclipse.Runtime"
+        "BreathOfEclipse.Runtime",
+        "BreathOfEclipse.Playtest"
     ],
     "includePlatforms": [
         "Editor"

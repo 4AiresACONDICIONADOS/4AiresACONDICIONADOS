@@ -22,6 +22,7 @@ namespace BreathOfEclipse.AI
             var pool = PoolManager.Instance;
             if (pool == null) return null;
             var go = pool.Spawn(PoolKey, Create, position + Vector3.up * 0.06f, Quaternion.identity);
+            DevTelemetry.ReportTelegraph(position, radius, duration);
             var marker = go.GetComponent<TelegraphMarker>();
             go.transform.localScale = new Vector3(radius * 2f, 1f, radius * 2f);
             marker._duration = Mathf.Max(0.05f, duration);

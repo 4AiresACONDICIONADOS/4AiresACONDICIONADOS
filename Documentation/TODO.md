@@ -3,9 +3,11 @@
 ## Próxima sesión (para llegar a v0.2.0 — "jugable verificado")
 
 - [ ] Abrir en Unity 6.3 LTS, confirmar 0 errores de compilación e importación de shaders.
-- [ ] Ejecutar Test Runner (EditMode) y corregir cualquier fallo de `ContentValidationTests` / `SaveSystemTests`.
-- [ ] Jugar `03_CombatTest`: ajustar velocidades, distancias de cámara, hit stop, intensidades de VFX y bloom.
-- [ ] Jugar `02_MoonlitForest` de principio a fin (incluido The Hollow Oni) y ajustar iluminación/niebla/densidad.
+- [ ] **Breath of Eclipse → Playtest → Full Visual Test** y revisar `PlaytestReports/` + `PlaytestCaptures/`.
+- [ ] Corregir cada FAIL / WARNING del informe (y ajustar los propios tests si sus esperas o distancias no encajan).
+- [ ] **Rising Serpent Visual Test** (VFX Lab, 0.25x / FREEZE / NEXT FRAME): ajustar timing y legibilidad.
+- [ ] Ejecutar Test Runner (EditMode) y corregir cualquier fallo.
+- [ ] Jugar `02_MoonlitForest` a mano de principio a fin (incluido The Hollow Oni) y ajustar iluminación/niebla/densidad.
 - [ ] Perfilar a 1080p y confirmar 60 FPS en la calidad High; ajustar densidad de partículas y sombras si hace falta.
 - [ ] Registrar resultados en `DEV_STATUS.md` y, si todo es jugable, publicar **v0.2.0** en el CHANGELOG.
 

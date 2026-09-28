@@ -40,6 +40,38 @@ namespace BreathOfEclipse.Core
         public bool InHitStop => Time.unscaledTime < _hitStopEnd;
         public float CurrentScale { get; private set; } = 1f;
 
+        /// <summary>Development freeze (VFX inspection): game time stops, rendering and UI keep running.</summary>
+        public bool DevFrozen
+        {
+            get => _devFrozen;
+            set
+            {
+                _devFrozen = value;
+                _pendingSteps = 0;
+                EndStep();
+                Apply();
+            }
+        }
+
+        private bool _devFrozen;
+        private int _pendingSteps;
+        private bool _stepping;
+        private const float StepDelta = 1f / 60f;
+
+        /// <summary>While <see cref="DevFrozen"/>, advances the game by exactly one 1/60 s frame.</summary>
+        public void StepFrame()
+        {
+            if (!_devFrozen) return;
+            _pendingSteps++;
+        }
+
+        private void EndStep()
+        {
+            if (!_stepping) return;
+            _stepping = false;
+            Time.captureDeltaTime = 0f;
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -59,12 +91,14 @@ namespace BreathOfEclipse.Core
             Services.Unregister(this);
             Time.timeScale = 1f;
             Time.fixedDeltaTime = _baseFixedDelta;
+            if (_stepping) Time.captureDeltaTime = 0f;
         }
 
         /// <summary>Freezes gameplay for <paramref name="duration"/> real seconds. Overlapping requests keep the longest.</summary>
         public void HitStop(float duration)
         {
             if (duration <= 0f) return;
+            DevTelemetry.ReportHitStop(duration);
             float end = Time.unscaledTime + duration;
             if (end > _hitStopEnd) _hitStopEnd = end;
             Apply();
@@ -106,7 +140,23 @@ namespace BreathOfEclipse.Core
         {
             float now = Time.unscaledTime;
             float scale;
-            if (_paused)
+            if (_devFrozen && !_paused)
+            {
+                // One fixed 1/60 s game frame per requested step, then frozen again.
+                if (_pendingSteps > 0 && !_stepping)
+                {
+                    _pendingSteps--;
+                    _stepping = true;
+                    Time.captureDeltaTime = StepDelta;
+                    scale = 1f;
+                }
+                else
+                {
+                    EndStep();
+                    scale = 0f;
+                }
+            }
+            else if (_paused)
             {
                 scale = 0f;
             }

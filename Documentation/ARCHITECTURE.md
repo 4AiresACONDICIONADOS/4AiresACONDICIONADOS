@@ -16,8 +16,9 @@
 |---|---|---|
 | `BreathOfEclipse.Logic` | C# puro, **sin UnityEngine** (`noEngineReferences`): HealthModel, StaminaModel, BreathGaugeModel, CooldownTracker, DamageCalculator, ComboGraph, PoiseModel, ComboCounter, BuffCollection, AttackTokenPool, InputBuffer | — |
 | `BreathOfEclipse.Runtime` | El juego | Logic, Input System, URP, uGUI |
-| `BreathOfEclipse.Editor` | Menús, exportador de contenido, validador | Runtime |
-| `BreathOfEclipse.Tests.EditMode` | Tests NUnit | Logic, Runtime |
+| `BreathOfEclipse.Playtest` | Herramientas de validación en ejecución (auto test, laboratorios, reportes). Restricción `UNITY_EDITOR \|\| DEVELOPMENT_BUILD`: no existe en builds de release | Logic, Runtime, Input System, URP, uGUI |
+| `BreathOfEclipse.Editor` | Menús, exportador de contenido, validador, playtest en un clic | Runtime, Playtest |
+| `BreathOfEclipse.Tests.EditMode` | Tests NUnit | Logic, Runtime, Playtest |
 
 La capa Logic se testea también fuera de Unity (`Tools/CompileCheck/LogicTests`).
 
@@ -62,6 +63,14 @@ Los estáticos se reinician con `RuntimeInitializeOnLoadMethod(SubsystemRegistra
 `Damage`, `Critical`, `EnemyKilled`, `PerfectDodge`, `Parry`, `BreathChanged`, `SkillUsed`, `UltimateActivated`,
 `PlayerDied`, `PlayerRespawned`, `BossEncounter`, `BossPhaseChanged`, `BossDefeated`, `LockTargetChanged`,
 `CameraModeChanged`, `StyleChanged`, `ComboChanged`, `Notification`.
+
+## Observabilidad para herramientas (`DevTelemetry`)
+
+El runtime no conoce el sistema de playtest. Solo expone puntos de observación que no alteran el gameplay:
+`DevTelemetry` (hit stop, señales de cámara, VFX, telegrafías), `EnemyController.StateChanged`,
+`CameraRig.SecondPersonTargetLost`, lecturas de diagnóstico y la capa `SimulatedInput` de `InputReader`
+(las herramientas pulsan "teclas virtuales" que recorren el mismo camino que el teclado). El menú principal expone
+`MainMenuController.MenuBuilt` para que el ensamblado de playtest añada su botón sin crear dependencias al revés.
 
 ## Guardado (`SaveSystem`)
 

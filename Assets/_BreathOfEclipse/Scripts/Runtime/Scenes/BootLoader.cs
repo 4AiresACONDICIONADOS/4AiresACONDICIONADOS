@@ -23,6 +23,8 @@ namespace BreathOfEclipse.Scenes
             var cam = new GameObject("BootCamera").AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.01f, 0.01f, 0.03f);
+            // Without a listener Unity warns every frame while the persistent AudioManager exists.
+            cam.gameObject.AddComponent<AudioListener>();
             var canvas = UIFactory.Canvas("Splash", 10);
             UIFactory.Text("Title", canvas.transform, "BREATH OF ECLIPSE", 72, Color.white, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(0f, 20f), new Vector2(1400f, 110f), TextAnchor.MiddleCenter, FontStyle.BoldAndItalic);

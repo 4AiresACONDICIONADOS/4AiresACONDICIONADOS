@@ -28,6 +28,32 @@ Por eso la versión se mantiene en **v0.1.0**; la v0.2.0 se publicará cuando se
 | 7 | Moonlit Forest, menú, HUD, ajustes, audio, guardado, debug, documentación | ✅ Implementado |
 | — | Prueba de juego, ajuste fino y rendimiento en el Editor | ⏳ Siguiente paso (ver TODO.md) |
 
+## Sesión de prueba solicitada (2026-09-28) — NO REALIZADA
+
+Se pidió abrir el proyecto en Unity 6.3 y jugarlo. **No fue posible en el entorno de desarrollo**: no tiene el
+Editor de Unity instalado, ni licencia de Unity para activarlo, ni GPU. Por tanto **ninguna casilla de juego está
+verificada** (inicio, menú, CombatTest, bosque, combate, Rising Serpent, cámaras, IA, jefe, VFX, audio, UI, FPS).
+
+En su lugar se hizo una auditoría estática de errores que solo aparecen en ejecución:
+
+| Comprobación | Resultado |
+|---|---|
+| Uso de la API `UnityEngine.Input` antigua (el proyecto usa solo Input System: lanzaría excepciones cada frame) | ✅ ninguno |
+| EventSystem con `InputSystemUIInputModule` | ✅ |
+| Tags y capas usados en código vs `TagManager` | ✅ coinciden |
+| Nombres de acciones/mapas que busca `InputReader` vs el `.inputactions` | ✅ coinciden |
+| Partículas: `duration` modificado con el sistema parado | ✅ |
+| Orden de `AddComponent` vs `RequireComponent` (componentes duplicados) | ✅ |
+| Reasignación de teclas desactiva la acción antes de reasignar | ✅ |
+| `fixedDeltaTime` nunca llega a 0 al pausar | ✅ |
+| Guardas de `CharacterController.Move` en controladores desactivados | ✅ |
+| Campos de datos serializables (el contenido exportado a assets se comporta igual que el generado por código) | ✅ |
+| AudioListener en `00_Boot` | ❌ → **corregido** (Unity avisaba en cada frame del splash) |
+
+Para poder jugarlo desde el entorno de desarrollo haría falta: instalar el Editor Linux 6000.3.25f1 en el script de
+configuración del entorno (~4.5 GB de descarga), una licencia de Unity como variable de entorno del entorno (nunca
+en el chat) y renderizado por software (Xvfb + Mesa). Incluso así, las cifras de FPS no representarían hardware real.
+
 ## Riesgos principales para la primera apertura
 
 1. **Ajuste fino**: valores de movimiento, cámara y VFX están razonados pero no probados a mano.

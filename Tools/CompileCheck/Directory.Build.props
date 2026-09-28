@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);CS1591;CS0436;CS1701;CS1702</NoWarn>
+    <UnityManaged Condition="'$(UnityManaged)' == ''">/opt/unity6/Editor/Data/Managed</UnityManaged>
+    <UnityBuiltInPackages Condition="'$(UnityBuiltInPackages)' == ''">/opt/unity6/Editor/Data/Resources/PackageManager/BuiltInPackages</UnityBuiltInPackages>
+    <InputSystemSource Condition="'$(InputSystemSource)' == ''">/opt/unitypkgs/inputsystem/package/InputSystem</InputSystemSource>
+    <CompileCheckOut>$(MSBuildThisFileDirectory)bin/refs</CompileCheckOut>
+    <UnityDefines>UNITY_6000_3_OR_NEWER;UNITY_6000_2_OR_NEWER;UNITY_6000_1_OR_NEWER;UNITY_6000_0_OR_NEWER;UNITY_2023_3_OR_NEWER;UNITY_2023_2_OR_NEWER;UNITY_2023_1_OR_NEWER;UNITY_2022_3_OR_NEWER;UNITY_2022_2_OR_NEWER;UNITY_2022_1_OR_NEWER;UNITY_2021_3_OR_NEWER;UNITY_2021_2_OR_NEWER;UNITY_2021_1_OR_NEWER;UNITY_2020_3_OR_NEWER;UNITY_2020_2_OR_NEWER;UNITY_2020_1_OR_NEWER;UNITY_2019_4_OR_NEWER;UNITY_2019_3_OR_NEWER;UNITY_2019_2_OR_NEWER;UNITY_2019_1_OR_NEWER;UNITY_2018_4_OR_NEWER;UNITY_2018_3_OR_NEWER;UNITY_2018_2_OR_NEWER;UNITY_2018_1_OR_NEWER;UNITY_2017_4_OR_NEWER;UNITY_2017_3_OR_NEWER;UNITY_2017_2_OR_NEWER;UNITY_2017_1_OR_NEWER;UNITY_5_6_OR_NEWER;UNITY_5_5_OR_NEWER;UNITY_5_4_OR_NEWER;UNITY_5_3_OR_NEWER;ENABLE_INPUT_SYSTEM;UNITY_STANDALONE;UNITY_STANDALONE_WIN;ENABLE_MONO;NET_STANDARD_2_0;NET_STANDARD;NET_STANDARD_2_1;CSHARP_7_3_OR_NEWER;ENABLE_PROFILER;UNITY_ASSERTIONS;ENABLE_UNITYEVENTS</UnityDefines>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(UnityProject)' == 'true'">
+    <Reference Include="$(UnityManaged)/UnityEngine/UnityEngine.*.dll" Private="false" />
+  </ItemGroup>
+</Project>

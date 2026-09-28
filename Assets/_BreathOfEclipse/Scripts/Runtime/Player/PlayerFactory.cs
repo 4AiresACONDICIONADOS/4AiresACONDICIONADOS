@@ -1,0 +1,65 @@
+using BreathOfEclipse.Breathing;
+using BreathOfEclipse.CameraSystem;
+using BreathOfEclipse.Characters;
+using BreathOfEclipse.Combat;
+using BreathOfEclipse.Core;
+using BreathOfEclipse.Data;
+using UnityEngine;
+
+namespace BreathOfEclipse.Player
+{
+    /// <summary>Builds the playable swordsman from data (procedural mannequin + all player components).</summary>
+    public static class PlayerFactory
+    {
+        public static PlayerController Create(GameDatabase db, Vector3 position, Quaternion rotation)
+        {
+            var go = new GameObject("Player");
+            go.tag = "Player";
+            go.layer = Layers.Player;
+            go.transform.SetPositionAndRotation(position, rotation);
+
+            var cc = go.AddComponent<CharacterController>();
+            cc.radius = 0.35f;
+            cc.height = 1.8f;
+            cc.center = new Vector3(0f, 0.9f, 0f);
+            cc.skinWidth = 0.02f;
+            cc.stepOffset = 0.35f;
+            cc.slopeLimit = 50f;
+            cc.minMoveDistance = 0f;
+
+            var rig = go.AddComponent<CharacterRig>();
+            rig.Build(RigProfile.Hero(), Layers.Player);
+            var animator = go.AddComponent<ProceduralAnimator>();
+            animator.Initialize(rig);
+
+            var damageable = go.AddComponent<Damageable>();
+            damageable.Configure(Team.Player, db.player.maxHealth, rig.LockOnPoint);
+
+            var stats = go.AddComponent<PlayerStats>();
+            stats.Initialize(db.player, damageable);
+            var motor = go.AddComponent<PlayerMotor>();
+            motor.Initialize(db.player, cc);
+            var defense = go.AddComponent<PlayerDefense>();
+            var combat = go.AddComponent<PlayerCombat>();
+            var lockOn = go.AddComponent<TargetLockSystem>();
+            var breathing = go.AddComponent<BreathingStyleSystem>();
+            var pc = go.AddComponent<PlayerController>();
+            defense.Initialize(pc, db.player);
+            damageable.AddInterceptor(defense);
+            combat.Initialize(pc, db.playerCombos, db.playerWeapon);
+            pc.Initialize(db.player, db.playerWeapon, db.playerCombos, db, rig, animator, motor, stats, combat, defense, lockOn, breathing, damageable);
+            return pc;
+        }
+
+        /// <summary>Connects the camera rig to the player.</summary>
+        public static void BindCamera(CameraRig cam, PlayerController pc)
+        {
+            cam.Bind(pc.transform, pc.Rig);
+            cam.LockTargetProvider = () => pc != null ? pc.LockOn.CurrentPoint : null;
+            cam.LockTargetIsBossProvider = () => pc != null && pc.LockOn.IsBoss;
+            cam.PlayerVelocityProvider = () => pc != null ? pc.Motor.Velocity : Vector3.zero;
+            cam.PlayerSprintingProvider = () => pc != null && pc.IsSprinting;
+            cam.PlayerAttackingProvider = () => pc != null && (pc.State == PlayerState.Attack || pc.State == PlayerState.Skill);
+        }
+    }
+}

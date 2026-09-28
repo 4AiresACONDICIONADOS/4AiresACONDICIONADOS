@@ -1,0 +1,54 @@
+# Unity generated
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Asset meta data should only be ignored when the corresponding asset is also ignored
+!/[Aa]ssets/**/*.meta
+
+# IDE / tooling
+.vs/
+.vscode/
+.idea/
+/*.csproj
+/*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+crashlytics-buildid.txt
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Offline compile-check output (Tools/CompileCheck)
+/Tools/CompileCheck/bin/
+/Tools/CompileCheck/obj/
+/Tools/CompileCheck/**/bin/
+/Tools/CompileCheck/**/obj/
+
+# Python caches (Tools/)
+__pycache__/
+*.pyc

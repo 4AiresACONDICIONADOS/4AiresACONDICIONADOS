@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Unity.RenderPipelines.Universal.Runtime</AssemblyName>
+    <UnityProject>true</UnityProject>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <OutputPath>$(CompileCheckOut)</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="UrpStubs.cs" />
+  </ItemGroup>
+</Project>

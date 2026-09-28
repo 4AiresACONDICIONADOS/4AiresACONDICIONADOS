@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compile-check of runtime + editor tooling + EditMode tests as the EDITOR sees them (UNITY_EDITOR defined). -->
+  <PropertyGroup>
+    <UnityProject>true</UnityProject>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>BreathOfEclipse.EditorCheck</AssemblyName>
+    <DefineConstants>$(UnityDefines);UNITY_EDITOR;UNITY_EDITOR_64;UNITY_EDITOR_WIN;UNITY_INCLUDE_TESTS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../Assets/_BreathOfEclipse/Scripts/Logic/**/*.cs" />
+    <Compile Include="../../../Assets/_BreathOfEclipse/Scripts/Runtime/**/*.cs" />
+    <Compile Include="../../../Assets/_BreathOfEclipse/Scripts/Editor/**/*.cs" />
+    <Compile Include="../../../Assets/_BreathOfEclipse/Scripts/Tests/**/*.cs" />
+    <Reference Include="$(CompileCheckOut)/UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(CompileCheckOut)/Unity.InputSystem.dll" Private="false" />
+    <Reference Include="$(CompileCheckOut)/Unity.RenderPipelines.Universal.Runtime.dll" Private="false" />
+    <Reference Include="$(UnityManaged)/UnityEngine/UnityEditor.*.dll" Private="false" />
+    <Reference Include="$(UnityBuiltInPackages)/com.unity.ext.nunit/net40/unity-custom/nunit.framework.dll" Private="false" />
+  </ItemGroup>
+</Project>

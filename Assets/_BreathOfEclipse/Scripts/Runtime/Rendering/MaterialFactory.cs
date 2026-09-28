@@ -1,0 +1,188 @@
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Rendering;
+
+namespace BreathOfEclipse.Rendering
+{
+    public enum VfxBlend
+    {
+        Additive = 0,
+        AlphaBlend = 1,
+        /// <summary>Premultiplied-style "soft additive" that keeps colors from blowing out.</summary>
+        SoftAdditive = 2
+    }
+
+    /// <summary>
+    /// Creates and caches materials for the project's hand-written shaders, with safe URP fallbacks
+    /// if a shader is missing. Per-object variations use MaterialPropertyBlocks, not new materials.
+    /// </summary>
+    public static class MaterialFactory
+    {
+        private static readonly Dictionary<string, Material> Cache = new Dictionary<string, Material>();
+        private static readonly Dictionary<string, Shader> Shaders = new Dictionary<string, Shader>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            Cache.Clear();
+            Shaders.Clear();
+        }
+
+        public static Shader FindShader(string name)
+        {
+            if (Shaders.TryGetValue(name, out var s) && s != null) return s;
+            s = Shader.Find(name);
+            if (s == null)
+            {
+                s = Shader.Find("Universal Render Pipeline/Unlit");
+                if (s == null) s = Shader.Find("Unlit/Color");
+                Debug.LogWarning($"[MaterialFactory] Shader '{name}' not found, using fallback '{(s != null ? s.name : "none")}'.");
+            }
+            Shaders[name] = s;
+            return s;
+        }
+
+        private static Material Get(string key, string shader, System.Action<Material> setup)
+        {
+            if (Cache.TryGetValue(key, out var m) && m != null) return m;
+            m = new Material(FindShader(shader)) { name = "BoE_" + key };
+            setup?.Invoke(m);
+            Cache[key] = m;
+            return m;
+        }
+
+        private static string ColorKey(Color c) => $"{c.r:F3},{c.g:F3},{c.b:F3},{c.a:F3}";
+
+        /// <summary>Cel-shaded material for characters and props.</summary>
+        /// <param name="outline">Outline width (0 = none). Characters ~1.6, props ~0.8, scenery 0.</param>
+        /// <param name="character">Characters stay lit during anime flash frames.</param>
+        public static Material Toon(Color baseColor, float outline = 1.4f, bool character = false, Color? emission = null,
+            float shadeDarken = 0.52f, float rim = 0.35f, float spec = 0f, Texture detail = null, float tiling = 1f)
+        {
+            Color em = emission ?? Color.black;
+            string key = $"toon_{ColorKey(baseColor)}_{outline:F2}_{character}_{ColorKey(em)}_{shadeDarken:F2}_{rim:F2}_{spec:F2}_{(detail != null ? detail.name : "none")}_{tiling:F2}";
+            return Get(key, ShaderIds.ToonLit, m =>
+            {
+                m.SetColor(ShaderIds.BaseColor, baseColor);
+                // Shadow color: darker, slightly shifted to cool purple for a night anime palette.
+                Color shade = new Color(baseColor.r * shadeDarken * 0.9f, baseColor.g * shadeDarken * 0.88f, baseColor.b * shadeDarken * 1.12f + 0.02f, 1f);
+                m.SetColor(ShaderIds.ShadeColor, shade);
+                m.SetFloat(ShaderIds.ShadeThreshold, 0.42f);
+                m.SetFloat(ShaderIds.ShadeSoftness, 0.035f);
+                m.SetColor(ShaderIds.RimColor, new Color(0.55f, 0.65f, 1f) * rim);
+                m.SetFloat(ShaderIds.RimPower, 3.5f);
+                m.SetColor(ShaderIds.SpecColor, Color.white * spec);
+                m.SetFloat(ShaderIds.SpecSize, 0.08f);
+                m.SetColor(ShaderIds.EmissionColor, em);
+                m.SetColor(ShaderIds.OutlineColor, new Color(0.03f, 0.02f, 0.05f, 1f));
+                m.SetFloat(ShaderIds.OutlineWidth, outline);
+                m.SetFloat(ShaderIds.IsCharacter, character ? 1f : 0f);
+                if (detail != null)
+                {
+                    m.SetTexture(ShaderIds.BaseMap, detail);
+                    m.SetTextureScale(ShaderIds.BaseMap, new Vector2(tiling, tiling));
+                }
+                m.enableInstancing = true;
+            });
+        }
+
+        /// <summary>Particle / sprite material.</summary>
+        public static Material Vfx(Texture texture, VfxBlend blend = VfxBlend.Additive, float softParticles = 0.4f)
+        {
+            string tex = texture != null ? texture.name : "none";
+            string key = $"vfx_{tex}_{blend}_{softParticles:F2}";
+            string shader = blend == VfxBlend.AlphaBlend ? ShaderIds.VfxAlpha : ShaderIds.VfxAdditive;
+            return Get(key, shader, m =>
+            {
+                if (texture != null) m.SetTexture(ShaderIds.MainTex, texture);
+                m.SetColor(ShaderIds.TintColor, Color.white);
+                m.SetFloat("_SoftFade", softParticles);
+                if (blend == VfxBlend.SoftAdditive)
+                {
+                    m.SetFloat(ShaderIds.SrcBlend, (float)BlendMode.OneMinusDstColor);
+                    m.SetFloat(ShaderIds.DstBlend, (float)BlendMode.One);
+                }
+                else if (blend == VfxBlend.Additive)
+                {
+                    m.SetFloat(ShaderIds.SrcBlend, (float)BlendMode.SrcAlpha);
+                    m.SetFloat(ShaderIds.DstBlend, (float)BlendMode.One);
+                }
+            });
+        }
+
+        /// <summary>Material for procedural ribbon / tube meshes (water serpent, fire arcs, wind spirals...).</summary>
+        public static Material Ribbon(string key, Color core, Color edge, VfxBlend blend, Texture noise = null, float scroll = 1.5f, float fresnel = 2f)
+        {
+            string k = $"ribbon_{key}_{ColorKey(core)}_{ColorKey(edge)}_{blend}";
+            var m = Get(k, ShaderIds.ElementRibbon, mat =>
+            {
+                mat.SetColor(ShaderIds.ColorA, core);
+                mat.SetColor(ShaderIds.ColorB, edge);
+                mat.SetTexture(ShaderIds.NoiseTex, noise != null ? noise : ProceduralTextures.Noise);
+                mat.SetFloat(ShaderIds.ScrollSpeed, scroll);
+                mat.SetFloat(ShaderIds.FresnelPower, fresnel);
+                SetBlend(mat, blend);
+            });
+            return m;
+        }
+
+        /// <summary>A fresh (uncached) instance for effects that animate material values themselves.</summary>
+        public static Material Instance(Material source) => new Material(source) { name = source.name + "_inst" };
+
+        public static Material SwordTrail(string key, Gradient gradient, VfxBlend blend)
+        {
+            string k = $"trail_{key}_{blend}";
+            return Get(k, ShaderIds.SwordTrail, m =>
+            {
+                m.SetTexture(ShaderIds.GradientTex, ProceduralTextures.FromGradient(k, gradient));
+                m.SetTexture(ShaderIds.NoiseTex, ProceduralTextures.Noise);
+                SetBlend(m, blend);
+            });
+        }
+
+        public static Material Ghost(Color color)
+        {
+            return Get($"ghost_{ColorKey(color)}", ShaderIds.Ghost, m => m.SetColor(ShaderIds.BaseColor, color));
+        }
+
+        public static Material Telegraph(Color color)
+        {
+            return Get($"telegraph_{ColorKey(color)}", ShaderIds.Telegraph, m => m.SetColor(ShaderIds.BaseColor, color));
+        }
+
+        public static Material Distortion()
+        {
+            return Get("distortion", ShaderIds.Distortion, m => m.SetTexture(ShaderIds.NoiseTex, ProceduralTextures.Noise));
+        }
+
+        public static Material Decal(Texture texture, Color tint)
+        {
+            return Get($"decal_{texture.name}_{ColorKey(tint)}", ShaderIds.VfxAlpha, m =>
+            {
+                m.SetTexture(ShaderIds.MainTex, texture);
+                m.SetColor(ShaderIds.TintColor, tint);
+                m.SetFloat("_SoftFade", 0f);
+                m.renderQueue = (int)RenderQueue.Transparent - 50;
+            });
+        }
+
+        public static void SetBlend(Material m, VfxBlend blend)
+        {
+            switch (blend)
+            {
+                case VfxBlend.AlphaBlend:
+                    m.SetFloat(ShaderIds.SrcBlend, (float)BlendMode.SrcAlpha);
+                    m.SetFloat(ShaderIds.DstBlend, (float)BlendMode.OneMinusSrcAlpha);
+                    break;
+                case VfxBlend.SoftAdditive:
+                    m.SetFloat(ShaderIds.SrcBlend, (float)BlendMode.OneMinusDstColor);
+                    m.SetFloat(ShaderIds.DstBlend, (float)BlendMode.One);
+                    break;
+                default:
+                    m.SetFloat(ShaderIds.SrcBlend, (float)BlendMode.SrcAlpha);
+                    m.SetFloat(ShaderIds.DstBlend, (float)BlendMode.One);
+                    break;
+            }
+        }
+    }
+}

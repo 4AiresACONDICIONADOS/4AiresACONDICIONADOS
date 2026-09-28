@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Builds com.unity.ugui runtime from the Unity editor's built-in package source (compile-check only). -->
+  <PropertyGroup>
+    <UnityProject>true</UnityProject>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <OutputPath>$(CompileCheckOut)</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AssemblyName>UnityEngine.UI</AssemblyName>
+    <DefineConstants>$(UnityDefines);PACKAGE_PHYSICS;PACKAGE_PHYSICS2D;PACKAGE_ANIMATION;PACKAGE_UITOOLKIT;PACKAGE_TILEMAP</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>$(NoWarn);CS0618;CS0649;CS0414;CS0169;CS0067;CS0108;CS0114;CS0162;CS0219</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UnityBuiltInPackages)/com.unity.ugui/Runtime/UGUI/**/*.cs" />
+  </ItemGroup>
+</Project>

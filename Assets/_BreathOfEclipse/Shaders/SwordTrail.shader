@@ -61,6 +61,7 @@ Shader "BreathOfEclipse/SwordTrail"
                 half4 color : COLOR;
                 float2 uv : TEXCOORD0;
                 half fogFactor : TEXCOORD1;
+                float eyeDepth : TEXCOORD2;
             };
 
             Varyings TrailVert(Attributes input)
@@ -70,6 +71,7 @@ Shader "BreathOfEclipse/SwordTrail"
                 output.color = input.color;
                 output.uv = input.uv;
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);
+                output.eyeDepth = output.positionCS.w;
                 return output;
             }
 
@@ -88,6 +90,8 @@ Shader "BreathOfEclipse/SwordTrail"
                 half3 color = gradient.rgb * (0.6h + edge * 1.6h) * max(_Intensity, 0.0h);
                 color += gradient.rgb * smoothstep(0.9h, 1.0h, along) * 1.5h * (1.0h - age);
                 half alpha = saturate(gradient.a * input.color.a * baseFade * dissolve * (0.5h + edge * 0.5h));
+                // First person: the part of the trail right at the lens fades so the katana stays readable.
+                alpha *= saturate((input.eyeDepth - 0.15) / 0.45);
 
                 if (abs(_SrcBlend - 4.0) < 0.5)
                     color *= alpha;

@@ -103,12 +103,13 @@ namespace BreathOfEclipse.VFX
             // --------------------------------------------------------- RISING SERPENT: the reference technique
             VFXLibrary.Register("water_serpent", b =>
             {
-                b.Lifetime = 2f;
+                b.Lifetime = 2.2f;
                 Vector3 p0 = new Vector3(-0.9f, 0.2f, 0.5f), p1 = new Vector3(-0.5f, 0.3f, 2.4f), p2 = new Vector3(0.7f, 2.9f, 2.8f), p3 = new Vector3(1.4f, 4.8f, 1.5f);
                 var mainPath = PathUtil.CoiledBezier(p0, p1, p2, p3, 1.6f, 0.4f, 0.7f);
                 var profile = new AnimationCurve(new Keyframe(0f, 0.35f), new Keyframe(0.5f, 0.9f), new Keyframe(0.85f, 1.25f), new Keyframe(0.95f, 1.1f), new Keyframe(1f, 0.6f));
 
-                var body = b.Tube("SerpentBody", Body(b), mainPath, 0.52f, 0.24f, 0.42f, 0.55f);
+                // Grow 0.24 s, hold 0.55 s, dissolve 0.55 s: the serpent must be readable, not a flash.
+                var body = b.Tube("SerpentBody", Body(b), mainPath, 0.52f, 0.24f, 0.55f, 0.55f);
                 body.RadiusProfile = profile;
                 body.Wobble = 0.2f;
                 body.WobbleFrequency = 2.2f;
@@ -117,7 +118,7 @@ namespace BreathOfEclipse.VFX
                 body.RadialSegments = 12;
                 body.Head = SerpentHead(b, body.transform, 0.75f);
 
-                var core = b.Tube("FoamCore", Foam(b), PathUtil.CoiledBezier(p0, p1, p2, p3, 1.6f, 0.4f, 0.7f, 0.25f), 0.2f, 0.22f, 0.32f, 0.45f);
+                var core = b.Tube("FoamCore", Foam(b), PathUtil.CoiledBezier(p0, p1, p2, p3, 1.6f, 0.4f, 0.7f, 0.25f), 0.2f, 0.22f, 0.45f, 0.45f);
                 core.RadiusProfile = profile;
                 core.Wobble = 0.2f;
                 core.WobbleFrequency = 2.2f;

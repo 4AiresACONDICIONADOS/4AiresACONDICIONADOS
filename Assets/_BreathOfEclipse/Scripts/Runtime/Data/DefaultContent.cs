@@ -261,22 +261,30 @@ namespace BreathOfEclipse.Data
             var serpent = Skill("tidal_rising_serpent", "Rising Serpent", "Seventh Form", S, SkillTier.Normal, 14f, 0f, 3.5f,
                 "Low stance, water gathers on the blade, dash and rising diagonal cut: a serpent of water launches the enemy. Continue with an air combo.");
             serpent.endsAirborne = true;
-            serpent.phases.Add(Phase("Low Stance", 0.3f, "SkillLowStance", 0.06f).Trail(TrailMode.SwordAndElement)
-                .Vfx("water_charge", VFXAnchor.Sword, 0f, 1f, true).Vfx("water_ground_ripple", VFXAnchor.Ground)
-                .Sfx("charge", 0f, 0.5f).Sfx("water", 0.05f, 0.7f)
-                .Cam(zoom: 0.88f, slowScale: 0.7f, slowDuration: 0.25f, bloom: 0.3f));
-            serpent.phases.Add(Phase("Serpent Dash", 0.16f, "SkillDash", 0.04f).Move(SkillMoveMode.DashToTarget, 7f).Afterimages()
+            // Timeline (hero reference): anticipation 0.34 → charge 0.18 → dash 0.17 → slash 0.16 (hit + 0.08 hit stop)
+            // → serpent on screen ~1.3 s while the player rises → aftermath 0.5, cancelable into the air combo.
+            serpent.phases.Add(Phase("Low Stance", 0.34f, "SkillLowStance", 0.06f).Trail(TrailMode.SwordAndElement)
+                .Vfx("water_charge", VFXAnchor.Sword, 0f, 0.7f, true).Vfx("water_ground_ripple", VFXAnchor.Ground)
+                .Sfx("water", 0.05f, 0.6f)
+                .Cam(zoom: 0.9f, slowScale: 0.75f, slowDuration: 0.3f, bloom: 0.2f));
+            serpent.phases.Add(Phase("Charge", 0.18f, "SkillLowStance", 0.02f).Trail(TrailMode.SwordAndElement)
+                .Vfx("water_charge", VFXAnchor.Sword, 0f, 1.25f, true).Vfx("water_ground_ripple", VFXAnchor.Ground, 0.02f, 0.7f)
+                .Sfx("charge", 0f, 0.6f)
+                .Cam(zoom: 0.86f, bloom: 0.35f, saturation: -10f));
+            serpent.phases.Add(Phase("Serpent Dash", 0.17f, "SkillDash", 0.04f).Move(SkillMoveMode.DashToTarget, 7f).Afterimages()
                 .Vfx("water_dash_wake", VFXAnchor.Self, 0f, 1f, true).Sfx("dash")
                 .Cam(fovPunch: 6f, speedLines: true, radialBlur: true));
-            serpent.phases.Add(Phase("Rising Cut", 0.22f, "SkillRisingCut", 0.03f)
+            serpent.phases.Add(Phase("Rising Cut", 0.16f, "SkillRisingCut", 0.03f)
                 .Vfx("water_serpent", VFXAnchor.Self).Vfx("water_splash", VFXAnchor.Target, 0.06f, 1.2f)
                 .Sfx("slash_heavy").Sfx("water_big", 0.03f)
                 .Hit(Spec(HitShape.CapsuleForward, 2.6f, HitReaction.Launch, 1.5f, 2.8f, 0.05f, knockback: 1f, launch: 3.4f, airHang: 1.1f,
                     hitStop: 0.08f, shake: 0.45f, impact: "water_splash"))
-                .Cam(shake: 0.2f, zoom: 0.8f, chromatic: 0.3f, bloom: 0.6f));
-            serpent.phases.Add(Phase("Ascend", 0.26f, "SkillAirReady").Move(SkillMoveMode.Rise, 0.8f, 2.8f).NoGravity()
-                .Vfx("water_suspended", VFXAnchor.Target, 0.02f).Sfx("water", 0f, 0.4f));
-            serpent.phases.Add(Phase("Poise", 0.18f, "SkillHover").Move(SkillMoveMode.Hover).Cancelable());
+                // Hero camera: pull back ~15% so player, serpent and enemy share the frame.
+                .Cam(shake: 0.2f, zoom: 1.15f, chromatic: 0.3f, bloom: 0.6f));
+            serpent.phases.Add(Phase("Ascend", 0.3f, "SkillAirReady").Move(SkillMoveMode.Rise, 0.8f, 2.8f).NoGravity()
+                .Vfx("water_suspended", VFXAnchor.Target, 0.02f).Sfx("water", 0f, 0.4f)
+                .Cam(zoom: 1.15f));
+            serpent.phases.Add(Phase("Poise", 0.2f, "SkillHover").Move(SkillMoveMode.Hover).Cancelable());
 
             var tide = Skill("tidal_crescent_tide", "Crescent Tide", "Second Form", S, SkillTier.Normal, 18f, 0f, 5f,
                 "A full spin that releases a ring-shaped wave, pushing every surrounding enemy away.");

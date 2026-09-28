@@ -61,6 +61,9 @@ half4 VfxFrag(VfxVaryings input) : SV_Target
     half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
     half4 color = tex * input.color * _TintColor;
     color.a = saturate(color.a * _Opacity);
+    // Near-camera fade: effects thin out under 1.2 m and vanish at 0.3 m from the camera (first person, camera
+    // pushing through a splash), so a VFX card never fills the screen.
+    color.a *= saturate((input.screenPos.w - 0.3) / 0.9);
 
     if (_SoftFade > 0.001)
     {

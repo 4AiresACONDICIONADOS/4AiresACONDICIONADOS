@@ -106,6 +106,8 @@ Shader "BreathOfEclipse/ElementRibbon"
                 half tailFade = smoothstep(0.0h, 0.25h, input.uv.x);
                 half ragged = smoothstep(0.0h, 0.3h, flow + input.uv.x * 0.5h);
                 half alpha = saturate((0.35h + fresnel * 0.9h + streak * 0.4h) * tailFade * ragged) * _Opacity;
+                // Near-camera fade (first person): the water body never becomes a wall in front of the lens.
+                alpha *= saturate((distance(_WorldSpaceCameraPos, input.positionWS) - 0.3) / 0.9);
 
                 if (abs(_SrcBlend - 4.0) < 0.5)
                     color *= alpha;

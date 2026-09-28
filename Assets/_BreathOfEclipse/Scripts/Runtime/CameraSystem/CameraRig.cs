@@ -107,6 +107,7 @@ namespace BreathOfEclipse.CameraSystem
         {
             Instance = this;
             if (Camera == null) Camera = GetComponent<Camera>();
+            _shaker.Initialize();
             _active = Third;
             _current = new CameraPose(transform.position, transform.rotation, 60f);
         }

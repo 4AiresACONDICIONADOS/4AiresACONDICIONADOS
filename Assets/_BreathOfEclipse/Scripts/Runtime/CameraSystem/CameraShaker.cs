@@ -16,11 +16,17 @@ namespace BreathOfEclipse.CameraSystem
         public float Damping = 16f;
 
         private float _trauma;
-        private float _seed = Random.value * 100f;
+        private float _seed;
         private Vector3 _impulseOffset;
         private Vector3 _impulseVelocity;
 
         public float Trauma => _trauma;
+
+        /// <summary>
+        /// Picks the noise seed. Uses the Unity API, so it must run from Awake/Start and never from a constructor or
+        /// field initializer (the shaker is created by <see cref="CameraRig"/>'s field initializers).
+        /// </summary>
+        public void Initialize() => _seed = Random.value * 100f;
 
         public void AddTrauma(float amount) => _trauma = Mathf.Clamp01(_trauma + amount);
 

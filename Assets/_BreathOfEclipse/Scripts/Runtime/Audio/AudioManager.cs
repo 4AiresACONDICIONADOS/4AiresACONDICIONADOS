@@ -148,6 +148,9 @@ namespace BreathOfEclipse.Audio
             return clip;
         }
 
+        /// <summary>The clip for a sound id (library clip or generated placeholder), e.g. for a VoiceChannel.</summary>
+        public AudioClip Clip(string id) => GetClip(id);
+
         /// <summary>Plays a sound at a world position.</summary>
         public void Play(string id, Vector3 position, float volume = 1f, float pitch = 1f, AudioCategory category = AudioCategory.SFX, float spatial = 0.6f)
         {

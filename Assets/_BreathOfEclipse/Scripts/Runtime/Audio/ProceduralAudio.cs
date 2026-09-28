@@ -74,6 +74,23 @@ namespace BreathOfEclipse.Audio
         }
 
         /// <summary>Returns a synthesized clip for a sound id, or null if unknown.</summary>
+        /// <summary>Creature vocalisation: saw growl through a low-pass with vibrato, breath noise and a pitch glide.</summary>
+        private static AudioClip Growl(string id, float len, float baseFreq, float vibrato, float noise, float glide)
+        {
+            var rng = new Rng((uint)id.GetHashCode());
+            OnePole lp = default;
+            Biquad bp = default;
+            return Make(id, len, (t, i) =>
+            {
+                float k = Mathf.Clamp01(t / len);
+                float f = baseFreq * (1f + glide * k) * (1f + 0.07f * Mathf.Sin(t * vibrato));
+                float saw = ((t * f) % 1f) * 2f - 1f;
+                float body = lp.LowPass(saw + rng.Next() * noise, 0.12f) * 2.2f;
+                float breath = bp.BandPass(rng.Next(), 900f + 600f * k, 2f, SampleRate) * noise * 0.4f;
+                return (body + breath) * Mathf.Sin(k * Mathf.PI);
+            });
+        }
+
         public static AudioClip Generate(string id)
         {
             var rng = new Rng((uint)id.GetHashCode());
@@ -272,6 +289,11 @@ namespace BreathOfEclipse.Audio
                         float low = Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(90f, 40f, t / 1.2f) * t) * Env(t, 0.01f, 0.3f);
                         return hiss + low;
                     });
+                // Creature voices (EnemyVoice): short growls and pain cries per species.
+                case "nightspawn_grunt": return Growl(id, 0.32f, 150f, 31f, 0.7f, 0.25f);
+                case "nightspawn_hurt": return Growl(id, 0.28f, 230f, 45f, 0.9f, -0.35f);
+                case "oni_grunt": return Growl(id, 0.55f, 66f, 17f, 0.5f, 0.2f);
+                case "oni_hurt": return Growl(id, 0.45f, 95f, 26f, 0.7f, -0.3f);
                 case "telegraph":
                     return Make(id, 0.45f, (t, i) => (Mathf.Sin(2f * Mathf.PI * 1480f * t) + Mathf.Sin(2f * Mathf.PI * 1568f * t)) * Env(t, 0.005f, 0.12f) * 0.5f);
                 case "crate_break":

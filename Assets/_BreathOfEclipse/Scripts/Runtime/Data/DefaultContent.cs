@@ -734,6 +734,7 @@ namespace BreathOfEclipse.Data
             var e = ScriptableObject.CreateInstance<EnemyData>();
             e.name = "Enemy_Nightspawn";
             e.enemyId = "nightspawn";
+            e.voicePrefix = "nightspawn";
             e.displayName = "Nightspawn";
             e.archetype = EnemyArchetype.Nightspawn;
             e.maxHealth = 150f;
@@ -773,6 +774,7 @@ namespace BreathOfEclipse.Data
             var e = ScriptableObject.CreateInstance<EnemyData>();
             e.name = "Enemy_HollowOni";
             e.enemyId = "hollow_oni";
+            e.voicePrefix = "oni";
             e.displayName = "The Hollow Oni";
             e.archetype = EnemyArchetype.HollowOni;
             e.isBoss = true;

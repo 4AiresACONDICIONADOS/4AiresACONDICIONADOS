@@ -75,6 +75,8 @@ namespace BreathOfEclipse.Data
     {
         public string enemyId = "nightspawn";
         public string displayName = "Nightspawn";
+        [Tooltip("Voice sound ids are <prefix>_grunt and <prefix>_hurt (3D, one voice per enemy). Empty = silent.")]
+        public string voicePrefix = "";
         public EnemyArchetype archetype = EnemyArchetype.Nightspawn;
         public bool isBoss;
 

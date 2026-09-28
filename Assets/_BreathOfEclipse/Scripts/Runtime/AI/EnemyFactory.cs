@@ -40,6 +40,7 @@ namespace BreathOfEclipse.AI
             motor.Initialize(cc);
             var enemy = go.AddComponent<EnemyController>();
             enemy.Initialize(data, rig, anim, motor, damageable);
+            EnemyVoice.Attach(enemy, data.voicePrefix);
             if (data.isBoss)
             {
                 var boss = go.AddComponent<BossController>();

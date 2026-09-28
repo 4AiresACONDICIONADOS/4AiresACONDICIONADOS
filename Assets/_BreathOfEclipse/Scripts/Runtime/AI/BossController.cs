@@ -72,6 +72,14 @@ namespace BreathOfEclipse.AI
                 post.PulseLensDistortion(-0.35f);
             }
             GameEvents.Notify("THE HOLLOW ONI AWAKENS");
+            // The change must read instantly, without text: eyes blaze, markings ignite, the aura erupts and the
+            // night itself turns crimson.
+            e.Rig.SetEyeColor(e.Data.phase2EyeColor * 1.5f);
+            e.Rig.SetAccentColor(e.Data.phase2EyeColor * 0.6f);
+            e.Rig.SetHitFlash(1f, new Color(1f, 0.2f, 0.45f));
+            _aura = VFXLibrary.Spawn("boss_aura", e.transform.position, Quaternion.identity, e.Data.scale * 0.8f, Element.Dark, e.transform);
+            FlashFrameSystem.Trigger(e.LockOnPoint.position, new Color(3f, 0.4f, 1.2f), 2, FlashFrameStyle.Silhouette);
+            ShiftNight(PhaseTwoFog, PhaseTwoAmbient, PhaseTwoSun, 2.2f);
             // Push the player back with a shockwave.
             VFXLibrary.Spawn("shockwave", e.transform.position, Quaternion.identity, 2f, Element.Dark);
             var pc = PlayerController.Instance;
@@ -94,12 +102,30 @@ namespace BreathOfEclipse.AI
             e.SpeedMultiplier = e.Data.phase2SpeedMultiplier;
             e.AggressionBonus = e.Data.phase2AggressionBonus;
             e.Rig.SetEyeColor(e.Data.phase2EyeColor);
-            _aura = VFXLibrary.Spawn("boss_aura", e.transform.position, Quaternion.identity, e.Data.scale * 0.8f, Element.Dark, e.transform);
+        }
+
+        private static readonly Color PhaseTwoFog = new Color(0.16f, 0.04f, 0.09f);
+        private static readonly Color PhaseTwoAmbient = new Color(0.3f, 0.1f, 0.2f);
+        private static readonly Color PhaseTwoSun = new Color(1f, 0.55f, 0.65f);
+        private bool _nightSaved;
+        private Color _savedFog, _savedAmbient, _savedSun;
+
+        private void ShiftNight(Color fog, Color ambient, Color sun, float seconds)
+        {
+            if (!_nightSaved)
+            {
+                _nightSaved = true;
+                _savedFog = RenderSettings.fogColor;
+                _savedAmbient = RenderSettings.ambientSkyColor;
+                _savedSun = RenderSettings.sun != null ? RenderSettings.sun.color : Color.white;
+            }
+            NightShift.Run(fog, ambient, sun, seconds);
         }
 
         private void OnDied(HitData hit)
         {
             if (_aura != null) _aura.StopEmitting();
+            if (_nightSaved) NightShift.Run(_savedFog, _savedAmbient, _savedSun, 3f);
             if (TimeController.Instance != null) TimeController.Instance.SlowMotion(0.2f, 1.6f, "boss_death", 0.5f);
             FlashFrameSystem.Trigger(Enemy.LockOnPoint.position, new Color(4f, 3f, 3.5f), 3, FlashFrameStyle.Silhouette);
             CameraFX.Zoom(0.7f, 1.5f);
@@ -114,6 +140,39 @@ namespace BreathOfEclipse.AI
         {
             if (Enemy != null && Enemy.Damageable != null && Enemy.Damageable.Health != null)
                 Enemy.Damageable.Health.Damaged -= OnDamaged;
+        }
+    }
+
+    /// <summary>
+    /// Slight environment reaction for boss phases: fog, sky ambient and moonlight drift toward a target over a
+    /// few seconds. Runs on its own scene object so it completes even if the boss is removed meanwhile.
+    /// </summary>
+    internal sealed class NightShift : MonoBehaviour
+    {
+        private Color _fog0, _amb0, _sun0, _fog, _amb, _sun;
+        private float _seconds, _t;
+
+        public static void Run(Color fog, Color ambient, Color sun, float seconds)
+        {
+            foreach (var old in FindObjectsByType<NightShift>(FindObjectsSortMode.None)) Destroy(old.gameObject);
+            var n = new GameObject("NightShift").AddComponent<NightShift>();
+            n._fog0 = RenderSettings.fogColor;
+            n._amb0 = RenderSettings.ambientSkyColor;
+            n._sun0 = RenderSettings.sun != null ? RenderSettings.sun.color : Color.white;
+            n._fog = fog;
+            n._amb = ambient;
+            n._sun = sun;
+            n._seconds = Mathf.Max(0.05f, seconds);
+        }
+
+        private void Update()
+        {
+            _t += Time.unscaledDeltaTime;
+            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(_t / _seconds));
+            RenderSettings.fogColor = Color.Lerp(_fog0, _fog, k);
+            RenderSettings.ambientSkyColor = Color.Lerp(_amb0, _amb, k);
+            if (RenderSettings.sun != null) RenderSettings.sun.color = Color.Lerp(_sun0, _sun, k);
+            if (_t >= _seconds) Destroy(gameObject);
         }
     }
 }

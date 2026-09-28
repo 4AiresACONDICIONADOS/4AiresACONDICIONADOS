@@ -27,6 +27,8 @@ namespace BreathOfEclipse.Environment
 
         private void Awake()
         {
+            // Black until player, camera, world, lighting and HUD exist and their shaders are compiled.
+            if (SceneLoader.Instance != null) SceneLoader.Instance.HoldBlackUntilReady();
             var existing = transform.Find("World");
             if (existing != null)
             {

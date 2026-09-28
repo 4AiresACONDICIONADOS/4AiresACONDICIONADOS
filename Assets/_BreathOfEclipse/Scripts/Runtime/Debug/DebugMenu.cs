@@ -65,6 +65,28 @@ namespace BreathOfEclipse.Core
             }
         }
 
+        /// <summary>Hits the player from the front with a chosen reaction (tests hit reactions, knockdown and get up).</summary>
+        private static void HitPlayer(PlayerController pc, HitReaction reaction, float launchHeight)
+        {
+            if (pc == null) return;
+            bool heavy = reaction != HitReaction.Light;
+            var hit = new HitData
+            {
+                AttackerTeam = Team.Enemy,
+                SourceId = "debug_hit",
+                AttackInstanceId = Random.Range(1_000_000, int.MaxValue),
+                Category = heavy ? DamageCategory.EnemyHeavy : DamageCategory.EnemyLight,
+                BaseDamage = heavy ? 12f : 5f,
+                Multiplier = 1f,
+                Reaction = reaction,
+                HitPoint = pc.Damageable.CenterPoint,
+                Direction = -pc.transform.forward,
+                Knockback = heavy ? 4f : 1f,
+                LaunchHeight = launchHeight
+            };
+            pc.Damageable.ReceiveHit(hit);
+        }
+
         private static void ApplyCheats(PlayerController pc)
         {
             pc.Stats.GodMode = GodMode;
@@ -96,8 +118,14 @@ namespace BreathOfEclipse.Core
             GUILayout.Label($"v{GameManager.Version}  |  Scene: {SceneManager.GetActiveScene().name}");
             GUILayout.Label($"Enemies alive: {EncounterDirector.AliveCount}  |  timeScale: {Time.timeScale:0.00}");
             if (pc != null)
-                GUILayout.Label($"Player: {pc.State}  HP {pc.Damageable.Health.Current:0}/{pc.Damageable.Health.Max:0}  " +
+            {
+                GUILayout.Label($"Player: {pc.State}{(pc.GettingUp ? " (getting up)" : "")}  HP {pc.Damageable.Health.Current:0}/{pc.Damageable.Health.Max:0}  " +
                                 $"ST {pc.Stats.Stamina.Current:0}  BR {pc.Stats.Breath.Current:0}");
+                var cam = CameraRig.Instance;
+                string technique = pc.Breathing.IsExecuting && pc.Breathing.Executor.Skill != null ? pc.Breathing.Executor.Skill.displayName : "-";
+                GUILayout.Label($"Grounded {pc.Motor.Grounded}  CanAttack/Technique {pc.CanAct}  Down pose {pc.Animator.KnockdownPoseActive}");
+                GUILayout.Label($"Camera {(cam != null ? cam.Mode.ToString() : "-")}  Technique {technique}");
+            }
 
             GUILayout.Space(4f);
             GUILayout.Label("CHEATS", _header);
@@ -118,6 +146,17 @@ namespace BreathOfEclipse.Core
                 pc.Stats.Breath.SetValue(pc.Stats.Breath.Max);
                 pc.Breathing.Cooldowns.ResetAll();
             }
+
+            GUILayout.Space(4f);
+            GUILayout.Label("PLAYER HIT TEST", _header);
+            GUI.enabled = pc != null;
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Light Hit")) HitPlayer(pc, HitReaction.Light, 0f);
+            if (GUILayout.Button("Heavy Hit")) HitPlayer(pc, HitReaction.Heavy, 0f);
+            if (GUILayout.Button("Knockdown")) HitPlayer(pc, HitReaction.Knockdown, 0f);
+            if (GUILayout.Button("Launch")) HitPlayer(pc, HitReaction.Launch, 3f);
+            GUILayout.EndHorizontal();
+            GUI.enabled = true;
 
             GUILayout.Space(4f);
             GUILayout.Label("ENEMIES", _header);

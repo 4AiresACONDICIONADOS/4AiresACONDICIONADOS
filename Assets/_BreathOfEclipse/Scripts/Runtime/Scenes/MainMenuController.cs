@@ -89,6 +89,7 @@ namespace BreathOfEclipse.Scenes
 
         private void Awake()
         {
+            if (SceneLoader.Instance != null) SceneLoader.Instance.HoldBlackUntilReady();
             _world = new GameObject("MenuWorld").transform;
             _world.SetParent(transform, false);
             BuildWorld();

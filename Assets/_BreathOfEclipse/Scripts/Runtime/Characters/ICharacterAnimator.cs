@@ -32,7 +32,7 @@ namespace BreathOfEclipse.Characters
         void StopAction(float blendOut);
         void PlayHit(HitReaction reaction, Vector3 worldDirection);
         void SetDodge(Vector3 worldDirection, float duration);
-        void SetKnockedDown(bool value);
+        void SetKnockedDown(bool value, float getUpDuration = 0.4f);
         void SetDead(bool value);
         void SetLookTarget(Transform target);
     }

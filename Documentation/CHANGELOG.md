@@ -5,6 +5,21 @@ primera versión verificada como jugable dentro del Editor de Unity.**
 
 ---
 
+## v0.1.2 — Runtime stabilization (2026-09-28)
+
+### Fixed
+- `CameraRig`: `Random.value` se llamaba desde un inicializador de campo (excepción al construir) y dejaba `_shaker` /
+  `_zooms` en null; ahora se crean en `Awake`.
+- Pantalla azul al pulsar Play: la escena queda en negro hasta que termina de compilar sus shaders (Editor) y hace
+  fundido (`SceneLoader.HoldBlackUntilReady`).
+- Jugador tumbado mientras atacaba: todos los cambios de estado pasan por `SetState`; salir de Knockdown limpia la pose.
+  Knockdown = suelo (`knockdownGroundTime` 0.55 s) → levantarse (`getUpDuration` 0.45 s, invulnerable, solo esquiva).
+  Un golpe ligero ya no saca al jugador del knockdown; un flinch no acorta un stagger pesado.
+- Cancelar un ataque o técnica por un golpe detiene el lunge, el air hang y la cámara lenta de la técnica.
+
+### Added
+- F1: estado del jugador (Grounded, CanAct, pose de knockdown, cámara, técnica) y PLAYER HIT TEST.
+
 ## v0.1.1 — Playtest tooling (2026-09-28)
 
 Sin contenido de juego nuevo: herramientas para validar v0.1.0 en Unity con el mínimo esfuerzo.

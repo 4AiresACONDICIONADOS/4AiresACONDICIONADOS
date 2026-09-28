@@ -73,8 +73,18 @@ namespace BreathOfEclipse.Player
         private float _lastCombatTime = -100f;
         private float _dodgeEndTime;
         private bool _airDodgeUsed;
-        private float _respawnInvulnerableUntil;
+        private float _invulnerableUntil;
+        private bool _gettingUp;
+        private float _knockAirTime;
+        private const float MaxKnockAirTime = 2.5f;
         private float _footstepTimer;
+
+        /// <summary>Down after a knockdown / launch, or getting up (no attacks or techniques).</summary>
+        public bool IsDown => State == PlayerState.Knockdown;
+        public bool GettingUp => State == PlayerState.Knockdown && _gettingUp;
+        /// <summary>Attacks and techniques can start only from these states; Dead, Knockdown and HitStun block them.</summary>
+        public bool CanAct => State == PlayerState.Locomotion || State == PlayerState.Attack || State == PlayerState.Skill ||
+                              State == PlayerState.Dodge || State == PlayerState.Block;
 
         private static readonly BufferedAction[] AttackButtons = { BufferedAction.LightAttack, BufferedAction.HeavyAttack };
         private static readonly CancelFlags[] AttackCancelFlags = { CancelFlags.Attack, CancelFlags.Dodge, CancelFlags.Skill, CancelFlags.Block, CancelFlags.Ultimate, CancelFlags.Jump };
@@ -240,18 +250,47 @@ namespace BreathOfEclipse.Player
                     break;
                 case PlayerState.Knockdown:
                     Motor.SetDesiredVelocity(Vector3.zero);
-                    _stateTimer -= dt;
-                    if (_stateTimer <= 0.35f) Animator.SetKnockedDown(false);
-                    if (_stateTimer <= 0f) EnterLocomotion();
-                    else if (_stateTimer < Data.knockdownDuration - 0.4f) TryActions(input, CancelFlags.Dodge);
+                    UpdateKnockdown(input, dt);
                     break;
                 case PlayerState.Dead:
                     Motor.SetDesiredVelocity(Vector3.zero);
                     break;
             }
 
-            if (Damageable != null) Damageable.Invulnerable = Time.time < _respawnInvulnerableUntil;
+            if (Damageable != null) Damageable.Invulnerable = Time.time < _invulnerableUntil;
             UpdateAnimator();
+        }
+
+        /// <summary>Knockdown → (land) → down on the ground → get up → locomotion. Only a recovery dodge while getting up.</summary>
+        private void UpdateKnockdown(InputReader input, float dt)
+        {
+            if (!_gettingUp)
+            {
+                // A launch counts its ground time from the landing (capped so an airborne glitch never locks input).
+                _knockAirTime += dt;
+                if (!Motor.Grounded && _knockAirTime < MaxKnockAirTime) return;
+                _stateTimer -= dt;
+                if (_stateTimer > 0f) return;
+                _gettingUp = true;
+                _stateTimer = Data.getUpDuration;
+                Animator.SetKnockedDown(false, Data.getUpDuration);
+                _invulnerableUntil = Mathf.Max(_invulnerableUntil, Time.time + Data.getUpDuration);
+                return;
+            }
+            _stateTimer -= dt;
+            if (_stateTimer <= 0f) EnterLocomotion();
+            else TryActions(input, CancelFlags.Dodge);
+        }
+
+        /// <summary>Single point for state changes: leaving Knockdown always clears the knockdown pose.</summary>
+        private void SetState(PlayerState next)
+        {
+            if (State == PlayerState.Knockdown && next != PlayerState.Knockdown)
+            {
+                _gettingUp = false;
+                Animator.SetKnockedDown(false, Data.getUpDuration);
+            }
+            State = next;
         }
 
         private void ReadMoveInput(InputReader input)
@@ -395,7 +434,7 @@ namespace BreathOfEclipse.Player
                     bool airJump = !Motor.Grounded && Motor.TimeSinceGrounded > 0.12f;
                     if (Motor.TryJump())
                     {
-                        State = PlayerState.Locomotion;
+                        SetState(PlayerState.Locomotion);
                         Sfx.Play("jump", transform.position, 0.5f);
                         if (airJump)
                         {
@@ -410,7 +449,7 @@ namespace BreathOfEclipse.Player
             if ((allowed & CancelFlags.Block) != 0 && input.BlockHeld && State != PlayerState.Block && Motor.Grounded)
             {
                 CancelCurrentAction();
-                State = PlayerState.Block;
+                SetState(PlayerState.Block);
                 Defense.BeginBlock();
                 _lastCombatTime = Time.time;
             }
@@ -425,10 +464,11 @@ namespace BreathOfEclipse.Player
 
         private bool StartAttack(ComboInput input, ComboContext ctx)
         {
+            if (!CanAct) return false;
             if (State == PlayerState.Skill) Breathing.Cancel();
             if (State == PlayerState.Block) Defense.EndBlock();
             if (!Combat.TryAttack(input, ctx)) return false;
-            State = PlayerState.Attack;
+            SetState(PlayerState.Attack);
             _lastCombatTime = Time.time;
             Motor.SetDesiredVelocity(Vector3.zero);
             return true;
@@ -436,6 +476,7 @@ namespace BreathOfEclipse.Player
 
         private bool StartSkill(int slot)
         {
+            if (!CanAct) return false;
             if (!Breathing.CanUse(slot, out var reason))
             {
                 if (!string.IsNullOrEmpty(reason)) GameEvents.Notify(reason);
@@ -443,7 +484,7 @@ namespace BreathOfEclipse.Player
             }
             CancelCurrentAction();
             if (!Breathing.TryUse(slot, LockOn.CurrentPoint)) return false;
-            State = PlayerState.Skill;
+            SetState(PlayerState.Skill);
             _lastCombatTime = Time.time;
             return true;
         }
@@ -469,14 +510,14 @@ namespace BreathOfEclipse.Player
             Sfx.Play("dash", transform.position, 0.6f);
             CameraFX.FovPunch(3f);
             _dodgeEndTime = Time.time + Data.dodgeDuration;
-            State = PlayerState.Dodge;
+            SetState(PlayerState.Dodge);
             return true;
         }
 
         private void EnterLocomotion()
         {
             if (State == PlayerState.Block) Defense.EndBlock();
-            State = PlayerState.Locomotion;
+            SetState(PlayerState.Locomotion);
         }
 
         private void OnSkillFinished(SkillData skill)
@@ -545,6 +586,15 @@ namespace BreathOfEclipse.Player
             Stats.OnDamageTaken(result.Damage);
             if (result.Killed) return;
 
+            // Priority: Dead > Knockdown / Launched > hard stagger > actions. A lighter hit never pulls the player
+            // out of a heavier reaction (e.g. a claw landing on a knocked-down player does not stand them up).
+            bool downing = hit.Reaction == HitReaction.Launch || hit.Reaction == HitReaction.Knockdown;
+            if (State == PlayerState.Knockdown && !downing)
+            {
+                Animator.PlayHit(HitReaction.Light, hit.Direction);
+                return;
+            }
+
             CancelCurrentAction();
             Animator.PlayHit(hit.Reaction, hit.Direction);
             switch (hit.Reaction)
@@ -555,27 +605,35 @@ namespace BreathOfEclipse.Player
                     Motor.AddKnockback(hit.Direction * Mathf.Max(4f, hit.Knockback));
                     Motor.Launch(Mathf.Max(0.6f, hit.LaunchHeight * 0.5f));
                     Animator.SetKnockedDown(true);
-                    State = PlayerState.Knockdown;
-                    _stateTimer = Data.knockdownDuration;
+                    SetState(PlayerState.Knockdown);
+                    _gettingUp = false;
+                    _knockAirTime = 0f;
+                    _stateTimer = Data.knockdownGroundTime;
                     break;
                 case HitReaction.Knockback:
                 case HitReaction.Heavy:
+                case HitReaction.Stun:
                     Motor.AddKnockback(hit.Direction * Mathf.Max(3f, hit.Knockback));
-                    State = PlayerState.HitStun;
-                    _stateTimer = Data.hitStunHeavy;
+                    EnterHitStun(Data.hitStunHeavy);
                     break;
                 default:
                     Motor.AddKnockback(hit.Direction * Mathf.Max(1.5f, hit.Knockback * 0.6f));
-                    State = PlayerState.HitStun;
-                    _stateTimer = Data.hitStunLight;
+                    EnterHitStun(Data.hitStunLight);
                     break;
             }
+        }
+
+        private void EnterHitStun(float duration)
+        {
+            // A light flinch never shortens a heavy stagger already in progress.
+            _stateTimer = State == PlayerState.HitStun ? Mathf.Max(_stateTimer, duration) : duration;
+            SetState(PlayerState.HitStun);
         }
 
         private void OnDied(HitData hit)
         {
             CancelCurrentAction();
-            State = PlayerState.Dead;
+            SetState(PlayerState.Dead);
             Motor.ResetMotion();
             Animator.SetDead(true);
             LockOn.Release();
@@ -600,9 +658,9 @@ namespace BreathOfEclipse.Player
             Damageable.Health.Revive(1f);
             Stats.Stamina.Refill();
             Animator.SetDead(false);
+            SetState(PlayerState.Locomotion);
             Animator.SetKnockedDown(false);
-            State = PlayerState.Locomotion;
-            _respawnInvulnerableUntil = Time.time + 2f;
+            _invulnerableUntil = Time.time + 2f;
             Breathing.Cooldowns.ResetAll();
             GameEvents.RaisePlayerRespawned();
         }

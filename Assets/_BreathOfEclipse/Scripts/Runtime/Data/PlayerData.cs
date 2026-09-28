@@ -48,7 +48,10 @@ namespace BreathOfEclipse.Data
         [Header("Damage taken")]
         public float hitStunLight = 0.32f;
         public float hitStunHeavy = 0.55f;
-        public float knockdownDuration = 1.1f;
+        [Tooltip("Seconds lying on the ground once a knockdown / launch lands.")]
+        public float knockdownGroundTime = 0.55f;
+        [Tooltip("Seconds to get back up (blend to the combat stance, brief invulnerability, dodge allowed).")]
+        public float getUpDuration = 0.45f;
         public float respawnDelay = 3f;
     }
 }

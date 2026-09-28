@@ -60,6 +60,7 @@ namespace BreathOfEclipse.Characters
         private Vector3 _hitLocalDir;
         private bool _down, _dead;
         private float _downWeight, _deadWeight;
+        private float _downBlendOutRate = 2.5f;
         private Transform _lookTarget;
         private float _lookWeight;
         private float _breathTime;
@@ -172,7 +173,16 @@ namespace BreathOfEclipse.Characters
             _dodgeTimer = _dodgeDuration;
         }
 
-        public void SetKnockedDown(bool value) => _down = value;
+        /// <summary>Knockdown pose on/off. <paramref name="getUpDuration"/> is how long the blend back to standing takes.</summary>
+        public void SetKnockedDown(bool value, float getUpDuration = 0.4f)
+        {
+            _down = value;
+            _downBlendOutRate = 1f / Mathf.Max(0.05f, getUpDuration);
+            if (value) _dodgeTimer = 0f;
+        }
+
+        /// <summary>Diagnostics: the knockdown pose still has weight.</summary>
+        public bool KnockdownPoseActive => _downWeight > 0.001f;
 
         public void SetDead(bool value)
         {
@@ -319,7 +329,7 @@ namespace BreathOfEclipse.Characters
             }
 
             // ---- knockdown / death
-            _downWeight = Mathf.MoveTowards(_downWeight, _down && !_dead ? 1f : 0f, dt * (_down ? 5f : 2.5f));
+            _downWeight = Mathf.MoveTowards(_downWeight, _down && !_dead ? 1f : 0f, dt * (_down ? 5f : _downBlendOutRate));
             _deadWeight = Mathf.MoveTowards(_deadWeight, _dead ? 1f : 0f, dt * 2.2f);
             if (_downWeight > 0f) pose = MotionPose.Lerp(pose, p.Down, MotionPose.Evaluate(Ease.Out, _downWeight));
             if (_deadWeight > 0f) pose = MotionPose.Lerp(pose, p.Dead, MotionPose.Evaluate(Ease.In, _deadWeight));

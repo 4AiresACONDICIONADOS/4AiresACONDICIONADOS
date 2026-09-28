@@ -1,12 +1,17 @@
 # DEV STATUS — Breath of Eclipse
 
-**Versión actual: v0.1.1 — Playtest tooling** · Fecha: 2026-09-28 · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
+**Versión actual: v0.1.2 — Runtime stabilization** · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
 
-## ⚠️ NO REAL UNITY PLAYTEST PERFORMED BY CLAUDE
+## v0.1.2 (resumen)
 
-El entorno donde se desarrolla no tiene el Editor de Unity (ni licencia, ni GPU). **Nadie ha ejecutado todavía el
-juego en Unity.** Ningún resultado de juego está verificado: arranque, menú, CombatTest, bosque, combate, cámaras,
-IA, jefe, VFX, audio y UI siguen **sin probar en ejecución**.
+- **Working (probado por el usuario en Unity 6.3):** arranque de `03_CombatTest`, personaje, escenario, ataques y técnicas.
+- **Working (código, pendiente de verificar en Unity):** fundido a negro hasta que la escena y sus shaders están
+  listos (sin pantalla azul); knockdown → en el suelo → levantarse → locomoción, sin atacar ni usar técnicas en el
+  suelo; un golpe ligero no levanta al jugador caído; cancelar ataque/técnica detiene lunge, aire, cámara lenta y
+  trails; F1 muestra estado del jugador y botones Light Hit / Heavy Hit / Knockdown / Launch.
+- **Incomplete:** combat feel (fase B), rediseño de Tidal Breath y Rising Serpent (fases C–E), cámaras, animación.
+- **Next:** verificar v0.1.2 en Unity (F1 → PLAYER HIT TEST) y empezar fase B.
+- Claude no ejecuta Unity: todo lo marcado "código" solo está compilado (0 errores) contra los DLL de Unity 6.3.
 
 ## ✅ PLAYTEST INFRASTRUCTURE READY
 

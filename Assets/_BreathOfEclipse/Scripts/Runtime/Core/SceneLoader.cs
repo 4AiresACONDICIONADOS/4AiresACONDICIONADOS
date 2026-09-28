@@ -17,6 +17,7 @@ namespace BreathOfEclipse.Core
         public static event Action<string> SceneLoaded;
 
         private CanvasGroup _fade;
+        private bool _holdingForScene;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => SceneLoaded = null;
@@ -92,9 +93,43 @@ namespace BreathOfEclipse.Core
             if (PoolManager.Instance != null) PoolManager.Instance.Prune();
             yield return null;
             SceneLoaded?.Invoke(sceneName);
-            yield return Fade(1f, 0f, fadeDuration);
+            if (_holdingForScene)
+            {
+                // The new scene asked to stay black until it is ready; it fades in by itself.
+                while (_holdingForScene) yield return null;
+            }
+            else
+            {
+                yield return Fade(1f, 0f, fadeDuration);
+            }
             _fade.blocksRaycasts = false;
             IsLoading = false;
+        }
+
+        /// <summary>
+        /// Keeps the screen black from this frame until the scene has rendered a few frames and, in the Editor, every
+        /// shader variant it requested has compiled, then fades in. Without it the first second shows the Editor's cyan
+        /// placeholder shader on the sky dome and terrain (the "blue screen" on Play).
+        /// </summary>
+        public void HoldBlackUntilReady(Action onRevealed = null, float fadeIn = 0.45f, float maxWait = 8f)
+        {
+            _holdingForScene = true;
+            _fade.alpha = 1f;
+            StartCoroutine(RevealWhenReady(onRevealed, fadeIn, maxWait));
+        }
+
+        private IEnumerator RevealWhenReady(Action onRevealed, float fadeIn, float maxWait)
+        {
+            float start = Time.unscaledTime;
+            // Let the scene render under the black overlay so every material requests its shader variants.
+            for (int i = 0; i < 3; i++) yield return null;
+#if UNITY_EDITOR
+            while (UnityEditor.ShaderUtil.anythingCompiling && Time.unscaledTime - start < maxWait) yield return null;
+#endif
+            yield return null;
+            onRevealed?.Invoke();
+            yield return Fade(1f, 0f, fadeIn);
+            _holdingForScene = false;
         }
 
         /// <summary>Fades to black and back without loading (respawn transitions).</summary>

@@ -79,7 +79,7 @@ namespace BreathOfEclipse.Breathing
         {
             if (!Running) return;
             ExitPhase();
-            End();
+            End(true);
             _pc.Animator.StopAction(0.1f);
         }
 
@@ -222,8 +222,14 @@ namespace BreathOfEclipse.Breathing
                 _pc.Motor.StopForced();
         }
 
-        private void End()
+        private void End(bool cancelled = false)
         {
+            // An interrupted technique must not leave its slow motion or aerial hang behind (e.g. knocked out of it).
+            if (cancelled)
+            {
+                if (Skill != null && TimeController.Instance != null) TimeController.Instance.CancelSlowMotion("skill_" + Skill.skillId);
+                _pc.Motor.CancelAirHang();
+            }
             Running = false;
             Phase = null;
             _scheduled.Clear();
@@ -237,7 +243,7 @@ namespace BreathOfEclipse.Breathing
                 post.ReleaseSaturation("skill");
                 post.SetCinematicDof(0f, 5f);
             }
-            if (Skill != null && Skill.endsAirborne)
+            if (Skill != null && Skill.endsAirborne && !cancelled)
             {
                 _pc.Motor.AirHang(0.7f);
             }

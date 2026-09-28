@@ -69,7 +69,7 @@ namespace BreathOfEclipse.Characters
 
         public void SetDodge(Vector3 worldDirection, float duration) => PlayMotion("Dodge", duration, 0.03f);
 
-        public void SetKnockedDown(bool value) => _animator.SetBool(KnockedDownId, value);
+        public void SetKnockedDown(bool value, float getUpDuration = 0.4f) => _animator.SetBool(KnockedDownId, value);
 
         public void SetDead(bool value) => _animator.SetBool(DeadId, value);
 

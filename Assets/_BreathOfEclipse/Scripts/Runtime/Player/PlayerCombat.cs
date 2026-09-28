@@ -127,7 +127,13 @@ namespace BreathOfEclipse.Player
                 _lastFinishedTime = Time.time;
             }
             IsAttacking = false;
-            if (cancelled) _pc.Animator.StopAction(0.08f);
+            if (cancelled)
+            {
+                // Interrupted (hit, dodge, jump, move): stop the lunge and the aerial hang with the attack.
+                _pc.Animator.StopAction(0.08f);
+                _pc.Motor.StopForced();
+                _pc.Motor.CancelAirHang();
+            }
             _pc.SetTrails(false, false, 1f);
             if (Current != null && Current.plunge) _pc.Motor.SetGravityScale(1f);
         }

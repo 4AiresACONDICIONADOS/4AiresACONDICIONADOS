@@ -56,6 +56,13 @@ def meta_text(rel_path, is_dir):
                 "  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
                 f"  script: {{fileID: 11500000, guid: {INPUT_ACTION_IMPORTER_GUID}, type: 3}}\n"
                 "  generateWrapperCode: 0\n  wrapperCodePath: \n  wrapperClassName: \n  wrapperCodeNamespace: \n")
+    if ext in (".wav", ".ogg", ".mp3"):
+        # Voice / sound clips: preloaded, Vorbis compressed, loaded through Resources by name.
+        return (f"fileFormatVersion: 2\nguid: {g}\nAudioImporter:\n  externalObjects: {{}}\n  serializedVersion: 7\n"
+                "  defaultSettings:\n    serializedVersion: 2\n    loadType: 0\n    sampleRateSetting: 0\n    sampleRateOverride: 44100\n"
+                "    compressionFormat: 1\n    quality: 0.7\n    conversionMode: 0\n    preloadAudioData: 1\n"
+                "  platformSettingOverrides: {}\n  forceToMono: 0\n  normalize: 0\n  loadInBackground: 0\n  ambisonic: 0\n  3D: 1\n"
+                "  userData: \n  assetBundleName: \n  assetBundleVariant: \n")
     if ext in (".md", ".txt", ".json", ".xml", ".bytes", ".csv"):
         return f"fileFormatVersion: 2\nguid: {g}\nTextScriptImporter:\n  externalObjects: {{}}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
     return f"fileFormatVersion: 2\nguid: {g}\nDefaultImporter:\n  externalObjects: {{}}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"

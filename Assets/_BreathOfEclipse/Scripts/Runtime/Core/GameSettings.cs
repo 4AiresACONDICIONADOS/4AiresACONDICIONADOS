@@ -62,6 +62,13 @@ namespace BreathOfEclipse.Core
         public bool showDamageNumbers = true;
         public bool flashFramesEnabled = true;
         public bool skipUltimateCinematics;
+        [Tooltip("The swordsman announces style, form and technique (Voice volume applies).")]
+        public bool techniqueVoice = true;
+        public bool techniqueSubtitles = true;
+        [Tooltip("Small STYLE / FORM / NAME title while a technique starts.")]
+        public bool techniqueTitles = true;
+        [Tooltip("Voice clip folder under Resources/BreathOfEclipse/Voice (es-419 = Latin American Spanish).")]
+        public string voiceLanguage = "es-419";
         public bool showFps;
         public string lastEquippedStyle = "tidal";
 
@@ -82,6 +89,7 @@ namespace BreathOfEclipse.Core
         {
             masterVolume = Mathf.Clamp01(masterVolume);
             musicVolume = Mathf.Clamp01(musicVolume);
+            if (string.IsNullOrEmpty(voiceLanguage)) voiceLanguage = "es-419";
             sfxVolume = Mathf.Clamp01(sfxVolume);
             voiceVolume = Mathf.Clamp01(voiceVolume);
             ambientVolume = Mathf.Clamp01(ambientVolume);

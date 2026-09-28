@@ -42,6 +42,10 @@ namespace BreathOfEclipse.Core
         public static event Action<int> ComboChanged;
         /// <summary>Short on-screen notification.</summary>
         public static event Action<string> Notification;
+        /// <summary>(text, seconds, color) — spoken technique line as a subtitle; empty text clears it.</summary>
+        public static event Action<string, float, Color> TechniqueSubtitle;
+        /// <summary>(style, form, technique, color, seconds) — small title card for a technique.</summary>
+        public static event Action<string, string, string, Color, float> TechniqueTitle;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
@@ -64,7 +68,13 @@ namespace BreathOfEclipse.Core
             StyleChanged = null;
             ComboChanged = null;
             Notification = null;
+            TechniqueSubtitle = null;
+            TechniqueTitle = null;
         }
+
+        public static void RaiseTechniqueSubtitle(string text, float seconds, Color color) => TechniqueSubtitle?.Invoke(text, seconds, color);
+        public static void RaiseTechniqueTitle(string style, string form, string technique, Color color, float seconds) =>
+            TechniqueTitle?.Invoke(style, form, technique, color, seconds);
 
         public static void RaiseDamage(HitData hit, HitResult result)
         {

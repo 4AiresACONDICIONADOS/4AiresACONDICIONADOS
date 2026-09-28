@@ -192,7 +192,6 @@ namespace BreathOfEclipse.Breathing
             var element = skill.element != Element.None ? skill.element : Current.element;
             if (skill.tier == SkillTier.Ultimate) GameEvents.RaiseUltimateActivated(skill.skillId, callout, element);
             else GameEvents.RaiseSkillUsed(skill.skillId, callout, element);
-            Sfx.Play2D("callout", 0.5f, 1f, AudioCategory.Voice);
 
             _pc.Rig.SetWeaponGlow(Current.glowColor * 1.2f);
             Executor.Start(skill, Current, target);

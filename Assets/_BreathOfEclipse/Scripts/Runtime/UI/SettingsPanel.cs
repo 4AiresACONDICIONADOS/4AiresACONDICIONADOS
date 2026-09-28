@@ -93,6 +93,9 @@ namespace BreathOfEclipse.UI
             Toggle(right, "Damage numbers", () => s.showDamageNumbers, v => s.showDamageNumbers = v);
             Toggle(right, "Anime flash frames", () => s.flashFramesEnabled, v => s.flashFramesEnabled = v);
             Toggle(right, "Skip ultimate cinematics", () => s.skipUltimateCinematics, v => s.skipUltimateCinematics = v);
+            Toggle(right, "Technique voice", () => s.techniqueVoice, v => s.techniqueVoice = v);
+            Toggle(right, "Technique subtitles", () => s.techniqueSubtitles, v => s.techniqueSubtitles = v);
+            Toggle(right, "Technique titles", () => s.techniqueTitles, v => s.techniqueTitles = v);
 
             var bottom = UIFactory.Rect("Bottom", _settingsPage, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 10f), new Vector2(1400f, 70f));
             UIFactory.Horizontal(bottom, 24f);

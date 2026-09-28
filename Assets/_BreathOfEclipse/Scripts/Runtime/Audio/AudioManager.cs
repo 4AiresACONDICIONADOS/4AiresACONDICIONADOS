@@ -36,6 +36,7 @@ namespace BreathOfEclipse.Audio
         private Coroutine _musicRoutine;
 
         private float _master = 1f, _musicVol = 1f, _sfx = 1f, _voice = 1f, _ambientVol = 1f;
+        private float _duck = 1f, _duckLevel = 1f, _duckUntil;
 
         private static readonly string[] Prewarm =
         {
@@ -128,10 +129,10 @@ namespace BreathOfEclipse.Audio
         {
             switch (category)
             {
-                case AudioCategory.Music: return _master * _musicVol;
+                case AudioCategory.Music: return _master * _musicVol * _duck;
                 case AudioCategory.SFX: return _master * _sfx;
                 case AudioCategory.Voice: return _master * _voice;
-                case AudioCategory.Ambient: return _master * _ambientVol;
+                case AudioCategory.Ambient: return _master * _ambientVol * _duck;
                 default: return _master;
             }
         }
@@ -271,6 +272,11 @@ namespace BreathOfEclipse.Audio
                 }
             }
 
+            // Voice ducking: music and ambience dip slightly while a technique is announced.
+            float duckTarget = Time.unscaledTime < _duckUntil ? _duckLevel : 1f;
+            _duck = Mathf.MoveTowards(_duck, duckTarget, Time.unscaledDeltaTime * (duckTarget < _duck ? 4f : 1.2f));
+            if (_ambient.isPlaying) _ambient.volume = 0.6f * CategoryVolume(AudioCategory.Ambient);
+
             // Keep music volume in sync with the settings slider.
             if (_musicRoutine == null)
             {
@@ -312,6 +318,13 @@ namespace BreathOfEclipse.Audio
         // ------------------------------------------------------------------ ambient
 
         /// <summary>Plays a looping ambience clip from the library (e.g. "ambient_forest"). Placeholder: soft noise bed.</summary>
+        /// <summary>Lowers music and ambience to <paramref name="level"/> (0-1) for <paramref name="seconds"/>, then restores them.</summary>
+        public void Duck(float level, float seconds)
+        {
+            _duckLevel = Mathf.Clamp01(level);
+            _duckUntil = Mathf.Max(_duckUntil, Time.unscaledTime + seconds);
+        }
+
         public void PlayAmbient(string id)
         {
             var entry = Library != null ? Library.Find(id) : null;

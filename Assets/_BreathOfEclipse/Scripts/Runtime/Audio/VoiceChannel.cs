@@ -1,0 +1,187 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
+using BreathOfEclipse.Core;
+using BreathOfEclipse.Data;
+using UnityEngine;
+
+namespace BreathOfEclipse.Audio
+{
+    /// <summary>
+    /// Voice clips by spoken text: Resources/BreathOfEclipse/Voice/&lt;language&gt;/&lt;key&gt;, where the key is the text
+    /// lower-cased without accents or punctuation ("¡Serpiente Ascendente!" → serpiente_ascendente). Replace a
+    /// placeholder by dropping a recorded clip with the same name into that folder.
+    /// </summary>
+    public static class VoiceLibrary
+    {
+        public const string Root = "BreathOfEclipse/Voice/";
+        private static readonly Dictionary<string, AudioClip> Cache = new Dictionary<string, AudioClip>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => Cache.Clear();
+
+        public static AudioClip Get(string language, string text)
+        {
+            string key = Key(text);
+            if (string.IsNullOrEmpty(key)) return null;
+            string path = Root + language + "/" + key;
+            if (Cache.TryGetValue(path, out var clip)) return clip;
+            clip = Resources.Load<AudioClip>(path);
+            Cache[path] = clip;
+            return clip;
+        }
+
+        public static string Key(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return null;
+            var sb = new StringBuilder(text.Length);
+            bool underscore = false;
+            foreach (char c in text.Normalize(NormalizationForm.FormD))
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark) continue;
+                if (char.IsLetterOrDigit(c))
+                {
+                    sb.Append(char.ToLowerInvariant(c));
+                    underscore = false;
+                }
+                else if (sb.Length > 0 && !underscore)
+                {
+                    sb.Append('_');
+                    underscore = true;
+                }
+            }
+            if (underscore) sb.Length--;
+            return sb.ToString();
+        }
+    }
+
+    /// <summary>
+    /// One voice per character: plays a short sequence of lines (e.g. style → form → technique) back to back,
+    /// interrupting whatever that character was saying. 2D for the local player, 3D for enemies.
+    /// </summary>
+    public sealed class VoiceChannel : MonoBehaviour
+    {
+        public struct Line
+        {
+            public string Text;
+            public AudioClip Clip;
+            /// <summary>Silence before this line (seconds).</summary>
+            public float Gap;
+        }
+
+        /// <summary>(line index, line) when a line starts.</summary>
+        public event Action<int, Line> LineStarted;
+        /// <summary>The last line finished (not raised after <see cref="Stop"/>).</summary>
+        public event Action Finished;
+
+        public bool IsSpeaking => _index < _lines.Count || _busy;
+
+        private AudioSource _source;
+        private readonly List<Line> _lines = new List<Line>();
+        private int _index;
+        private float _nextAt;
+        private bool _busy;
+        private float _busyUntil;
+        private float _fadeFrom, _fadeStart, _fadeDuration;
+        private bool _fading;
+        private float _baseVolume = 1f;
+
+        public static VoiceChannel Create(Transform owner, bool positional, float volume = 1f)
+        {
+            var go = new GameObject("Voice");
+            go.transform.SetParent(owner, false);
+            go.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+            var ch = go.AddComponent<VoiceChannel>();
+            ch._source = go.AddComponent<AudioSource>();
+            ch._source.playOnAwake = false;
+            ch._source.spatialBlend = positional ? 1f : 0f;
+            ch._source.rolloffMode = AudioRolloffMode.Linear;
+            ch._source.minDistance = 3f;
+            ch._source.maxDistance = 45f;
+            ch._source.priority = 16;
+            ch._baseVolume = volume;
+            return ch;
+        }
+
+        /// <summary>Speaks <paramref name="lines"/> in order; lines without a clip are skipped (their text still raises LineStarted).</summary>
+        public void Speak(IEnumerable<Line> lines)
+        {
+            _source.Stop();
+            _fading = false;
+            _lines.Clear();
+            _lines.AddRange(lines);
+            _index = 0;
+            _busy = false;
+            _nextAt = Time.unscaledTime + (_lines.Count > 0 ? _lines[0].Gap : 0f);
+        }
+
+        /// <summary>Stops now (fade in seconds) and drops the queued lines.</summary>
+        public void Stop(float fade = 0.08f)
+        {
+            _lines.Clear();
+            _index = 0;
+            _busy = false;
+            if (!_source.isPlaying) return;
+            _fading = true;
+            _fadeFrom = _source.volume;
+            _fadeStart = Time.unscaledTime;
+            _fadeDuration = Mathf.Max(0.01f, fade);
+        }
+
+        /// <summary>Lets the current line finish but drops the ones after it.</summary>
+        public void DropQueued()
+        {
+            if (_index < _lines.Count) _lines.RemoveRange(_index, _lines.Count - _index);
+        }
+
+        private void Update()
+        {
+            float volume = _baseVolume * (AudioManager.Instance != null ? AudioManager.Instance.CategoryVolume(AudioCategory.Voice) : 1f);
+            if (_fading)
+            {
+                float k = 1f - Mathf.Clamp01((Time.unscaledTime - _fadeStart) / _fadeDuration);
+                _source.volume = _fadeFrom * k;
+                if (k <= 0f)
+                {
+                    _source.Stop();
+                    _fading = false;
+                }
+                return;
+            }
+            _source.volume = volume;
+
+            float now = Time.unscaledTime;
+            if (_busy)
+            {
+                // A line is playing (or, without a clip, being "read" for its estimated length).
+                if (_source.isPlaying || now < _busyUntil) return;
+                _busy = false;
+                if (_index >= _lines.Count)
+                {
+                    Finished?.Invoke();
+                    return;
+                }
+                _nextAt = now + _lines[_index].Gap;
+            }
+            if (_index >= _lines.Count || now < _nextAt) return;
+
+            var line = _lines[_index];
+            _index++;
+            _busy = true;
+            if (line.Clip != null)
+            {
+                _source.clip = line.Clip;
+                _source.Play();
+                _busyUntil = now;
+            }
+            else
+            {
+                _busyUntil = now + EstimateSeconds(line.Text);
+            }
+            LineStarted?.Invoke(_index - 1, line);
+        }
+
+        public static float EstimateSeconds(string text) => string.IsNullOrEmpty(text) ? 0f : 0.25f + text.Length * 0.055f;
+    }
+}

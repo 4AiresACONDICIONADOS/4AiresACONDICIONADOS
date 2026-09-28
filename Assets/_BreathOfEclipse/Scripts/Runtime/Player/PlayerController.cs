@@ -129,6 +129,7 @@ namespace BreathOfEclipse.Player
 
             breathing.Initialize(this, db.styles, SaveSystem.Settings.lastEquippedStyle);
             breathing.Executor.Finished += OnSkillFinished;
+            BreathingVoiceSystem.Attach(breathing);
         }
 
         private void OnEnable()

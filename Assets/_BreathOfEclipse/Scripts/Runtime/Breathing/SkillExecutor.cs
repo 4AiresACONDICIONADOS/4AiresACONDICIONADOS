@@ -75,9 +75,13 @@ namespace BreathOfEclipse.Breathing
             EnterNext();
         }
 
+        /// <summary>Raised when a running technique is cancelled (hit, dodge, death…) before it finished.</summary>
+        public event Action<SkillData> Interrupted;
+
         public void Cancel()
         {
             if (!Running) return;
+            Interrupted?.Invoke(Skill);
             ExitPhase();
             End(true);
             _pc.Animator.StopAction(0.1f);

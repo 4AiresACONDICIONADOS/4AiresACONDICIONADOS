@@ -46,7 +46,9 @@ namespace BreathOfEclipse.UI
         private float _comboScale;
         private float _comboAlpha;
         private RectTransform _bannerRoot;
-        private Text _bannerText, _bannerForm;
+        private Text _bannerText, _bannerForm, _bannerStyle;
+        private Text _subtitle;
+        private float _subtitleTimer;
         private Image _bannerBrush;
         private float _bannerTimer;
         private Text _notice;
@@ -88,6 +90,8 @@ namespace BreathOfEclipse.UI
             GameEvents.PlayerRespawned += OnPlayerRespawned;
             GameEvents.CameraModeChanged += OnCameraMode;
             GameEvents.StyleChanged += OnStyleChanged;
+            GameEvents.TechniqueTitle += OnTechniqueTitle;
+            GameEvents.TechniqueSubtitle += OnTechniqueSubtitle;
         }
 
         private void OnDisable()
@@ -100,7 +104,8 @@ namespace BreathOfEclipse.UI
             GameEvents.PlayerRespawned -= OnPlayerRespawned;
             GameEvents.CameraModeChanged -= OnCameraMode;
             GameEvents.StyleChanged -= OnStyleChanged;
-            if (_boundBreathing != null) _boundBreathing.TechniqueStarted -= OnTechnique;
+            GameEvents.TechniqueTitle -= OnTechniqueTitle;
+            GameEvents.TechniqueSubtitle -= OnTechniqueSubtitle;
         }
 
         // ------------------------------------------------------------------ build
@@ -185,13 +190,20 @@ namespace BreathOfEclipse.UI
             _comboCount = UIFactory.Text("Count", _comboRoot, "", 92, Color.white, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 14f), new Vector2(300f, 100f), TextAnchor.MiddleRight, FontStyle.BoldAndItalic);
             _comboLabel = UIFactory.Text("Label", _comboRoot, "HITS", 28, UIColors.TextDim, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-4f, -48f), new Vector2(300f, 34f), TextAnchor.MiddleRight, FontStyle.BoldAndItalic);
 
-            // Center: technique banner (brush stroke + callout).
-            _bannerRoot = UIFactory.Rect("Banner", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 250f), new Vector2(1300f, 150f));
+            // Upper center: small technique title card (STYLE / FORM / NAME) on a brush stroke.
+            var mid = new Vector2(0.5f, 0.5f);
+            _bannerRoot = UIFactory.Rect("Banner", root, mid, mid, mid, new Vector2(0f, 310f), new Vector2(760f, 124f));
             _bannerBrush = UIFactory.Image("Brush", _bannerRoot, new Color(0.02f, 0.02f, 0.05f, 0.85f), ProceduralTextures.UISprite("brush"));
             UIFactory.Fill(_bannerBrush.rectTransform);
-            _bannerForm = UIFactory.Text("Form", _bannerRoot, "", 24, UIColors.TextDim, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 38f), new Vector2(1200f, 30f), TextAnchor.MiddleCenter, FontStyle.Italic);
-            _bannerText = UIFactory.Text("Callout", _bannerRoot, "", 54, Color.white, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -8f), new Vector2(1250f, 70f), TextAnchor.MiddleCenter, FontStyle.BoldAndItalic);
+            _bannerStyle = UIFactory.Text("Style", _bannerRoot, "", 18, UIColors.TextDim, mid, mid, new Vector2(0f, 40f), new Vector2(700f, 24f), TextAnchor.MiddleCenter, FontStyle.Bold);
+            _bannerForm = UIFactory.Text("Form", _bannerRoot, "", 22, UIColors.TextDim, mid, mid, new Vector2(0f, 16f), new Vector2(700f, 28f), TextAnchor.MiddleCenter, FontStyle.Italic);
+            _bannerText = UIFactory.Text("Callout", _bannerRoot, "", 38, Color.white, mid, mid, new Vector2(0f, -22f), new Vector2(740f, 50f), TextAnchor.MiddleCenter, FontStyle.BoldAndItalic);
             _bannerRoot.gameObject.SetActive(false);
+
+            // Bottom center: technique voice subtitles (small, above the skill bar area, never over the fight).
+            var bottom = new Vector2(0.5f, 0f);
+            _subtitle = UIFactory.Text("Subtitle", root, "", 26, Color.white, bottom, bottom, new Vector2(0f, 214f), new Vector2(1200f, 36f), TextAnchor.MiddleCenter, FontStyle.Italic);
+            _subtitle.gameObject.SetActive(false);
 
             // Top-center: notifications.
             _notice = UIFactory.Text("Notice", root, "", 26, new Color(1f, 0.95f, 0.8f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(1200f, 40f), TextAnchor.MiddleCenter, FontStyle.Bold);
@@ -267,17 +279,24 @@ namespace BreathOfEclipse.UI
             _bossPhase.text = phase >= 2 ? "PHASE II" : "";
         }
 
-        private void OnTechnique(SkillData skill, string callout)
+        private void OnTechniqueTitle(string style, string form, string technique, Color color, float seconds)
         {
             _bannerRoot.gameObject.SetActive(true);
-            _bannerText.text = callout;
-            _bannerForm.text = skill.formName + (skill.tier == SkillTier.Advanced ? " · ADVANCED" : skill.tier == SkillTier.Ultimate ? " · ULTIMATE" : "");
-            var pc = PlayerController.Instance;
-            Color c = pc != null ? ElementPalette.Display(pc.Breathing.CurrentElement) : Color.white;
-            _bannerText.color = Color.Lerp(Color.white, c, 0.35f);
-            _bannerBrush.color = new Color(c.r * 0.15f, c.g * 0.15f, c.b * 0.2f, 0.88f);
-            _bannerTimer = skill.tier == SkillTier.Ultimate ? 2.6f : 1.5f;
-            _bannerRoot.localScale = new Vector3(1.4f, 0.6f, 1f);
+            _bannerStyle.text = style;
+            _bannerForm.text = form;
+            _bannerText.text = technique;
+            _bannerText.color = color;
+            _bannerBrush.color = new Color(color.r * 0.12f, color.g * 0.12f, color.b * 0.18f, 0.85f);
+            _bannerTimer = seconds;
+            _bannerRoot.localScale = new Vector3(1.25f, 0.7f, 1f);
+        }
+
+        private void OnTechniqueSubtitle(string text, float seconds, Color color)
+        {
+            _subtitleTimer = string.IsNullOrEmpty(text) ? 0f : seconds;
+            _subtitle.text = text;
+            _subtitle.color = color;
+            _subtitle.gameObject.SetActive(_subtitleTimer > 0f);
         }
 
         private void OnPlayerDied()
@@ -310,9 +329,7 @@ namespace BreathOfEclipse.UI
             var pc = PlayerController.Instance;
             if (pc != null && pc.Breathing != _boundBreathing)
             {
-                if (_boundBreathing != null) _boundBreathing.TechniqueStarted -= OnTechnique;
                 _boundBreathing = pc.Breathing;
-                if (_boundBreathing != null) _boundBreathing.TechniqueStarted += OnTechnique;
                 _styleDirty = true;
             }
 
@@ -322,6 +339,7 @@ namespace BreathOfEclipse.UI
             UpdateBoss(dt);
             UpdateCombo(dt);
             UpdateBanner(dt);
+            UpdateSubtitle(dt);
             UpdateNotices(dt);
             UpdateLockOn(pc);
             UpdatePrompt(pc);
@@ -438,8 +456,18 @@ namespace BreathOfEclipse.UI
             float a = Mathf.Clamp01(_bannerTimer * 3f);
             _bannerText.color = new Color(_bannerText.color.r, _bannerText.color.g, _bannerText.color.b, a);
             _bannerForm.color = new Color(UIColors.TextDim.r, UIColors.TextDim.g, UIColors.TextDim.b, a);
+            _bannerStyle.color = new Color(UIColors.TextDim.r, UIColors.TextDim.g, UIColors.TextDim.b, a);
             _bannerBrush.color = new Color(_bannerBrush.color.r, _bannerBrush.color.g, _bannerBrush.color.b, 0.88f * a);
             if (_bannerTimer <= 0f) _bannerRoot.gameObject.SetActive(false);
+        }
+
+        private void UpdateSubtitle(float dt)
+        {
+            if (!_subtitle.gameObject.activeSelf) return;
+            _subtitleTimer -= dt;
+            var c = _subtitle.color;
+            _subtitle.color = new Color(c.r, c.g, c.b, Mathf.Clamp01(_subtitleTimer * 2.5f));
+            if (_subtitleTimer <= 0f) _subtitle.gameObject.SetActive(false);
         }
 
         private void UpdateNotices(float dt)

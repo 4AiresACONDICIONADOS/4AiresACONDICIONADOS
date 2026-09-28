@@ -46,6 +46,7 @@ gameplay_actions = [
     action('Skill1'), action('Skill2'), action('Skill3'), action('Skill4'),
     action('Ultimate'), action('CameraMode'), action('Interact'),
     action('NextStyle'), action('PrevStyle'),
+    action('FormWheel'),
 ]
 
 b = []
@@ -78,6 +79,8 @@ b.append(binding('Dodge', '<Keyboard>/rightAlt', KM))
 b.append(binding('LockOn', '<Keyboard>/tab', KM))
 b.append(binding('SwitchTarget', '<Mouse>/scroll/y', KM))
 b.append(binding('PrevStyle', '<Keyboard>/z', KM))
+# Hold to open the breathing form wheel (every form of the style; keys 1-4 stay as quick slots).
+b.append(binding('FormWheel', '<Keyboard>/f', KM))
 
 system_actions = [action('Pause'), action('DebugMenu'), action('ToggleFps')]
 sb = [

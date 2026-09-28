@@ -74,6 +74,7 @@ namespace BreathOfEclipse.UI
             var hud = canvas.gameObject.AddComponent<HUDController>();
             hud._canvas = canvas;
             hud.Build();
+            FormWheel.Create(canvas);
             return hud;
         }
 

@@ -68,6 +68,11 @@ namespace BreathOfEclipse.Core
         public bool JumpHeld { get; private set; }
         public bool LightHeld { get; private set; }
         public bool HeavyHeld { get; private set; }
+        /// <summary>The form wheel key is held (gameplay input enabled).</summary>
+        public bool FormWheelHeld { get; private set; }
+        /// <summary>Raw pointer delta in pixels and right stick, read even while look is suppressed (form wheel).</summary>
+        public Vector2 PointerDelta { get; private set; }
+        public Vector2 AimStick { get; private set; }
         /// <summary>True when the last look input came from a gamepad stick.</summary>
         public bool UsingGamepad { get; private set; }
         /// <summary>Unscaled time of the last look input (camera auto-recentering).</summary>
@@ -96,6 +101,7 @@ namespace BreathOfEclipse.Core
         private InputActionMap _gameplay;
         private InputActionMap _system;
         private InputAction _move, _look, _lookStick, _sprint, _jump, _dodge, _light, _heavy, _block, _lockOn, _switchTarget;
+        private InputAction _formWheel;
         private InputAction _skill1, _skill2, _skill3, _skill4, _ultimate, _cameraMode, _interact, _nextStyle, _prevStyle;
         private InputAction _pause, _debugMenu, _toggleFps;
         private float _switchCooldown;
@@ -181,6 +187,8 @@ namespace BreathOfEclipse.Core
             _light = _gameplay.FindAction("LightAttack", true);
             _heavy = _gameplay.FindAction("HeavyAttack", true);
             _block = _gameplay.FindAction("Block", true);
+            // Optional: older or customised assets may not have it.
+            _formWheel = _gameplay.FindAction("FormWheel", false);
             _lockOn = _gameplay.FindAction("LockOn", true);
             _switchTarget = _gameplay.FindAction("SwitchTarget", true);
             _skill1 = _gameplay.FindAction("Skill1", true);
@@ -235,7 +243,8 @@ namespace BreathOfEclipse.Core
                 _gameplay.Disable();
                 Move = Vector2.zero;
                 LookDelta = Vector2.zero;
-                SprintHeld = BlockHeld = JumpHeld = LightHeld = HeavyHeld = false;
+                SprintHeld = BlockHeld = JumpHeld = LightHeld = HeavyHeld = FormWheelHeld = false;
+                PointerDelta = AimStick = Vector2.zero;
                 Buffer.ClearAll();
             }
         }
@@ -306,6 +315,9 @@ namespace BreathOfEclipse.Core
             JumpHeld = _jump.IsPressed() || (sim != null && sim.Jump);
             LightHeld = _light.IsPressed() || (sim != null && sim.Light);
             HeavyHeld = _heavy.IsPressed() || (sim != null && sim.Heavy);
+            FormWheelHeld = _formWheel != null && _formWheel.IsPressed();
+            PointerDelta = _look.ReadValue<Vector2>();
+            AimStick = _lookStick.ReadValue<Vector2>();
 
             Record(_light, BufferedAction.LightAttack, now);
             Record(_heavy, BufferedAction.HeavyAttack, now);

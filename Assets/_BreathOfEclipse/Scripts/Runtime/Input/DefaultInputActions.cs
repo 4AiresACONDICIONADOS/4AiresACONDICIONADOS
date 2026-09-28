@@ -190,6 +190,15 @@ namespace BreathOfEclipse.Core
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""FormWheel"",
+                    ""type"": ""Button"",
+                    ""id"": ""359c43d8-c5d0-5550-96f6-a3f60a1c301d"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -707,6 +716,17 @@ namespace BreathOfEclipse.Core
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",
                     ""action"": ""PrevStyle"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""583abf7b-95ec-5db8-b593-c6d9403df36d"",
+                    ""path"": ""<Keyboard>/f"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""FormWheel"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }

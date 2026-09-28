@@ -192,7 +192,7 @@ namespace BreathOfEclipse.UI
 
             if (reader != null && reader.Asset != null)
             {
-                string[] names = { "Jump", "Dodge", "Sprint", "LightAttack", "HeavyAttack", "Block", "LockOn", "Skill1", "Skill2", "Skill3", "Skill4", "Ultimate", "CameraMode", "Interact", "NextStyle", "PrevStyle" };
+                string[] names = { "Jump", "Dodge", "Sprint", "LightAttack", "HeavyAttack", "Block", "LockOn", "Skill1", "Skill2", "Skill3", "Skill4", "FormWheel", "Ultimate", "CameraMode", "Interact", "NextStyle", "PrevStyle" };
                 for (int i = 0; i < names.Length; i++)
                 {
                     var action = reader.Asset.FindAction(names[i]);
@@ -248,10 +248,11 @@ namespace BreathOfEclipse.UI
                 case "LightAttack": return "Light attack";
                 case "HeavyAttack": return "Heavy attack";
                 case "LockOn": return "Lock-on";
-                case "Skill1": return "Technique 1";
-                case "Skill2": return "Technique 2";
-                case "Skill3": return "Technique 3";
-                case "Skill4": return "Advanced form";
+                case "Skill1": return "Quick form 1";
+                case "Skill2": return "Quick form 2";
+                case "Skill3": return "Quick form 3";
+                case "Skill4": return "Quick form 4";
+                case "FormWheel": return "Form wheel (hold)";
                 case "CameraMode": return "Camera mode";
                 case "NextStyle": return "Next style";
                 case "PrevStyle": return "Previous style";

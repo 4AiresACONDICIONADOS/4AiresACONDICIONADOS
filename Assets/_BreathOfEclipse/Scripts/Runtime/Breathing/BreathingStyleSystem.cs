@@ -13,11 +13,12 @@ namespace BreathOfEclipse.Breathing
 {
     /// <summary>
     /// Equips breathing styles (palette, passives, trails, sword aura) and executes their techniques:
-    /// keys 1-3 = forms, 4 = advanced form, R = ultimate. Handles stamina / breath costs and cooldowns.
+    /// any number of forms (keys 1-4 = quick slots, the form wheel reaches all), R = ultimate.
+    /// Handles stamina / breath costs and cooldowns.
     /// </summary>
     public sealed class BreathingStyleSystem : MonoBehaviour
     {
-        public const int UltimateSlot = 4;
+        public const int UltimateSlot = BreathingStyleData.UltimateSlot;
         private const string PassiveBuffPrefix = "style_passive_";
 
         public IReadOnlyList<BreathingStyleData> Styles => _styles;
@@ -33,6 +34,8 @@ namespace BreathOfEclipse.Breathing
         public event Action<BreathingStyleData> StyleChanged;
         /// <summary>(skill, callout text) — HUD shows the anime technique banner.</summary>
         public event Action<SkillData, string> TechniqueStarted;
+        /// <summary>(style, form or null for the ultimate, skill) — voice, subtitles and title card.</summary>
+        public event Action<BreathingStyleData, BreathingForm, SkillData> TechniqueAnnounced;
 
         private readonly List<BreathingStyleData> _styles = new List<BreathingStyleData>();
         private PlayerController _pc;
@@ -111,11 +114,38 @@ namespace BreathOfEclipse.Breathing
             return s == null ? 0f : Cooldowns.Remaining(s.skillId, Time.time);
         }
 
+        public int FormCount => Current != null ? Current.FormCount : 0;
+        public BreathingForm GetForm(int index) => Current != null ? Current.GetForm(index) : null;
+
         /// <summary>Checks whether a slot can be used now. <paramref name="reason"/> explains failures for the HUD.</summary>
-        public bool CanUse(int slot, out string reason)
+        public bool CanUse(int slot, out string reason) => CanUseSkill(GetSkill(slot), out reason);
+
+        public bool CanUseForm(int formIndex, out string reason)
+        {
+            var form = GetForm(formIndex);
+            if (form != null && !form.unlocked)
+            {
+                reason = string.IsNullOrEmpty(form.unlockRequirement) ? "Form locked" : "Locked: " + form.unlockRequirement;
+                return false;
+            }
+            return CanUseSkill(form != null ? form.skill : null, out reason);
+        }
+
+        public bool TryUse(int slot, Transform target) => TryUseSkill(GetSkill(slot), target, out _);
+
+        public bool TryUseForm(int formIndex, Transform target)
+        {
+            if (!CanUseForm(formIndex, out var reason))
+            {
+                if (!string.IsNullOrEmpty(reason)) GameEvents.Notify(reason);
+                return false;
+            }
+            return TryUseSkill(GetForm(formIndex).skill, target, out _);
+        }
+
+        private bool CanUseSkill(SkillData skill, out string reason)
         {
             reason = null;
-            var skill = GetSkill(slot);
             if (skill == null)
             {
                 reason = "No technique";
@@ -145,20 +175,20 @@ namespace BreathOfEclipse.Breathing
             return true;
         }
 
-        public bool TryUse(int slot, Transform target)
+        private bool TryUseSkill(SkillData skill, Transform target, out string reason)
         {
-            if (!CanUse(slot, out var reason))
+            if (!CanUseSkill(skill, out reason))
             {
                 if (!string.IsNullOrEmpty(reason)) GameEvents.Notify(reason);
                 return false;
             }
-            var skill = GetSkill(slot);
             _pc.Stats.Stamina.TrySpend(skill.staminaCost * Current.staminaCostMultiplier);
             _pc.Stats.Breath.TrySpend(skill.breathCost);
             Cooldowns.Start(skill.skillId, skill.cooldown, Time.time);
 
             string callout = string.IsNullOrEmpty(skill.callout) ? $"{Current.displayName} — {skill.displayName.ToUpperInvariant()}" : skill.callout;
             TechniqueStarted?.Invoke(skill, callout);
+            TechniqueAnnounced?.Invoke(Current, Current.FindForm(skill), skill);
             var element = skill.element != Element.None ? skill.element : Current.element;
             if (skill.tier == SkillTier.Ultimate) GameEvents.RaiseUltimateActivated(skill.skillId, callout, element);
             else GameEvents.RaiseSkillUsed(skill.skillId, callout, element);

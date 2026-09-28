@@ -77,6 +77,9 @@ namespace BreathOfEclipse.Player
         private bool _gettingUp;
         private float _knockAirTime;
         private const float MaxKnockAirTime = 2.5f;
+        private int _requestedForm = -1;
+        private float _requestedFormTime;
+        private const float FormRequestBuffer = 0.3f;
         private float _footstepTimer;
 
         /// <summary>Down after a knockdown / launch, or getting up (no attacks or techniques).</summary>
@@ -374,9 +377,17 @@ namespace BreathOfEclipse.Player
                 if (StartSkill(BreathingStyleSystem.UltimateSlot)) return;
             }
 
+            if ((allowed & CancelFlags.Skill) != 0 && _requestedForm >= 0)
+            {
+                int form = _requestedForm;
+                bool fresh = Time.unscaledTime - _requestedFormTime <= FormRequestBuffer;
+                _requestedForm = -1;
+                if (fresh && StartForm(form)) return;
+            }
+
             if ((allowed & CancelFlags.Skill) != 0)
             {
-                for (int slot = 0; slot < 4; slot++)
+                for (int slot = 0; slot < BreathingStyleData.QuickSlotCount; slot++)
                 {
                     var action = (BufferedAction)((int)BufferedAction.Skill1 + slot);
                     if (!buffer.Has(action, now)) continue;
@@ -484,6 +495,31 @@ namespace BreathOfEclipse.Player
             }
             CancelCurrentAction();
             if (!Breathing.TryUse(slot, LockOn.CurrentPoint)) return false;
+            SetState(PlayerState.Skill);
+            _lastCombatTime = Time.time;
+            return true;
+        }
+
+        /// <summary>
+        /// Asks for any form of the equipped style (form wheel, labs). Buffered like a key press and executed as
+        /// soon as the current state allows a technique.
+        /// </summary>
+        public void RequestForm(int formIndex)
+        {
+            _requestedForm = formIndex;
+            _requestedFormTime = Time.unscaledTime;
+        }
+
+        private bool StartForm(int formIndex)
+        {
+            if (!CanAct) return false;
+            if (!Breathing.CanUseForm(formIndex, out var reason))
+            {
+                if (!string.IsNullOrEmpty(reason)) GameEvents.Notify(reason);
+                return false;
+            }
+            CancelCurrentAction();
+            if (!Breathing.TryUseForm(formIndex, LockOn.CurrentPoint)) return false;
             SetState(PlayerState.Skill);
             _lastCombatTime = Time.time;
             return true;

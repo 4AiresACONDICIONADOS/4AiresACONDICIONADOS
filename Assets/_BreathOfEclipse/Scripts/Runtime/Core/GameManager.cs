@@ -78,10 +78,10 @@ namespace BreathOfEclipse.Core
             var db = Resources.Load<GameDatabase>(GameDatabase.ResourcePath);
             if (db != null && db.styles.Count > 0 && db.player != null && db.playerCombos != null && db.playerWeapon != null)
             {
-                if (db.contentVersion < DefaultContent.ContentVersion)
-                    Debug.LogWarning($"[GameManager] GameDatabase asset is content v{db.contentVersion}; code defaults are v{DefaultContent.ContentVersion}. " +
-                                     "Use 'Breath of Eclipse/Data/Export Default Content (overwrite)' to refresh it.");
-                return db;
+                if (db.contentVersion >= DefaultContent.ContentVersion) return db;
+                // An older export would hide new content (e.g. the 7 Water forms): play with the code defaults instead.
+                Debug.LogWarning($"[GameManager] GameDatabase asset is content v{db.contentVersion}; code defaults are v{DefaultContent.ContentVersion}. " +
+                                 "Using the code defaults. 'Breath of Eclipse/Data/Export Default Content (overwrite)' refreshes the editable assets.");
             }
             return DefaultContent.Build();
         }

@@ -50,9 +50,9 @@ namespace BreathOfEclipse.Data
             foreach (var s in styles)
             {
                 if (s == null) continue;
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < s.TechniqueCount; i++)
                 {
-                    var skill = s.GetSkill(i);
+                    var skill = s.GetTechnique(i);
                     if (skill != null && skill.skillId == skillId) return skill;
                 }
             }

@@ -29,9 +29,9 @@ namespace BreathOfEclipse.Tests
         private IEnumerable<SkillData> AllSkills()
         {
             foreach (var style in _db.styles)
-                for (int i = 0; i <= 4; i++)
+                for (int i = 0; i < style.TechniqueCount; i++)
                 {
-                    var s = style.GetSkill(i);
+                    var s = style.GetTechnique(i);
                     if (s != null) yield return s;
                 }
         }
@@ -48,18 +48,40 @@ namespace BreathOfEclipse.Tests
         }
 
         [Test]
-        public void FiveBreathingStyles_EachWithThreeTechniquesAdvancedAndUltimate()
+        public void FiveBreathingStyles_EachWithFormsQuickSlotsAndUltimate()
         {
             Assert.AreEqual(5, _db.styles.Count);
             var ids = new HashSet<string>();
             foreach (var style in _db.styles)
             {
                 Assert.IsTrue(ids.Add(style.styleId), $"Duplicate style id {style.styleId}");
-                Assert.AreEqual(3, style.techniques.Count, style.styleId);
-                Assert.IsNotNull(style.advanced, style.styleId);
+                Assert.GreaterOrEqual(style.FormCount, 4, style.styleId);
+                Assert.LessOrEqual(style.FormCount, 11, style.styleId);
+                int lastNumber = 0;
+                for (int i = 0; i < style.FormCount; i++)
+                {
+                    var form = style.GetForm(i);
+                    Assert.IsNotNull(form.skill, $"{style.styleId} form {i + 1}");
+                    Assert.Greater(form.formNumber, lastNumber, $"{style.styleId}: form numbers must increase");
+                    Assert.LessOrEqual(form.formNumber, 11, style.styleId);
+                    Assert.IsNotEmpty(form.skill.voiceTechniqueCall, $"{form.skill.skillId}: Spanish name call");
+                    lastNumber = form.formNumber;
+                }
+                Assert.IsNotEmpty(style.styleCall, style.styleId);
+                for (int slot = 0; slot < BreathingStyleData.QuickSlotCount; slot++)
+                    Assert.IsNotNull(style.GetSkill(slot), $"{style.styleId} quick slot {slot + 1}");
                 Assert.IsNotNull(style.ultimate, style.styleId);
                 Assert.AreEqual(SkillTier.Ultimate, style.ultimate.tier, style.styleId);
             }
+        }
+
+        [Test]
+        public void WaterBreathing_HasSevenForms_RisingSerpentIsTheSeventh()
+        {
+            var tidal = _db.FindStyle("tidal");
+            Assert.IsNotNull(tidal);
+            Assert.AreEqual(7, tidal.FormCount);
+            Assert.AreEqual("tidal_rising_serpent", tidal.GetForm(6).skill.skillId);
         }
 
         [Test]

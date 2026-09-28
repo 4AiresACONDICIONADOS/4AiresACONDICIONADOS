@@ -221,7 +221,7 @@ namespace BreathOfEclipse.Playtest
                 {
                     var lab = gameObject.AddComponent<VfxLab>();
                     lab.PresetStyle = "tidal";
-                    lab.PresetSlot = 0;
+                    lab.PresetSkillId = "tidal_rising_serpent";
                     lab.PresetInterval = 3f;
                     return lab;
                 }

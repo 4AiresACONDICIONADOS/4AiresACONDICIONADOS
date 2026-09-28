@@ -27,7 +27,15 @@ namespace BreathOfEclipse.EditorTools
                 if (SessionState.GetBool(AutoExportSessionKey, false)) return;
                 SessionState.SetBool(AutoExportSessionKey, true);
                 if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-                if (AssetDatabase.LoadAssetAtPath<GameDatabase>(DatabasePath) != null) return;
+                var existing = AssetDatabase.LoadAssetAtPath<GameDatabase>(DatabasePath);
+                if (existing != null && existing.contentVersion < DefaultContent.ContentVersion)
+                {
+                    Debug.Log($"[Breath of Eclipse] Data assets are content v{existing.contentVersion}; exporting v{DefaultContent.ContentVersion} " +
+                              "(new forms and voice lines). Previous versions stay in version control.");
+                    Export();
+                    return;
+                }
+                if (existing != null) return;
                 if (AssetDatabase.IsValidFolder(DataRoot))
                 {
                     Debug.LogWarning("[Breath of Eclipse] GameDatabase asset is missing but " + DataRoot + " exists. The game uses code defaults. " +
@@ -78,9 +86,9 @@ namespace BreathOfEclipse.EditorTools
             foreach (var style in db.styles)
             {
                 string folder = $"{DataRoot}/BreathingStyles/{Sanitize(style.styleId, "style")}";
-                for (int i = 0; i <= 4; i++)
+                for (int i = 0; i < style.TechniqueCount; i++)
                 {
-                    var skill = style.GetSkill(i);
+                    var skill = style.GetTechnique(i);
                     if (skill != null) Save(skill, $"{folder}/Skill_{Sanitize(skill.skillId, "skill")}.asset", written);
                 }
                 Save(style, $"{folder}/Style_{Sanitize(style.styleId, "style")}.asset", written);

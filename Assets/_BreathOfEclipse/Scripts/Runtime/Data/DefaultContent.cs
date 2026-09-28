@@ -11,7 +11,7 @@ namespace BreathOfEclipse.Data
     /// </summary>
     public static class DefaultContent
     {
-        public const int ContentVersion = 1;
+        public const int ContentVersion = 2;
 
         public static GameDatabase Build()
         {
@@ -202,6 +202,24 @@ namespace BreathOfEclipse.Data
             return s;
         }
 
+        private static readonly string[] EnglishOrdinals =
+            { "First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth", "Eleventh" };
+
+        /// <summary>Registers a technique as form <paramref name="number"/> (I … XI) with its Spanish name call.</summary>
+        private static BreathingForm Form(int number, SkillData skill, string techniqueCall)
+        {
+            skill.formName = (number >= 1 && number <= EnglishOrdinals.Length ? EnglishOrdinals[number - 1] : "Form " + number) + " Form";
+            skill.voiceTechniqueCall = techniqueCall;
+            return new BreathingForm { formNumber = number, skill = skill };
+        }
+
+        private static void Ultimate(BreathingStyleData style, SkillData ult, string techniqueCall)
+        {
+            ult.voiceFormCall = "Forma Final";
+            ult.voiceTechniqueCall = techniqueCall;
+            style.ultimate = ult;
+        }
+
         private static BreathingStyleData Style(string id, string display, Element element, Color baseColor, Color secondary, Color glow,
             ElementTrailStyle trail, string sfx, string description, Gradient trailGradient)
         {
@@ -240,7 +258,7 @@ namespace BreathOfEclipse.Data
             style.passives.Add(new StylePassive { stat = StatType.StaminaRegen, magnitude = 0.15f });
 
             // First Form — the reference technique.
-            var serpent = Skill("tidal_rising_serpent", "Rising Serpent", "First Form", S, SkillTier.Normal, 14f, 0f, 3.5f,
+            var serpent = Skill("tidal_rising_serpent", "Rising Serpent", "Seventh Form", S, SkillTier.Normal, 14f, 0f, 3.5f,
                 "Low stance, water gathers on the blade, dash and rising diagonal cut: a serpent of water launches the enemy. Continue with an air combo.");
             serpent.endsAirborne = true;
             serpent.phases.Add(Phase("Low Stance", 0.3f, "SkillLowStance", 0.06f).Trail(TrailMode.SwordAndElement)
@@ -269,7 +287,7 @@ namespace BreathOfEclipse.Data
                 .Cam(shake: 0.25f, zoom: 1.15f));
             tide.phases.Add(Phase("Recover", 0.25f).Cancelable());
 
-            var flow = Skill("tidal_flowing_current", "Flowing Current", "Third Form", S, SkillTier.Normal, 16f, 0f, 4.5f,
+            var flow = Skill("tidal_flowing_current", "Wandering Current", "Third Form", S, SkillTier.Normal, 16f, 0f, 4.5f,
                 "Weaving dash through the enemy line leaving liquid arcs, ending with a rising cut.");
             flow.phases.Add(Phase("Flow", 0.5f, "SkillDash").Move(SkillMoveMode.Weave, 9f).Afterimages().Trail(TrailMode.SwordAndElement)
                 .Vfx("water_flow_step", VFXAnchor.Self).Vfx("water_flow_step", VFXAnchor.Self, 0.17f).Vfx("water_flow_step", VFXAnchor.Self, 0.34f)
@@ -280,7 +298,7 @@ namespace BreathOfEclipse.Data
                 .Sfx("water_big", 0.1f).Hit(Spec(HitShape.SphereInFront, 1.4f, HitReaction.Heavy, 1.6f, 1.6f, 0.1f, knockback: 4f)));
             flow.phases.Add(Phase("Recover", 0.2f).Cancelable());
 
-            var fang = Skill("tidal_whirlpool_fang", "Whirlpool Fang", "Sixth Form", S, SkillTier.Advanced, 20f, 35f, 10f,
+            var fang = Skill("tidal_whirlpool_fang", "Abyss Fang", "Sixth Form", S, SkillTier.Advanced, 20f, 35f, 10f,
                 "Advanced form. The body becomes the tip of a spiraling water drill that pulls enemies in and bursts.");
             fang.phases.Add(Phase("Coil", 0.3f, "SkillLowStance").Vfx("water_charge", VFXAnchor.Sword, 0f, 1.2f, true).Sfx("charge")
                 .Cam(zoom: 0.85f, saturation: -20f));
@@ -309,9 +327,61 @@ namespace BreathOfEclipse.Data
                 .Cam(shake: 0.3f, bloom: 1.2f, chromatic: 0.5f).Shot(CinematicShot.OverShoulderTarget, 4f, 1.5f));
             ult.phases.Add(Phase("Stillness", 0.5f, "SkillFocus"));
 
-            style.techniques = new List<SkillData> { serpent, tide, flow };
-            style.advanced = fang;
-            style.ultimate = ult;
+            // First Form — quick and elegant: one clean horizontal cut that leaves an arc of water.
+            var cutter = Skill("tidal_tide_cutter", "Tide Cutter", "First Form", S, SkillTier.Normal, 10f, 0f, 2.5f,
+                "A single elegant horizontal cut delivered from a gliding step; the blade leaves a clean arc of water.");
+            cutter.phases.Add(Phase("Tide Draw", 0.14f, "SkillLowStance", 0.05f).Trail(TrailMode.SwordAndElement)
+                .Vfx("water_charge", VFXAnchor.Sword, 0f, 0.7f, true).Sfx("water", 0f, 0.45f));
+            cutter.phases.Add(Phase("Tide Cut", 0.2f, "SkillIaiDraw", 0.03f).Move(SkillMoveMode.DashToTarget, 4.5f).Afterimages()
+                .Trail(TrailMode.SwordAndElement)
+                .Vfx("water_flow_step", VFXAnchor.Self, 0.04f).Vfx("water_splash", VFXAnchor.Target, 0.08f, 0.8f)
+                .Sfx("slash", 0.02f).Sfx("water", 0.06f, 0.7f)
+                .Hit(Spec(HitShape.CapsuleForward, 1.9f, HitReaction.Heavy, 1.3f, 2.6f, 0.06f, knockback: 3f, hitStop: 0.06f, shake: 0.2f, impact: "spark_water"))
+                .Cam(fovPunch: 3f));
+            cutter.phases.Add(Phase("Settle", 0.2f, "SkillSheathe").Cancelable());
+
+            // Fourth Form — a leap and a descending cut that falls like a split waterfall.
+            var cascade = Skill("tidal_parting_cascade", "Parting Cascade", "Fourth Form", S, SkillTier.Normal, 16f, 0f, 5.5f,
+                "Leap and fall on the enemy with a vertical cut; the water splits around the impact like a waterfall.");
+            cascade.phases.Add(Phase("Rise", 0.3f, "SkillFlip", 0.05f).Move(SkillMoveMode.Leap, 3f, 2.6f).Trail(TrailMode.SwordAndElement)
+                .Vfx("water_charge", VFXAnchor.Sword, 0f, 1f, true).Sfx("jump", 0f, 0.6f).Sfx("water", 0.05f, 0.6f)
+                .Cam(zoom: 1.12f));
+            cascade.phases.Add(Phase("Cascade", 0.2f, "SkillPlunge", 0.02f).Move(SkillMoveMode.Plunge).Trail(TrailMode.SwordAndElement)
+                .Vfx("water_splash", VFXAnchor.Ground, 0.12f, 2f).Vfx("water_ground_ripple", VFXAnchor.Ground, 0.12f, 1.4f)
+                .Vfx("ground_impact", VFXAnchor.Ground, 0.12f, 1.2f).Vfx("water_suspended", VFXAnchor.InFront, 0.14f, 1.4f, false, new Vector3(0f, 0.6f, 1.2f))
+                .Sfx("slash_heavy").Sfx("water_big", 0.12f)
+                .Hit(Spec(HitShape.SphereInFront, 3.2f, HitReaction.Knockdown, 2.4f, 1.4f, 0.12f, knockback: 5f, hitStop: 0.08f, shake: 0.5f, impact: "water_splash"))
+                .Cam(shake: 0.3f, zoom: 0.9f, bloom: 0.4f));
+            cascade.phases.Add(Phase("Recover", 0.3f, "SkillFocus").Cancelable());
+
+            // Fifth Form — a standing vortex that drags enemies in, then erupts as a ring of tides.
+            var ring = Skill("tidal_ring_of_tides", "Ring of Tides", "Fifth Form", S, SkillTier.Normal, 20f, 0f, 7f,
+                "The current circles the swordsman and drags nearby enemies in before erupting outward as a ring of tides.");
+            ring.phases.Add(Phase("Gather", 0.4f, "SkillWhirl", 0.05f).Trail(TrailMode.SwordAndElement)
+                .Vfx("water_whirlpool", VFXAnchor.Self).Sfx("water", 0f, 0.6f).Sfx("water_big", 0.2f, 0.5f)
+                .Hit(Spec(HitShape.SphereAroundSelf, 0.5f, HitReaction.Light, 4.5f, 0f, 0.05f, 4, 0.09f, 0.3f, hitStop: 0.02f, shake: 0.1f, impact: "spark_water", sfx: "hit").Pull(5f))
+                .Cam(zoom: 1.15f, saturation: -10f));
+            ring.phases.Add(Phase("Tide Ring", 0.3f, "SkillSpinLong", 0.03f).Trail(TrailMode.SwordAndElement)
+                .Vfx("water_crescent_tide", VFXAnchor.Ground, 0f, 1.6f).Vfx("water_ground_ripple", VFXAnchor.Ground, 0f, 2f)
+                .Sfx("slash_heavy").Sfx("water_big", 0.05f)
+                .Hit(Spec(HitShape.SphereAroundSelf, 3f, HitReaction.Knockback, 4.2f, 0f, 0.06f, knockback: 8f, hitStop: 0.07f, shake: 0.4f, impact: "water_splash"))
+                .Cam(shake: 0.3f, zoom: 1.2f, bloom: 0.3f));
+            ring.phases.Add(Phase("Recover", 0.25f).Cancelable());
+
+            style.styleCall = "Respiración del Agua";
+            style.forms = new List<BreathingForm>
+            {
+                Form(1, cutter, "Corte de Marea"),
+                Form(2, tide, "Marea Creciente"),
+                Form(3, flow, "Corriente Errante"),
+                Form(4, cascade, "Cascada Partida"),
+                Form(5, ring, "Anillo de Mareas"),
+                Form(6, fang, "Colmillo del Abismo"),
+                Form(7, serpent, "Serpiente Ascendente")
+            };
+            // Keys 1-4 keep the v0.1 layout: Rising Serpent, Crescent Tide, Wandering Current, Abyss Fang.
+            style.quickSlots = new[] { 6, 1, 2, 5 };
+            Ultimate(style, ult, "Réquiem del Leviatán");
             return style;
         }
 
@@ -383,9 +453,15 @@ namespace BreathOfEclipse.Data
                 .Hit(Spec(HitShape.SphereAroundSelf, 5f, HitReaction.Knockdown, 12f, 0f, 0.05f, knockback: 10f, hitStop: 0.1f, shake: 1f, impact: "thunder_explosion", sfx: "thunder_big").Finisher().Crit())
                 .Cam(bloom: 1.5f).Shot(CinematicShot.WideArena, 9f, 3f));
 
-            style.techniques = new List<SkillData> { flash, chain, rolling };
-            style.advanced = drum;
-            style.ultimate = ult;
+            style.styleCall = "Respiración del Trueno";
+            style.forms = new List<BreathingForm>
+            {
+                Form(1, flash, "Destello Quebrantador"),
+                Form(2, chain, "Chispa Encadenada"),
+                Form(3, rolling, "Trueno Rodante"),
+                Form(5, drum, "Tambor Celestial")
+            };
+            Ultimate(style, ult, "Mil Destellos");
             return style;
         }
 
@@ -457,9 +533,15 @@ namespace BreathOfEclipse.Data
                 .Cam(shake: 0.5f, bloom: 1.5f, chromatic: 0.5f).Shot(CinematicShot.WideArena, 9f, 3f));
             ult.phases.Add(Phase("Embers", 0.5f, "SkillFocus"));
 
-            style.techniques = new List<SkillData> { arc, wheel, burst };
-            style.advanced = phoenix;
-            style.ultimate = ult;
+            style.styleCall = "Respiración de las Brasas";
+            style.forms = new List<BreathingForm>
+            {
+                Form(1, arc, "Arco Abrasador"),
+                Form(2, wheel, "Rueda de Cenizas"),
+                Form(3, burst, "Estallido de Brasas"),
+                Form(6, phoenix, "Ascenso del Fénix")
+            };
+            Ultimate(style, ult, "Cataclismo Solar");
             return style;
         }
 
@@ -523,9 +605,15 @@ namespace BreathOfEclipse.Data
                 .Hit(Spec(HitShape.SphereAroundSelf, 5f, HitReaction.Knockdown, 7f, 0f, 0.45f, knockback: 12f, hitStop: 0.1f, shake: 0.9f, impact: "impact_crit").Finisher().Crit())
                 .Shot(CinematicShot.FollowBehind, 5f, 2.5f));
 
-            style.techniques = new List<SkillData> { rend, cyclone, step };
-            style.advanced = pillar;
-            style.ultimate = ult;
+            style.styleCall = "Respiración del Vendaval";
+            style.forms = new List<BreathingForm>
+            {
+                Form(1, rend, "Desgarro del Cielo"),
+                Form(2, cyclone, "Danza del Ciclón"),
+                Form(3, step, "Paso del Céfiro"),
+                Form(5, pillar, "Pilar de Tempestad")
+            };
+            Ultimate(style, ult, "Vendaval Celestial");
             return style;
         }
 
@@ -593,9 +681,15 @@ namespace BreathOfEclipse.Data
                 .Shot(CinematicShot.OverShoulderTarget, 4f, 1.5f));
             ult.phases.Add(Phase("Afterglow", 0.4f, "SkillFocus"));
 
-            style.techniques = new List<SkillData> { veil, echo, halo };
-            style.advanced = tide;
-            style.ultimate = ult;
+            style.styleCall = "Respiración Lunar";
+            style.forms = new List<BreathingForm>
+            {
+                Form(1, veil, "Velo Creciente"),
+                Form(2, echo, "Eco Menguante"),
+                Form(3, halo, "Halo Lunar"),
+                Form(7, tide, "Marea del Eclipse")
+            };
+            Ultimate(style, ult, "Eclipse Eterno");
             return style;
         }
 

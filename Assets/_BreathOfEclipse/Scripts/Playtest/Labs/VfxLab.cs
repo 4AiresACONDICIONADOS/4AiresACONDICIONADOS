@@ -28,12 +28,13 @@ namespace BreathOfEclipse.Playtest
 
         public override string Title => "VFX LAB";
 
-        /// <summary>Preset applied on begin: style id + slot + repeat interval (Rising Serpent visual test).</summary>
+        /// <summary>Preset applied on begin: style id + technique + repeat interval (Rising Serpent visual test).</summary>
         public string PresetStyle = "tidal";
-        public int PresetSlot = -1;
+        public string PresetSkillId = "";
         public float PresetInterval = 0f;
 
         private int _style;
+        /// <summary>Technique index in the current style: forms first, the ultimate last.</summary>
         private int _slot;
         private float _interval;
         private bool _resetStage = true;
@@ -57,7 +58,7 @@ namespace BreathOfEclipse.Playtest
             var pc = Ctx.Player;
             var styles = pc.Breathing.Styles.ToList();
             _style = Mathf.Max(0, styles.FindIndex(s => s.styleId == PresetStyle));
-            _slot = PresetSlot >= 0 ? PresetSlot : 0;
+            _slot = Mathf.Max(0, IndexOfSkill(CurrentStyle, PresetSkillId));
             _interval = PresetInterval;
             var input = InputReader.Instance;
             if (input != null)
@@ -102,7 +103,7 @@ namespace BreathOfEclipse.Playtest
             yield return Ctx.LockOnto(_dummy, w);
             _staged = true;
             _status = "Ready";
-            if (PresetSlot >= 0) Cast();
+            if (!string.IsNullOrEmpty(PresetSkillId)) Cast();
         }
 
         private void Update()
@@ -134,7 +135,7 @@ namespace BreathOfEclipse.Playtest
         {
             var pc = Ctx.Player;
             var style = CurrentStyle;
-            var skill = style != null ? style.GetSkill(_slot) : null;
+            var skill = style != null ? style.GetTechnique(_slot) : null;
             if (pc == null || skill == null) yield break;
             _casting = true;
             _lastCastStart = Time.realtimeSinceStartup;
@@ -159,14 +160,9 @@ namespace BreathOfEclipse.Playtest
 
             float mark = Ctx.Telemetry.Mark();
             _lastPhases.Clear();
-            Ctx.Driver.Press(_slot switch
-            {
-                0 => InputCommand.Skill1,
-                1 => InputCommand.Skill2,
-                2 => InputCommand.Skill3,
-                3 => InputCommand.Skill4,
-                _ => InputCommand.Ultimate
-            });
+            // Forms go through the same request the form wheel uses; the ultimate through its key.
+            if (_slot < style.FormCount) pc.RequestForm(_slot);
+            else Ctx.Driver.Press(InputCommand.Ultimate);
 
             float start = Time.realtimeSinceStartup;
             bool started = false;
@@ -219,7 +215,7 @@ namespace BreathOfEclipse.Playtest
             if (GUILayout.Button("REPEAT RISING SERPENT", GUILayout.Height(34)))
             {
                 _style = Mathf.Max(0, styles.ToList().FindIndex(s => s.styleId == "tidal"));
-                _slot = 0;
+                _slot = Mathf.Max(0, IndexOfSkill(CurrentStyle, "tidal_rising_serpent"));
                 if (_interval <= 0f) _interval = 3f;
                 Cast();
             }
@@ -235,11 +231,12 @@ namespace BreathOfEclipse.Playtest
 
             var style = CurrentStyle;
             GUILayout.Label("Technique (click to cast)");
-            string[] slotNames = { "Skill 1", "Skill 2", "Skill 3", "Advanced", "Ultimate" };
-            for (int slot = 0; slot < 5; slot++)
+            int count = style != null ? style.TechniqueCount : 0;
+            for (int slot = 0; slot < count; slot++)
             {
-                var skill = style != null ? style.GetSkill(slot) : null;
-                string label = $"{(_slot == slot ? "> " : "")}{slotNames[slot]}: {(skill != null ? skill.displayName : "-")}";
+                var skill = style.GetTechnique(slot);
+                string slotName = slot < style.FormCount ? $"Form {Roman.Of(style.GetForm(slot).formNumber)}" : "Ultimate";
+                string label = $"{(_slot == slot ? "> " : "")}{slotName}: {(skill != null ? skill.displayName : "-")}";
                 if (GUILayout.Button(label, GUILayout.Height(24)))
                 {
                     _slot = slot;
@@ -280,6 +277,14 @@ namespace BreathOfEclipse.Playtest
             GUILayout.EndScrollView();
             GUILayout.EndArea();
             return area.height;
+        }
+
+        private static int IndexOfSkill(BreathingStyleData style, string skillId)
+        {
+            if (style == null || string.IsNullOrEmpty(skillId)) return -1;
+            for (int i = 0; i < style.TechniqueCount; i++)
+                if (style.GetTechnique(i)?.skillId == skillId) return i;
+            return -1;
         }
     }
 }

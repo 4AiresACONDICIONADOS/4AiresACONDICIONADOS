@@ -269,6 +269,10 @@ namespace BreathOfEclipse.Data
         [Tooltip("Big anime callout, e.g. TIDAL BREATH — RISING SERPENT")] public string callout = "";
         [TextArea] public string description = "";
         public SkillTier tier = SkillTier.Normal;
+
+        [Header("Voice (Spanish) — spoken by BreathingVoiceSystem")]
+        [Tooltip("e.g. 'Séptima Postura' / 'Forma Final'. Empty = built from the form number.")] public string voiceFormCall = "";
+        [Tooltip("e.g. 'Serpiente Ascendente'. Empty = the name is not spoken.")] public string voiceTechniqueCall = "";
         [Tooltip("None = inherit the breathing style element.")] public Element element = Element.None;
 
         [Header("Cost")]

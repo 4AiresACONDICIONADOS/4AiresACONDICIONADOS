@@ -1,17 +1,17 @@
 # DEV STATUS — Breath of Eclipse
 
-**Versión actual: v0.1.2 — Runtime stabilization** · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
+**Versión actual: v0.2.0 — Tidal Breath Overhaul** · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
 
-## v0.1.2 (resumen)
-
-- **Working (probado por el usuario en Unity 6.3):** arranque de `03_CombatTest`, personaje, escenario, ataques y técnicas.
-- **Working (código, pendiente de verificar en Unity):** fundido a negro hasta que la escena y sus shaders están
-  listos (sin pantalla azul); knockdown → en el suelo → levantarse → locomoción, sin atacar ni usar técnicas en el
-  suelo; un golpe ligero no levanta al jugador caído; cancelar ataque/técnica detiene lunge, aire, cámara lenta y
-  trails; F1 muestra estado del jugador y botones Light Hit / Heavy Hit / Knockdown / Launch.
-- **Incomplete:** combat feel (fase B), rediseño de Tidal Breath y Rising Serpent (fases C–E), cámaras, animación.
-- **Next:** verificar v0.1.2 en Unity (F1 → PLAYER HIT TEST) y empezar fase B.
-- Claude no ejecuta Unity: todo lo marcado "código" solo está compilado (0 errores) contra los DLL de Unity 6.3.
+- **Working (probado por el usuario en Unity 6.3, v0.1.1):** arranque de `03_CombatTest`, personaje, escenario, ataques y técnicas.
+- **Working (código, compilado sin errores; SIN verificar en Unity):**
+  - v0.1.2: fundido a negro hasta que la escena y sus shaders están listos; knockdown → suelo → levantarse.
+  - Formas variables por estilo (hasta XI), rueda de formas (mantener F) y 4 formas rápidas (1-4).
+  - Respiración del Agua con 7 formas; Rising Serpent (VII) con nuevo timing y cámara que se aleja un 15%.
+  - Voz en español (45 clips TTS de dominio público), subtítulos, título pequeño, ducking, opciones en Settings.
+  - Fundido de VFX cerca de la cámara (primera persona); fase 2 del Oni inmediata y visible; voces 3D de demonios.
+- **Incomplete:** modelos 3D reales (protagonista y demonios siguen siendo procedurales), animaciones Mecanim,
+  thunder Flash Breaker hero, combat feel (fase B), bosque más denso, ultimate del Agua sin rediseñar.
+- **Next:** probar v0.2.0 en Unity (F → rueda, Rising Serpent con voz, F1 → PLAYER HIT TEST) y reportar errores.
 
 ## ✅ PLAYTEST INFRASTRUCTURE READY
 

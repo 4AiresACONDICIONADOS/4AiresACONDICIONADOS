@@ -5,6 +5,24 @@ primera versión verificada como jugable dentro del Editor de Unity.**
 
 ---
 
+## v0.2.0 — Tidal Breath Overhaul (2026-09-29)
+
+Sin verificar todavía en Unity.
+
+### Added
+- Formas variables por estilo (`BreathingStyleData.forms`, hasta XI), 4 formas rápidas (1-4) y rueda de formas (mantener F).
+- Respiración del Agua: 7 formas — I Tide Cutter, II Crescent Tide, III Wandering Current, IV Parting Cascade,
+  V Ring of Tides, VI Abyss Fang, VII Rising Serpent (IDs anteriores conservados).
+- `BreathingVoiceSystem`: estilo → postura → técnica en español, subtítulos, título pequeño, ducking; opciones en
+  Settings. 45 clips generados con Piper (`es_MX-ald-medium`), ver `EXTERNAL_ASSETS.md`.
+- Voces 3D de Nightspawn y Hollow Oni (`EnemyVoice`).
+
+### Changed
+- Rising Serpent: anticipación 0.34 / carga 0.18 / dash 0.17 / corte 0.16; la serpiente se ve 0.55 s a tamaño completo.
+- Fase 2 del Oni: ojos, marcas, aura y noche carmesí desde el rugido.
+- VFX, cintas de agua y trails se desvanecen cerca de la cámara.
+- Contenido v2: los assets de datos exportados con v1 se re-exportan en el Editor.
+
 ## v0.1.2 — Runtime stabilization (2026-09-28)
 
 ### Fixed

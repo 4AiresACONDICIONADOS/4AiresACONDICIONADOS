@@ -16,7 +16,8 @@ copia embebida idéntica (`DefaultInputActions.cs`), así que el juego nunca se 
 | Ataque pesado | **Clic derecho** | |
 | Bloquear / Parry | **Q** | Mantener = bloqueo; pulsar justo antes del golpe = parry |
 | Fijar objetivo | **Rueda (clic)** o **Tab** | Rueda arriba/abajo cambia de objetivo |
-| Técnicas 1-4 | **1 2 3 4** | 1-3 técnicas normales, 4 técnica avanzada |
+| Formas rápidas 1-4 | **1 2 3 4** | Accesos directos a 4 formas del estilo (Agua: VII, II, III, VI) |
+| Rueda de formas | **mantener F** | Todas las formas del estilo (I … XI): apunta con ratón/stick y suelta. Ralentiza el tiempo mientras está abierta |
 | Ultimate | **R** | Requiere la barra de BREATH llena |
 | Cambiar cámara | **C** | Tercera → Primera → Segunda persona |
 | Interactuar | **E** | Santuarios, linternas (checkpoint) |
@@ -36,7 +37,7 @@ copia embebida idéntica (`DefaultInputActions.cs`), así que el juego nunca se 
 | Ligero / Pesado | X / Cuadrado — Y / Triángulo |
 | Bloquear / Parry | LB / L1 |
 | Fijar objetivo | R3 |
-| Técnicas 1-4 | Cruceta arriba / derecha / abajo / izquierda |
+| Formas rápidas 1-4 | Cruceta arriba / derecha / abajo / izquierda (rueda de formas: sin botón por defecto, asignable) |
 | Ultimate | RT / R2 |
 | Interactuar | LT / L2 |
 | Siguiente respiración | RB / R1 |

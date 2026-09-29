@@ -218,7 +218,24 @@ namespace BreathOfEclipse.Characters
             }
             minY = lo;
             // InverseTransformPoint removes the root scale: convert back to parent units.
-            return (hi - lo) * root.lossyScale.y;
+            float bakedHeight = (hi - lo) * root.lossyScale.y;
+            // Cross-check with the bone chain (head bone ≈ 87% of the height above the ankles): a mesh baked with an
+            // unexpected node scale must not shrink or blow up the character.
+            var headBone = sk[HumanBodyBones.Head];
+            var fl = sk[HumanBodyBones.LeftFoot];
+            var fr = sk[HumanBodyBones.RightFoot];
+            if (headBone != null && fl != null && fr != null)
+            {
+                float ankleLocal = Mathf.Min(root.InverseTransformPoint(fl.position).y, root.InverseTransformPoint(fr.position).y);
+                float headLocal = root.InverseTransformPoint(headBone.position).y;
+                float estimate = (headLocal - ankleLocal) * 1.2f * root.lossyScale.y;
+                if (estimate > 1e-4f && Mathf.Abs(bakedHeight - estimate) / estimate > 0.25f)
+                {
+                    minY = ankleLocal - (headLocal - ankleLocal) * 0.055f;
+                    return estimate;
+                }
+            }
+            return bakedHeight;
         }
 
         private void BuildHand(bool right, Quaternion canon)

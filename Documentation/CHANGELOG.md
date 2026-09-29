@@ -5,6 +5,38 @@ primera versión verificada como jugable dentro del Editor de Unity.**
 
 ---
 
+## v0.4.0 — Full 3D Anime Evolution (2026-09-29)
+
+Sin verificar todavía en Unity (NOT PLAYTESTED).
+
+### Added
+- Personaje 3D real: cuerpo base Quaternius Universal Base Characters (CC0) vestido como espadachín anime original
+  (pelo anime procedural con coleta con muelles, parte superior oscura, haori corto abierto con falda y ribete del
+  color del estilo, obi del color del estilo, hakama plisado, vendas, botas tabi; cara separada; ojos anime con
+  expresiones y parpadeo; boca que se abre con la voz).
+- Animaciones reales: Universal Animation Library 1 + 2 (CC0) por Humanoid con Playables: idle / idle de combate,
+  caminar-trotar-correr sincronizados a la velocidad, strafe por orientation warping, retroceso, salto / caída /
+  aterrizaje, golpes, derribo + levantarse, muerte y un clip de cuerpo por ataque sincronizado con la fase activa.
+- Híbrido: el `ProceduralAnimator` sigue siendo la única autoridad; sus poses se retargetean con IK (manos en la
+  katana con marco de agarre desde los dedos, torso en ataques, cuerpo completo en técnicas, look-at con límites,
+  pies al suelo, puño, hombros al inhalar). Las 35 formas usan el modelo nuevo; la hoja real es la del hitbox.
+- Nightspawn y Hollow Oni 3D sobre el mismo cuerpo (piel demoníaca con marcas brillantes, garras, colmillos,
+  cuernos, espinas, hakama rasgado; el Oni con volumen, máscara de hueso y melena); fase 2 intensifica marcas y ojos.
+- Shader `AnimeCharacterToon` (dos bandas de sombra o rampa, rim, especular estilizado, cara aplanada, marcas,
+  hit flash, disolución, contorno para skinned meshes).
+- F1: PLAYER / DEMON VISUAL (3D o procedural), pruebas de animación y de demonios, ventana **Animation Lab**.
+- Editor: *Characters → Import Player Model* (VRoid/UniVRM o FBX Humanoid en `Characters/Import/Player/`),
+  *Validate Character Models*, *Use Built-in Anime Swordsman*. Playtest `ModelSuite` y tests `CharacterModelTests`.
+
+### Changed
+- `CharacterRig` integra renderers importados (hit flash, disolución, visibilidad, primera persona, afterimages).
+- Efectos de inhalación en `MouthBreathSocket`; primera persona usa la cabeza real y oculta cabeza/pelo/cara.
+- Ajustes nuevos `playerVisualMode` / `demonVisualMode` (0 = 3D); partidas de v0.3.0 siguen siendo válidas.
+
+### Known Issues
+- No probado en Unity: posibles ajustes de agarre, escala del pelo o poses de técnicas concretas en el modelo real.
+- Si el FBX no se importa como Humanoid, se usa el retarget procedural (sin clips); si el modelo falla, el maniquí.
+
 ## v0.3.0 — Forms & Character Evolution (2026-09-29)
 
 Sin verificar todavía en Unity (NOT PLAYTESTED).

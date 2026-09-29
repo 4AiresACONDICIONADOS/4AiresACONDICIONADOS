@@ -1,19 +1,18 @@
 # DEV STATUS — Breath of Eclipse
 
-**Versión actual: v0.3.0 — Forms & Character Evolution** · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
+**Versión actual: v0.4.0 — Full 3D Anime Evolution** · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
 
 - **Working (probado por el usuario en Unity 6.3, v0.1.1):** arranque de `03_CombatTest`, personaje, escenario, ataques y técnicas.
 - **Working (código compilado, 0 errores / 0 warnings; SIN verificar en Unity):**
-  - Formas jugables: 7 por estilo (35), rueda F con un segmento por forma, slots 1-4 asignables (F + apuntar + 1-4)
-    y guardados por estilo, HUD con todas las formas (numeral, cooldown, coste de BREATH, disponibilidad).
-  - Inhalación visible antes de cada forma / avanzada / ultimate: pose, corrientes de aire del elemento, sonido de
-    inhalación, foco en la hoja; un golpe durante la inhalación cancela todo sin gastar BREATH.
-  - Voz natural (Chatterbox Multilingual, MIT) con personalidad por estilo; control de calidad con Whisper.
-  - Katana nueva (hamon, tsuba, tsuka con ito) + `SheathSocket`; importación humanoide automatizada (menú Characters).
-  - Nightspawn: ataque pesado y tambaleo; Hollow Oni: transformación de fase 2 (crece, cuernos, suelo, luces).
-- **Incomplete:** ningún modelo humanoide ni animación real incorporados (pipeline listo: ver EXTERNAL_ASSETS);
-  formas VIII-XI (arquitectura lista, sin contenido).
-- **Next:** probar v0.3.0 en Unity: rueda F, las 7 formas del Agua, inhalación + voz, Thunder IV-VII, fase 2.
+  - Protagonista 3D real (cuerpo Quaternius CC0) vestido como espadachín anime original, con pelo, ropa, cara,
+    ojos y boca; animaciones reales Quaternius UAL 1+2 (Humanoid) + combate procedural retargeteado por IK.
+  - Nightspawn y Hollow Oni 3D (mismo cuerpo, aspecto demoníaco), fase 2 con marcas y ojos más intensos.
+  - F1: alternar 3D / procedural, pruebas de animación y demonios, Animation Lab; validación de esqueleto.
+  - v0.3.0: 7 formas por estilo, inhalación, voz natural, slots rápidos, katana y vaina.
+- **Incomplete:** formas VIII-XI (arquitectura lista, sin contenido); blendshapes faciales reales solo con modelos
+  VRoid (el cuerpo base usa texturas de ojos y boca procedurales).
+- **Next:** abrir en Unity, dejar que importe los FBX de `ThirdParty/Quaternius`, ejecutar *Characters → Validate
+  Character Models* y *Playtest → Full Visual Test* (incluye `3D MODEL`), revisar agarre / pelo / poses.
 
 ## ✅ PLAYTEST INFRASTRUCTURE READY
 
@@ -34,7 +33,7 @@ Primera prueba recomendada al abrir el proyecto:
 | Compilación editor + playtest + tests (con `UNITY_EDITOR`, `UnityEditor.*.dll`, NUnit de Unity) | ✅ 0 errores, 0 warnings |
 | Tests de la capa Logic (`dotnet test`) | ✅ 43/43 |
 | Tests EditMode (lógica, guardado, contenido, planes de playtest) | ⏳ escritos; se ejecutan en el Test Runner de Unity |
-| Shaders (13) compilados con DXC contra la ShaderLibrary de URP 17.3 | ✅ 66 compilaciones, 0 fallos |
+| Shaders (14) compilados con DXC contra la ShaderLibrary de URP 17.3 | ✅ 94 compilaciones, 0 fallos |
 | **Abrir y jugar en el Editor de Unity** | ❌ **No realizado** |
 
 La v0.2.0 empezará después de la primera prueba visual real.

@@ -1,0 +1,9 @@
+Quaternius — Universal Base Characters (Standard), Universal Animation Library (Standard),
+Universal Animation Library 2 (Standard)
+
+License: CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Models and animations by Quaternius — https://quaternius.com
+Downloaded from the free itch.io builds (quaternius.itch.io). Files are kept unmodified in this folder;
+the game derives its outfits, hair, faces and demon parts at runtime.

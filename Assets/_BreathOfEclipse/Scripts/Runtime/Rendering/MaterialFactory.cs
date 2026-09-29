@@ -126,6 +126,54 @@ namespace BreathOfEclipse.Rendering
             return m;
         }
 
+        /// <summary>Look presets for <see cref="TidalWater"/>.</summary>
+        public enum WaterLook
+        {
+            /// <summary>Main body: deep → cyan bands, edge + crest foam.</summary>
+            Body,
+            /// <summary>Mostly white foam (crests, breakers, spray sheets).</summary>
+            Foam,
+            /// <summary>Thin bright cutting arc (slash edges).</summary>
+            Edge
+        }
+
+        /// <summary>TIDAL BREATH anime water (TidalWaterAnime shader) for water ribbons, serpent bodies and heads.</summary>
+        public static Material TidalWater(WaterLook look, bool tube, VfxBlend blend = VfxBlend.AlphaBlend)
+        {
+            string k = $"tidal_{look}_{tube}_{blend}";
+            return Get(k, ShaderIds.TidalWater, mat =>
+            {
+                mat.SetTexture(ShaderIds.NoiseTex, ProceduralTextures.Caustics != null ? ProceduralTextures.Caustics : ProceduralTextures.Noise);
+                mat.SetFloat(ShaderIds.TubeMode, tube ? 1f : 0f);
+                switch (look)
+                {
+                    case WaterLook.Foam:
+                        mat.SetColor(ShaderIds.DeepColor, new Color(0.35f, 0.7f, 1.2f));
+                        mat.SetColor(ShaderIds.MidColor, new Color(1.1f, 1.5f, 1.9f));
+                        mat.SetFloat(ShaderIds.FoamEdge, 0.45f);
+                        mat.SetFloat(ShaderIds.CrestFoam, 0.9f);
+                        mat.SetFloat(ShaderIds.Emission, 1.15f);
+                        mat.SetFloat(ShaderIds.FlowSpeed, 2.4f);
+                        break;
+                    case WaterLook.Edge:
+                        mat.SetColor(ShaderIds.DeepColor, new Color(0.15f, 0.55f, 1.4f));
+                        mat.SetColor(ShaderIds.MidColor, new Color(0.9f, 1.8f, 2.6f));
+                        mat.SetFloat(ShaderIds.FoamEdge, 0.3f);
+                        mat.SetFloat(ShaderIds.CrestFoam, 0.2f);
+                        mat.SetFloat(ShaderIds.Emission, 1.4f);
+                        mat.SetFloat(ShaderIds.FlowSpeed, 3f);
+                        break;
+                    default:
+                        mat.SetFloat(ShaderIds.FoamEdge, tube ? 0.12f : 0.18f);
+                        mat.SetFloat(ShaderIds.CrestFoam, 0.45f);
+                        mat.SetFloat(ShaderIds.Emission, 1f);
+                        mat.SetFloat(ShaderIds.FlowSpeed, 1.6f);
+                        break;
+                }
+                SetBlend(mat, blend);
+            });
+        }
+
         /// <summary>A fresh (uncached) instance for effects that animate material values themselves.</summary>
         public static Material Instance(Material source) => new Material(source) { name = source.name + "_inst" };
 

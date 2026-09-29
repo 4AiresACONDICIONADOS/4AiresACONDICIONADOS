@@ -263,15 +263,15 @@ namespace BreathOfEclipse.Data
             serpent.endsAirborne = true;
             // Timeline (hero reference): anticipation 0.34 → charge 0.18 → dash 0.17 → slash 0.16 (hit + 0.08 hit stop)
             // → serpent on screen ~1.3 s while the player rises → aftermath 0.5, cancelable into the air combo.
-            serpent.phases.Add(Phase("Low Stance", 0.34f, "SkillLowStance", 0.06f).Trail(TrailMode.SwordAndElement)
+            serpent.phases.Add(Phase("Low Stance", 0.34f, "SkillLowStance", 0.06f).Voice(VoiceCue.Style).Trail(TrailMode.SwordAndElement)
                 .Vfx("water_charge", VFXAnchor.Sword, 0f, 0.7f, true).Vfx("water_ground_ripple", VFXAnchor.Ground)
                 .Sfx("water", 0.05f, 0.6f)
                 .Cam(zoom: 0.9f, slowScale: 0.75f, slowDuration: 0.3f, bloom: 0.2f));
-            serpent.phases.Add(Phase("Charge", 0.18f, "SkillLowStance", 0.02f).Trail(TrailMode.SwordAndElement)
+            serpent.phases.Add(Phase("Charge", 0.18f, "SkillLowStance", 0.02f).Voice(VoiceCue.Form).Trail(TrailMode.SwordAndElement)
                 .Vfx("water_charge", VFXAnchor.Sword, 0f, 1.25f, true).Vfx("water_ground_ripple", VFXAnchor.Ground, 0.02f, 0.7f)
                 .Sfx("charge", 0f, 0.6f)
                 .Cam(zoom: 0.86f, bloom: 0.35f, saturation: -10f));
-            serpent.phases.Add(Phase("Serpent Dash", 0.17f, "SkillDash", 0.04f).Move(SkillMoveMode.DashToTarget, 7f).Afterimages()
+            serpent.phases.Add(Phase("Serpent Dash", 0.17f, "SkillDash", 0.04f).Voice(VoiceCue.Name).Move(SkillMoveMode.DashToTarget, 7f).Afterimages()
                 .Vfx("water_dash_wake", VFXAnchor.Self, 0f, 1f, true).Sfx("dash")
                 .Cam(fovPunch: 6f, speedLines: true, radialBlur: true));
             serpent.phases.Add(Phase("Rising Cut", 0.16f, "SkillRisingCut", 0.03f)
@@ -280,7 +280,7 @@ namespace BreathOfEclipse.Data
                 .Hit(Spec(HitShape.CapsuleForward, 2.6f, HitReaction.Launch, 1.5f, 2.8f, 0.05f, knockback: 1f, launch: 3.4f, airHang: 1.1f,
                     hitStop: 0.08f, shake: 0.45f, impact: "water_splash"))
                 // Hero camera: pull back ~15% so player, serpent and enemy share the frame.
-                .Cam(shake: 0.2f, zoom: 1.15f, chromatic: 0.3f, bloom: 0.6f));
+                .Cam(shake: 0.2f, fovPunch: 4f, zoom: 1.15f, chromatic: 0.3f, bloom: 0.6f));
             serpent.phases.Add(Phase("Ascend", 0.3f, "SkillAirReady").Move(SkillMoveMode.Rise, 0.8f, 2.8f).NoGravity()
                 .Vfx("water_suspended", VFXAnchor.Target, 0.02f).Sfx("water", 0f, 0.4f)
                 .Cam(zoom: 1.15f));
@@ -319,21 +319,22 @@ namespace BreathOfEclipse.Data
 
             var ult = Skill("tidal_leviathan", "Leviathan's Requiem", "Final Form", S, SkillTier.Ultimate, 0f, 100f, 20f,
                 "Ultimate. A colossal water dragon coils around the battlefield and crashes onto the enemy.");
-            ult.phases.Add(Phase("Summon", 1.0f, "SkillRaise").Invulnerable()
+            // ~4.6 s in three shots: summon (low hero angle) → the leviathan coils the whirlpool (wide) → dive and impact.
+            ult.phases.Add(Phase("Summon", 1.2f, "SkillRaise").Voice(VoiceCue.Style).Invulnerable()
                 .Vfx("water_charge", VFXAnchor.Sword, 0f, 1.6f, true).Vfx("water_ground_ripple", VFXAnchor.Ground, 0f, 2f)
                 .Sfx("charge").Sfx("water_big", 0.3f)
                 .Cam(saturation: -30f).Shot(CinematicShot.LowAngleHero, 5f, 1.2f));
-            ult.phases.Add(Phase("Leviathan", 1.5f, "SkillFocus").Invulnerable()
+            ult.phases.Add(Phase("Leviathan", 1.8f, "SkillFocus").Voice(VoiceCue.Form).Invulnerable()
                 .Vfx("water_leviathan", VFXAnchor.TargetGround).Sfx("ultimate").Sfx("water_big", 0.4f)
                 .Cam(shake: 0.2f).Shot(CinematicShot.WideArena, 8f, 3f));
-            ult.phases.Add(Phase("Requiem", 0.9f, "SkillOverhead").Invulnerable()
+            ult.phases.Add(Phase("Requiem", 1.0f, "SkillOverhead").Voice(VoiceCue.Name).Invulnerable()
                 .Vfx("water_splash", VFXAnchor.Target, 0f, 3f).Vfx("water_splash", VFXAnchor.Target, 0.7f, 4f)
                 .Vfx("ground_impact", VFXAnchor.TargetGround, 0.7f, 2.5f).Vfx("water_suspended", VFXAnchor.Target, 0.75f, 2.5f)
                 .Sfx("water_big", 0.7f).Sfx("explosion", 0.7f, 0.7f)
                 .Hit(Spec(HitShape.AtTarget, 1.2f, HitReaction.Light, 7f, 0f, 0.05f, 5, 0.12f, 1f, hitStop: 0.03f, impact: "spark_water", sfx: "hit"))
                 .Hit(Spec(HitShape.AtTarget, 6f, HitReaction.Knockdown, 8f, 0f, 0.7f, knockback: 12f, hitStop: 0.1f, shake: 0.8f, impact: "water_splash").Finisher().Crit())
                 .Cam(shake: 0.3f, bloom: 1.2f, chromatic: 0.5f).Shot(CinematicShot.OverShoulderTarget, 4f, 1.5f));
-            ult.phases.Add(Phase("Stillness", 0.5f, "SkillFocus"));
+            ult.phases.Add(Phase("Stillness", 0.6f, "SkillFocus"));
 
             // First Form — quick and elegant: one clean horizontal cut that leaves an arc of water.
             var cutter = Skill("tidal_tide_cutter", "Tide Cutter", "First Form", S, SkillTier.Normal, 10f, 0f, 2.5f,
@@ -342,7 +343,7 @@ namespace BreathOfEclipse.Data
                 .Vfx("water_charge", VFXAnchor.Sword, 0f, 0.7f, true).Sfx("water", 0f, 0.45f));
             cutter.phases.Add(Phase("Tide Cut", 0.2f, "SkillIaiDraw", 0.03f).Move(SkillMoveMode.DashToTarget, 4.5f).Afterimages()
                 .Trail(TrailMode.SwordAndElement)
-                .Vfx("water_flow_step", VFXAnchor.Self, 0.04f).Vfx("water_splash", VFXAnchor.Target, 0.08f, 0.8f)
+                .Vfx("water_tide_cut", VFXAnchor.Self, 0.03f).Vfx("water_splash", VFXAnchor.Target, 0.08f, 0.8f)
                 .Sfx("slash", 0.02f).Sfx("water", 0.06f, 0.7f)
                 .Hit(Spec(HitShape.CapsuleForward, 1.9f, HitReaction.Heavy, 1.3f, 2.6f, 0.06f, knockback: 3f, hitStop: 0.06f, shake: 0.2f, impact: "spark_water"))
                 .Cam(fovPunch: 3f));
@@ -355,7 +356,7 @@ namespace BreathOfEclipse.Data
                 .Vfx("water_charge", VFXAnchor.Sword, 0f, 1f, true).Sfx("jump", 0f, 0.6f).Sfx("water", 0.05f, 0.6f)
                 .Cam(zoom: 1.12f));
             cascade.phases.Add(Phase("Cascade", 0.2f, "SkillPlunge", 0.02f).Move(SkillMoveMode.Plunge).Trail(TrailMode.SwordAndElement)
-                .Vfx("water_splash", VFXAnchor.Ground, 0.12f, 2f).Vfx("water_ground_ripple", VFXAnchor.Ground, 0.12f, 1.4f)
+                .Vfx("water_cascade", VFXAnchor.Self).Vfx("water_splash", VFXAnchor.Ground, 0.12f, 2f).Vfx("water_ground_ripple", VFXAnchor.Ground, 0.12f, 1.4f)
                 .Vfx("ground_impact", VFXAnchor.Ground, 0.12f, 1.2f).Vfx("water_suspended", VFXAnchor.InFront, 0.14f, 1.4f, false, new Vector3(0f, 0.6f, 1.2f))
                 .Sfx("slash_heavy").Sfx("water_big", 0.12f)
                 .Hit(Spec(HitShape.SphereInFront, 3.2f, HitReaction.Knockdown, 2.4f, 1.4f, 0.12f, knockback: 5f, hitStop: 0.08f, shake: 0.5f, impact: "water_splash"))
@@ -366,7 +367,7 @@ namespace BreathOfEclipse.Data
             var ring = Skill("tidal_ring_of_tides", "Ring of Tides", "Fifth Form", S, SkillTier.Normal, 20f, 0f, 7f,
                 "The current circles the swordsman and drags nearby enemies in before erupting outward as a ring of tides.");
             ring.phases.Add(Phase("Gather", 0.4f, "SkillWhirl", 0.05f).Trail(TrailMode.SwordAndElement)
-                .Vfx("water_whirlpool", VFXAnchor.Self).Sfx("water", 0f, 0.6f).Sfx("water_big", 0.2f, 0.5f)
+                .Vfx("water_ring_current", VFXAnchor.Self).Sfx("water", 0f, 0.6f).Sfx("water_big", 0.2f, 0.5f)
                 .Hit(Spec(HitShape.SphereAroundSelf, 0.5f, HitReaction.Light, 4.5f, 0f, 0.05f, 4, 0.09f, 0.3f, hitStop: 0.02f, shake: 0.1f, impact: "spark_water", sfx: "hit").Pull(5f))
                 .Cam(zoom: 1.15f, saturation: -10f));
             ring.phases.Add(Phase("Tide Ring", 0.3f, "SkillSpinLong", 0.03f).Trail(TrailMode.SwordAndElement)

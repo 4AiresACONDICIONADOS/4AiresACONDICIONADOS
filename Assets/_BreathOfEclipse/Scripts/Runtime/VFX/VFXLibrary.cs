@@ -38,6 +38,49 @@ namespace BreathOfEclipse.VFX
             return tube;
         }
 
+        /// <summary>Anime water sheet along a path (TidalWaterAnime): arcs, crescents, rings, spirals, curls, cascades.</summary>
+        public WaterRibbonRenderer WaterRibbon(string name, Material material, Func<float, Vector3> path, float width, float grow, float hold, float fade)
+        {
+            var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+            go.layer = Layers.VFX;
+            go.transform.SetParent(Root, false);
+            go.GetComponent<MeshRenderer>().sharedMaterial = material;
+            var r = go.AddComponent<WaterRibbonRenderer>();
+            r.Path = path;
+            r.Width = width;
+            r.GrowTime = grow;
+            r.HoldTime = hold;
+            r.FadeTime = fade;
+            // Low quality: fewer segments, same silhouette.
+            if (!VFXQuality.Secondary) r.Segments = 24;
+            return r;
+        }
+
+        /// <summary>Water serpent / dragon (body, foam crest, stylised head). Detail follows <see cref="VFXQuality"/>.</summary>
+        public WaterSerpentRenderer WaterSerpent(string name, Func<float, Vector3> path, float radius, float grow, float hold, float fade, float headSize = 1.35f)
+        {
+            var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+            go.layer = Layers.VFX;
+            go.transform.SetParent(Root, false);
+            go.GetComponent<MeshRenderer>().sharedMaterial = MaterialFactory.TidalWater(MaterialFactory.WaterLook.Body, true);
+            var s = go.AddComponent<WaterSerpentRenderer>();
+            s.Path = path;
+            s.Radius = radius;
+            s.GrowTime = grow;
+            s.HoldTime = hold;
+            s.FadeTime = fade;
+            bool full = VFXQuality.Full;
+            if (!VFXQuality.Secondary)
+            {
+                s.Segments = 32;
+                s.RadialSegments = 8;
+            }
+            s.Setup(full || VFXQuality.Secondary ? MaterialFactory.TidalWater(MaterialFactory.WaterLook.Foam, false) : null,
+                MaterialFactory.TidalWater(MaterialFactory.WaterLook.Body, true),
+                MaterialFactory.TidalWater(MaterialFactory.WaterLook.Edge, true, VfxBlend.Additive), headSize, full);
+            return s;
+        }
+
         public ExpandingMesh Shape(string name, Mesh mesh, Material material, Vector3 localPos, Vector3 localEuler, Vector3 startScale, Vector3 endScale, float duration, Color tint)
         {
             var go = ProceduralMeshes.CreatePart(name, mesh, material, Root, localPos, Quaternion.Euler(localEuler), startScale);

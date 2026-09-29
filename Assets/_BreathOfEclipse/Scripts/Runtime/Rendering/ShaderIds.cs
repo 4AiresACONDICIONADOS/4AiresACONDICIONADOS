@@ -9,6 +9,7 @@ namespace BreathOfEclipse.Rendering
         public const string VfxAdditive = "BreathOfEclipse/VFXAdditive";
         public const string VfxAlpha = "BreathOfEclipse/VFXAlphaBlend";
         public const string ElementRibbon = "BreathOfEclipse/ElementRibbon";
+        public const string TidalWater = "BreathOfEclipse/TidalWaterAnime";
         public const string SwordTrail = "BreathOfEclipse/SwordTrail";
         public const string Ghost = "BreathOfEclipse/Ghost";
         public const string SkyDome = "BreathOfEclipse/SkyDome";
@@ -56,6 +57,22 @@ namespace BreathOfEclipse.Rendering
         public static readonly int Density = Shader.PropertyToID("_Density");
         public static readonly int Time01 = Shader.PropertyToID("_T");
         public static readonly int FresnelPower = Shader.PropertyToID("_FresnelPower");
+        public static readonly int DeepColor = Shader.PropertyToID("_DeepColor");
+        public static readonly int MidColor = Shader.PropertyToID("_MidColor");
+        public static readonly int FoamColor = Shader.PropertyToID("_FoamColor");
+        public static readonly int HighlightColor = Shader.PropertyToID("_HighlightColor");
+        public static readonly int FlowSpeed = Shader.PropertyToID("_FlowSpeed");
+        public static readonly int FlowScale = Shader.PropertyToID("_FlowScale");
+        public static readonly int Bands = Shader.PropertyToID("_Bands");
+        public static readonly int FoamEdge = Shader.PropertyToID("_FoamEdge");
+        public static readonly int CrestFoam = Shader.PropertyToID("_CrestFoam");
+        public static readonly int Emission = Shader.PropertyToID("_Emission");
+        public static readonly int DissolveEdge = Shader.PropertyToID("_DissolveEdge");
+        public static readonly int DepthFade = Shader.PropertyToID("_DepthFade");
+        public static readonly int WaveAmp = Shader.PropertyToID("_WaveAmp");
+        public static readonly int WaveFreq = Shader.PropertyToID("_WaveFreq");
+        public static readonly int WaveSpeed = Shader.PropertyToID("_WaveSpeed");
+        public static readonly int TubeMode = Shader.PropertyToID("_TubeMode");
 
         // Globals
         public static readonly int GlobalFlashFrame = Shader.PropertyToID("_BoE_FlashFrame");

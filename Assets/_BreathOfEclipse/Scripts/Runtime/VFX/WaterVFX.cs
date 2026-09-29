@@ -31,32 +31,6 @@ namespace BreathOfEclipse.VFX
         }
 
         /// <summary>Serpent head: stretched liquid bulb, horn-fins and glinting eyes.</summary>
-        private static Transform SerpentHead(VfxBuild b, Transform parent, float size)
-        {
-            var head = new GameObject("SerpentHead").transform;
-            head.SetParent(parent, false);
-            head.gameObject.layer = Core.Layers.VFX;
-            var bulb = ProceduralMeshes.CreatePart("Bulb", ProceduralMeshes.Primitive(PrimitiveType.Sphere), Foam(b), head,
-                new Vector3(0f, 0f, 0.1f * size), Quaternion.identity, new Vector3(0.9f, 0.7f, 1.5f) * size);
-            bulb.layer = Core.Layers.VFX;
-            bulb.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            for (int s = -1; s <= 1; s += 2)
-            {
-                var fin = ProceduralMeshes.CreatePart("Fin", ProceduralMeshes.Crescent(80f, 0.35f), MaterialFactory.Vfx(ProceduralTextures.CrescentBand, VfxBlend.Additive, 0f), head,
-                    new Vector3(0.25f * s * size, 0.2f * size, -0.25f * size), Quaternion.Euler(-20f, 180f + 30f * s, 70f * s), Vector3.one * 0.9f * size);
-                fin.layer = Core.Layers.VFX;
-                var r = fin.GetComponent<MeshRenderer>();
-                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                var mpb = new MaterialPropertyBlock();
-                mpb.SetColor(ShaderIds.TintColor, b.Pal.Bright);
-                r.SetPropertyBlock(mpb);
-            }
-            var eyes = ParticleBuilder.Create("Eyes", head, MaterialFactory.Vfx(ProceduralTextures.Star, VfxBlend.Additive, 0f), new Vector3(0f, 0.18f * size, 0.45f * size));
-            eyes.Duration(0.5f, true).Rate(8f).Shape(ParticleSystemShapeType.Box, 0f, 0f, 360f, new Vector3(0.4f * size, 0f, 0f))
-                .Life(0.15f, 0.25f).Speed(0f, 0f).Size(0.25f * size, 0.35f * size).Color(Color.white * 4f).Local().PlayOnAwake().Fade(0.05f, 0.3f);
-            return head;
-        }
-
         public static void Register()
         {
             // --------------------------------------------------------- anticipation: water gathers around the blade
@@ -103,47 +77,44 @@ namespace BreathOfEclipse.VFX
             // --------------------------------------------------------- RISING SERPENT: the reference technique
             VFXLibrary.Register("water_serpent", b =>
             {
-                b.Lifetime = 2.2f;
+                b.Lifetime = 2.3f;
+                // Diagonal rising cut: a bright water arc sweeps from low-left to high-right first.
+                var tilt = Quaternion.AngleAxis(35f, Vector3.forward);
+                var arcPath = WaterSpline.SlashArc(1.6f, -75f, 85f, 1.05f, 35f);
+                var arc = b.WaterRibbon("SlashArc", MaterialFactory.TidalWater(MaterialFactory.WaterLook.Edge, false), arcPath, 0.75f, 0.09f, 0.16f, 0.3f);
+                arc.PlaneNormal = tilt * Vector3.up;
+                arc.Thickness = 0.3f;
+                arc.Curl = 40f;
+                AnimeFoam.Crest(b, "ArcFoam", arcPath, tilt * new Vector3(0f, 0.12f, 0f), 0.2f, 0.03f, 0.09f, 0.14f, 0.28f, tilt * Vector3.up);
+
+                // The serpent: born from the arc, coils once and rises past the launched enemy.
                 Vector3 p0 = new Vector3(-0.9f, 0.2f, 0.5f), p1 = new Vector3(-0.5f, 0.3f, 2.4f), p2 = new Vector3(0.7f, 2.9f, 2.8f), p3 = new Vector3(1.4f, 4.8f, 1.5f);
-                var mainPath = PathUtil.CoiledBezier(p0, p1, p2, p3, 1.6f, 0.4f, 0.7f);
-                var profile = new AnimationCurve(new Keyframe(0f, 0.35f), new Keyframe(0.5f, 0.9f), new Keyframe(0.85f, 1.25f), new Keyframe(0.95f, 1.1f), new Keyframe(1f, 0.6f));
+                var mainPath = WaterSpline.EvenSpeed(PathUtil.CoiledBezier(p0, p1, p2, p3, 1.6f, 0.4f, 0.7f));
+                var serpent = b.WaterSerpent("Serpent", mainPath, 0.5f, 0.28f, 0.6f, 0.5f, 1.45f);
+                serpent.StartDelay = 0.04f;
+                serpent.Twist = 620f;
+                serpent.Slither = 0.2f;
 
-                // Grow 0.24 s, hold 0.55 s, dissolve 0.55 s: the serpent must be readable, not a flash.
-                var body = b.Tube("SerpentBody", Body(b), mainPath, 0.52f, 0.24f, 0.55f, 0.55f);
-                body.RadiusProfile = profile;
-                body.Wobble = 0.2f;
-                body.WobbleFrequency = 2.2f;
-                body.WobbleSpeed = 11f;
-                body.Segments = 64;
-                body.RadialSegments = 12;
-                body.Head = SerpentHead(b, body.transform, 0.75f);
-
-                var core = b.Tube("FoamCore", Foam(b), PathUtil.CoiledBezier(p0, p1, p2, p3, 1.6f, 0.4f, 0.7f, 0.25f), 0.2f, 0.22f, 0.45f, 0.45f);
-                core.RadiusProfile = profile;
-                core.Wobble = 0.2f;
-                core.WobbleFrequency = 2.2f;
-                core.WobbleSpeed = 11f;
-
-                // Secondary current braided around the serpent.
-                var braid = b.Tube("Braid", Foam(b), PathUtil.CoiledBezier(p0, p1, p2, p3, 3.2f, 0.85f, 0.5f, Mathf.PI), 0.08f, 0.3f, 0.25f, 0.4f);
-                braid.Opacity = 0.8f;
-
-                // Spray bursts follow the head along the path.
-                for (int i = 1; i <= 6; i++)
+                if (VFXQuality.Secondary)
                 {
-                    float u = i / 6f;
-                    Vector3 pos = mainPath(u);
-                    Droplets(b, "Spray" + i, 12, pos, 2f, 5f, 1.4f, u * 0.24f, 60f);
+                    // A foam current braided around the body.
+                    var braid = b.WaterRibbon("Braid", MaterialFactory.TidalWater(MaterialFactory.WaterLook.Foam, false),
+                        WaterSpline.EvenSpeed(PathUtil.CoiledBezier(p0, p1, p2, p3, 3.2f, 0.85f, 0.5f, Mathf.PI)), 0.16f, 0.3f, 0.45f, 0.4f);
+                    braid.StartDelay = 0.06f;
+                    braid.Twist = 360f;
+                    braid.Thickness = 0.1f;
+                    // Spray follows the head along the path (few, directional).
+                    for (int i = 1; i <= 4; i++)
+                    {
+                        float u = i / 4f;
+                        Droplets(b, "Spray" + i, 10, mainPath(u), 2f, 5f, 1.4f, 0.04f + u * 0.26f, 55f);
+                    }
                 }
-                Foamy(b, "BaseFoam", 10, new Vector3(-0.6f, 0.3f, 0.8f), 0.6f);
-                b.Particles("Crown", b.Additive(ProceduralTextures.Streak), new Vector3(-0.8f, 0.1f, 0.6f)).Burst(22)
-                    .Shape(ParticleSystemShapeType.Circle, 0.6f, 0f, 360f, null, new Vector3(-90f, 0f, 0f))
-                    .Life(0.35f, 0.6f).Speed(4f, 8f).Size(0.08f, 0.14f).Color(b.Pal.Bright * 0.8f).Gravity(1.6f).Stretch(1.4f, 0.05f).Fade(0.01f, 0.5f)
-                    .Velocity(Vector3.zero, 0f, 1.5f);
+                AnimeFoam.Impact(b, "BaseFoam", new Vector3(-0.6f, 0.05f, 0.8f), 1.3f, 0.02f);
                 var ripple = CommonVFX.FlatRing(b, "Ripple", b.Pal.Core, 4f, 0.6f, 0.05f, 0f, 0.88f);
                 ripple.transform.localPosition = new Vector3(-0.6f, 0.05f, 0.8f);
-                b.Light("Light", new Vector3(0.2f, 2.2f, 2.2f), b.Pal.Core, 9f, 7f, 0.9f);
-                CommonVFX.Glow(b, "HeadFlash", b.Pal.Bright * 0.6f, 3.5f, 0.35f, new Vector3(1.2f, 4.4f, 1.8f), 0.22f);
+                b.Light("Light", new Vector3(0.2f, 2.2f, 2.2f), b.Pal.Core, 9f, 7f, 1f);
+                CommonVFX.Glow(b, "HeadFlash", b.Pal.Bright * 0.6f, 3.5f, 0.35f, new Vector3(1.2f, 4.4f, 1.8f), 0.3f);
             });
 
             VFXLibrary.Register("water_splash", b =>
@@ -177,45 +148,66 @@ namespace BreathOfEclipse.VFX
             // --------------------------------------------------------- Second Form: Crescent Tide (360 wave)
             VFXLibrary.Register("water_crescent_tide", b =>
             {
-                b.Lifetime = 1.4f;
-                var wave = b.Tube("Wave", Body(b), PathUtil.Circle(2.3f, 0.7f, -30f, 380f, 0f, 0.25f, 3f), 0.34f, 0.24f, 0.2f, 0.45f);
-                wave.Wobble = 0.12f;
-                wave.Segments = 72;
-                var crest = b.Tube("Crest", Foam(b), PathUtil.Circle(2.35f, 1.0f, -30f, 380f, 0f, 0.25f, 3f), 0.12f, 0.22f, 0.15f, 0.35f);
-                crest.Segments = 72;
-                b.Particles("Spray", b.Additive(ProceduralTextures.Droplet), new Vector3(0f, 0.7f, 0f)).Burst(60)
-                    .Shape(ParticleSystemShapeType.Circle, 2.2f, 0f, 360f, null, new Vector3(-90f, 0f, 0f))
-                    .Life(0.4f, 0.8f).Speed(1f, 3f).Size(0.06f, 0.14f).Color(b.Pal.Bright * 0.7f).Gravity(1.3f).Velocity(new Vector3(0f, 0f, 0f), 0f, 4f).Fade(0.01f, 0.5f);
+                b.Lifetime = 1.5f;
+                // A great crescent of water sweeps around the swordsman and throws its crest outward.
+                var sweep = WaterSpline.Ring(2.1f, 0.85f, 0.92f, 0.25f, -40f);
+                var wave = b.WaterRibbon("Crescent", MaterialFactory.TidalWater(MaterialFactory.WaterLook.Body, false), sweep, 1.15f, 0.22f, 0.22f, 0.4f);
+                wave.Thickness = 0.45f;
+                wave.Curl = 70f;
+                wave.WaveHeight = 0.12f;
+                wave.Segments = 64;
+                AnimeFoam.Crest(b, "Crest", WaterSpline.Ring(2.55f, 1.25f, 0.92f, 0.25f, -40f), Vector3.zero, 0.28f, 0.05f, 0.22f, 0.18f, 0.35f, Vector3.up);
+                if (VFXQuality.Secondary)
+                {
+                    b.Particles("Spray", b.Additive(ProceduralTextures.Droplet), new Vector3(0f, 0.7f, 0f)).Burst(VFXQuality.Count(36))
+                        .Shape(ParticleSystemShapeType.Circle, 2.2f, 0f, 360f, null, new Vector3(-90f, 0f, 0f))
+                        .Life(0.4f, 0.8f).Speed(1f, 3f).Size(0.06f, 0.14f).Color(b.Pal.Bright * 0.7f).Gravity(1.3f).Velocity(new Vector3(0f, 0f, 0f), 0f, 4f).Fade(0.01f, 0.5f);
+                }
                 CommonVFX.FlatRing(b, "Ring", b.Pal.Core, 5.5f, 0.45f, 0.06f);
-                Foamy(b, "Foam", 14, new Vector3(0f, 0.3f, 0f), 2f);
+                AnimeFoam.Impact(b, "GroundFoam", Vector3.zero, 2.2f, 0.12f);
             });
 
             // --------------------------------------------------------- Third Form: Flowing Current (per step)
             VFXLibrary.Register("water_flow_step", b =>
             {
-                b.Lifetime = 1.2f;
-                var arc = b.Tube("Arc", Body(b), u => new Vector3(Mathf.Sin(u * Mathf.PI) * 1.1f, 1.0f + Mathf.Sin(u * Mathf.PI * 2f) * 0.25f, -1.4f + u * 2.8f), 0.22f, 0.12f, 0.15f, 0.4f);
-                arc.Wobble = 0.1f;
-                var arc2 = b.Tube("Arc2", Foam(b), u => new Vector3(Mathf.Sin(u * Mathf.PI) * 1.2f, 1.1f + Mathf.Sin(u * Mathf.PI * 2f) * 0.25f, -1.4f + u * 2.8f), 0.07f, 0.12f, 0.1f, 0.3f);
-                arc2.Opacity = 0.9f;
-                Droplets(b, "Spray", 18, new Vector3(0.9f, 1f, 0f), 2f, 5f, 1.2f, 0.08f, 60f);
+                b.Lifetime = 1.1f;
+                // Wandering current: each step leaves a snaking flow; three steps draw the zigzag.
+                var flowPath = WaterSpline.Wave(2.8f, 0.45f, 1.1f, 1.0f, 0.4f);
+                var flow = b.WaterRibbon("Flow", MaterialFactory.TidalWater(MaterialFactory.WaterLook.Body, false), u => flowPath(u) + new Vector3(0f, 0f, -1.4f), 0.55f, 0.12f, 0.14f, 0.35f);
+                flow.Twist = 120f;
+                flow.Thickness = 0.35f;
+                flow.WaveHeight = 0.08f;
+                var edge = b.WaterRibbon("Edge", MaterialFactory.TidalWater(MaterialFactory.WaterLook.Edge, false), u => flowPath(u) + new Vector3(0f, 0.18f, -1.4f), 0.14f, 0.12f, 0.1f, 0.28f);
+                edge.Twist = 120f;
+                edge.StartDelay = 0.02f;
+                if (VFXQuality.Secondary) Droplets(b, "Spray", 12, new Vector3(0.4f, 1f, 1.2f), 2f, 5f, 1.2f, 0.08f, 60f);
             });
 
             // --------------------------------------------------------- Advanced: Whirlpool Fang (drill)
             VFXLibrary.Register("water_whirlpool", b =>
             {
                 b.Lifetime = 1.8f;
+                // Abyss Fang: three twisting spiral sheets form a drill that bores forward.
                 for (int i = 0; i < 3; i++)
                 {
-                    var t = b.Tube("Spiral" + i, i == 0 ? Foam(b) : Body(b), PathUtil.ForwardSpiral(6f, 1.3f, 2.5f, i * Mathf.PI * 2f / 3f), i == 0 ? 0.14f : 0.28f, 0.3f, 0.5f, 0.5f);
-                    t.Wobble = 0.1f;
-                    t.WobbleSpeed = 14f;
-                    t.Segments = 64;
+                    var look = i == 0 ? MaterialFactory.WaterLook.Foam : MaterialFactory.WaterLook.Body;
+                    var spiral = b.WaterRibbon("Spiral" + i, MaterialFactory.TidalWater(look, false),
+                        WaterSpline.Spiral(6f, 1.3f, 2.5f, 1.1f, i * Mathf.PI * 2f / 3f), i == 0 ? 0.3f : 0.7f, 0.3f, 0.5f, 0.5f);
+                    spiral.Twist = 540f;
+                    spiral.Thickness = 0.3f;
+                    spiral.PlaneNormal = Vector3.forward;
+                    spiral.Segments = 64;
                 }
-                b.Particles("Vortex", b.Additive(ProceduralTextures.Droplet), new Vector3(0f, 1.1f, 3f)).Duration(0.8f).Rate(120f)
-                    .Shape(ParticleSystemShapeType.Box, 0.5f, 0f, 360f, new Vector3(2f, 2f, 5f)).Life(0.4f, 0.8f).Speed(0.1f, 0.4f).Size(0.06f, 0.14f)
-                    .Color(b.Pal.Bright * 0.7f).Velocity(new Vector3(0f, 0f, 3f), 0f, -2f).Fade(0.05f, 0.5f);
-                Foamy(b, "Foam", 16, new Vector3(0f, 1.1f, 3f), 1.4f, 0.2f);
+                var core = b.WaterRibbon("Core", MaterialFactory.TidalWater(MaterialFactory.WaterLook.Edge, false),
+                    WaterSpline.Spiral(6.4f, 0.35f, 4f, 1.1f), 0.22f, 0.26f, 0.5f, 0.4f);
+                core.PlaneNormal = Vector3.forward;
+                if (VFXQuality.Secondary)
+                {
+                    b.Particles("Vortex", b.Additive(ProceduralTextures.Droplet), new Vector3(0f, 1.1f, 3f)).Duration(0.8f).Rate(VFXQuality.Count(70))
+                        .Shape(ParticleSystemShapeType.Box, 0.5f, 0f, 360f, new Vector3(2f, 2f, 5f)).Life(0.4f, 0.8f).Speed(0.1f, 0.4f).Size(0.06f, 0.14f)
+                        .Color(b.Pal.Bright * 0.7f).Velocity(new Vector3(0f, 0f, 3f), 0f, -2f).Fade(0.05f, 0.5f);
+                }
+                AnimeFoam.Flecks(b, "TipFoam", new Vector3(0f, 1.1f, 5.6f), 16, 0.6f, 7f, 0.35f);
                 b.Light("Light", new Vector3(0f, 1.2f, 3f), b.Pal.Core, 8f, 5f, 1f);
             });
 
@@ -223,14 +215,40 @@ namespace BreathOfEclipse.VFX
             VFXLibrary.Register("water_leviathan", b =>
             {
                 b.Lifetime = 3.6f;
+                // 1) The battlefield becomes a whirlpool: two rising ring currents around the target.
+                for (int i = 0; i < 2; i++)
+                {
+                    var ring = b.WaterRibbon("Current" + i, MaterialFactory.TidalWater(MaterialFactory.WaterLook.Body, false),
+                        WaterSpline.Ring(6.5f - i * 1.6f, 0.4f + i * 0.6f, 1.6f, 2.2f, i * 150f), 1.6f - i * 0.4f, 0.9f, 1.0f, 0.8f);
+                    ring.Thickness = 0.5f;
+                    ring.Curl = 80f;
+                    ring.WaveHeight = 0.3f;
+                    ring.Segments = 80;
+                    ring.StartDelay = i * 0.15f;
+                }
+                // 2) Water columns erupt around the circle.
+                int columns = VFXQuality.Secondary ? 4 : 2;
+                for (int i = 0; i < columns; i++)
+                {
+                    float a = (i / (float)columns * 360f + 30f) * Mathf.Deg2Rad;
+                    Vector3 basePos = new Vector3(Mathf.Sin(a) * 5f, 0f, Mathf.Cos(a) * 5f);
+                    var column = b.WaterRibbon("Column" + i, MaterialFactory.TidalWater(MaterialFactory.WaterLook.Body, false),
+                        WaterSpline.CatmullRom(basePos, basePos + new Vector3(0f, 3f, 0f), basePos + new Vector3(0f, 6.5f, 0f), basePos * 0.8f + new Vector3(0f, 8f, 0f)),
+                        1.3f, 0.35f, 0.9f, 0.6f);
+                    column.PlaneNormal = new Vector3(Mathf.Cos(a), 0f, -Mathf.Sin(a));
+                    column.Twist = 360f;
+                    column.Thickness = 0.6f;
+                    column.StartDelay = 0.3f + i * 0.12f;
+                }
+                // 3) The leviathan coils up the whirlpool and dives onto the target.
                 System.Func<float, Vector3> path = u =>
                 {
                     if (u < 0.65f)
                     {
                         float k = u / 0.65f;
-                        float a = (k * 1.35f * 360f + 200f) * Mathf.Deg2Rad;
+                        float ang = (k * 1.35f * 360f + 200f) * Mathf.Deg2Rad;
                         float r = Mathf.Lerp(7.5f, 5.5f, k);
-                        return new Vector3(Mathf.Sin(a) * r, Mathf.Lerp(0.5f, 10f, k), Mathf.Cos(a) * r);
+                        return new Vector3(Mathf.Sin(ang) * r, Mathf.Lerp(0.5f, 10f, k), Mathf.Cos(ang) * r);
                     }
                     float d = (u - 0.65f) / 0.35f;
                     float endA = (1.35f * 360f + 200f) * Mathf.Deg2Rad;
@@ -238,25 +256,80 @@ namespace BreathOfEclipse.VFX
                     Vector3 apex = top + Vector3.up * 2f;
                     return PathUtil.Bezier(top, apex, new Vector3(0f, 6f, 0f), new Vector3(0f, -0.5f, 0f), d);
                 };
-                var profile = new AnimationCurve(new Keyframe(0f, 0.3f), new Keyframe(0.3f, 1f), new Keyframe(0.9f, 1.2f), new Keyframe(1f, 0.8f));
-                var dragon = b.Tube("Leviathan", Body(b), path, 1.25f, 1.45f, 0.55f, 0.9f);
-                dragon.RadiusProfile = profile;
-                dragon.Wobble = 0.5f;
-                dragon.WobbleFrequency = 3f;
-                dragon.WobbleSpeed = 9f;
-                dragon.Segments = 96;
-                dragon.RadialSegments = 14;
-                dragon.Head = SerpentHead(b, dragon.transform, 2.1f);
-                var foam = b.Tube("Foam", Foam(b), path, 0.5f, 1.4f, 0.45f, 0.8f);
-                foam.RadiusProfile = profile;
-                foam.Wobble = 0.5f;
-                foam.WobbleFrequency = 3f;
-                foam.WobbleSpeed = 9f;
-                foam.Segments = 96;
-                b.Particles("Rain", b.Additive(ProceduralTextures.Droplet), new Vector3(0f, 12f, 0f)).Duration(3f).Rate(140f)
-                    .Shape(ParticleSystemShapeType.Box, 1f, 0f, 360f, new Vector3(16f, 0.5f, 16f)).Life(0.8f, 1.2f).Speed(0f, 0f)
-                    .Size(0.05f, 0.1f).Color(b.Pal.Bright * 0.5f).Gravity(1.6f).Stretch(2f, 0.06f).Fade(0.05f, 0.7f);
+                var dragon = b.WaterSerpent("Leviathan", WaterSpline.EvenSpeed(path, 96), 1.25f, 1.85f, 0.5f, 0.8f, 1.5f);
+                dragon.Segments = VFXQuality.Secondary ? 96 : 48;
+                dragon.RadialSegments = VFXQuality.Secondary ? 14 : 9;
+                dragon.Slither = 0.5f;
+                dragon.SlitherFrequency = 3f;
+                dragon.SlitherSpeed = 9f;
+                dragon.Twist = 900f;
+                // 4) Massive impact where it lands.
+                AnimeFoam.Impact(b, "ImpactFoam", Vector3.zero, 4.5f, 1.85f);
+                b.Particles("Crown", b.Additive(ProceduralTextures.Streak), new Vector3(0f, 0.2f, 0f)).Burst(VFXQuality.Count(40)).Delay(1.85f)
+                    .Shape(ParticleSystemShapeType.Circle, 1.5f, 0f, 360f, null, new Vector3(-90f, 0f, 0f))
+                    .Life(0.5f, 0.9f).Speed(8f, 14f).Size(0.12f, 0.24f).Color(b.Pal.Bright * 0.9f).Gravity(1.8f).Stretch(1.6f, 0.06f).Fade(0.01f, 0.5f)
+                    .Velocity(Vector3.zero, 0f, 3f);
+                if (VFXQuality.Secondary)
+                {
+                    b.Particles("Rain", b.Additive(ProceduralTextures.Droplet), new Vector3(0f, 12f, 0f)).Duration(3f).Rate(VFXQuality.Count(90))
+                        .Shape(ParticleSystemShapeType.Box, 1f, 0f, 360f, new Vector3(16f, 0.5f, 16f)).Life(0.8f, 1.2f).Speed(0f, 0f)
+                        .Size(0.05f, 0.1f).Color(b.Pal.Bright * 0.5f).Gravity(1.6f).Stretch(2f, 0.06f).Fade(0.05f, 0.7f);
+                }
                 b.Light("Light", new Vector3(0f, 6f, 0f), b.Pal.Core, 25f, 6f, 2.6f);
+                b.Light("ImpactLight", new Vector3(0f, 1.5f, 0f), b.Pal.Bright, 14f, 9f, 0.8f, 1.85f);
+            });
+
+            // --------------------------------------------------------- Form I: Tide Cutter (thin, clean arc)
+            VFXLibrary.Register("water_tide_cut", b =>
+            {
+                b.Lifetime = 0.9f;
+                var path = WaterSpline.SlashArc(1.7f, -80f, 85f, 1.15f, -8f);
+                var cut = b.WaterRibbon("Cut", MaterialFactory.TidalWater(MaterialFactory.WaterLook.Edge, false), path, 0.34f, 0.07f, 0.1f, 0.25f);
+                cut.Thickness = 0.15f;
+                cut.WidthProfile = new AnimationCurve(new Keyframe(0f, 0.1f), new Keyframe(0.5f, 1f), new Keyframe(1f, 0.35f));
+                AnimeFoam.Crest(b, "Foam", path, new Vector3(0f, 0.08f, 0f), 0.1f, 0.03f, 0.07f, 0.08f, 0.22f, Vector3.up);
+                if (VFXQuality.Secondary) AnimeFoam.Flecks(b, "EndFlecks", new Vector3(1.5f, 1.15f, 0.3f), 8, 0.2f, 5f, 0.08f);
+            });
+
+            // --------------------------------------------------------- Form IV: Parting Cascade (vertical waterfall)
+            VFXLibrary.Register("water_cascade", b =>
+            {
+                b.Lifetime = 1.4f;
+                for (int s = -1; s <= 1; s += 2)
+                {
+                    var fall = b.WaterRibbon("Fall" + (s < 0 ? "L" : "R"), MaterialFactory.TidalWater(MaterialFactory.WaterLook.Body, false),
+                        WaterSpline.Cascade(3.2f, 2.2f, 0.45f * s), 0.95f, 0.16f, 0.22f, 0.4f);
+                    fall.PlaneNormal = Vector3.right;
+                    fall.Thickness = 0.4f;
+                    fall.Curl = 25f * s;
+                    AnimeFoam.Crest(b, "FallFoam" + (s < 0 ? "L" : "R"), WaterSpline.Cascade(3.35f, 2.25f, 0.5f * s), Vector3.zero, 0.22f, 0.04f, 0.16f, 0.18f, 0.35f, Vector3.right);
+                }
+                var core = b.WaterRibbon("Blade", MaterialFactory.TidalWater(MaterialFactory.WaterLook.Edge, false), WaterSpline.Cascade(3f, 2.1f), 0.3f, 0.14f, 0.12f, 0.3f);
+                core.PlaneNormal = Vector3.right;
+                AnimeFoam.Impact(b, "Impact", new Vector3(0f, 0.05f, 2.1f), 1.8f, 0.14f);
+            });
+
+            // --------------------------------------------------------- Form V: Ring of Tides (circular current)
+            VFXLibrary.Register("water_ring_current", b =>
+            {
+                b.Lifetime = 1.3f;
+                for (int i = 0; i < 3; i++)
+                {
+                    var look = i == 1 ? MaterialFactory.WaterLook.Foam : MaterialFactory.WaterLook.Body;
+                    var ring = b.WaterRibbon("Current" + i, MaterialFactory.TidalWater(look, false),
+                        WaterSpline.Ring(3.2f - i * 0.6f, 0.35f + i * 0.45f, 1.25f, 0.3f, i * 120f), i == 1 ? 0.3f : 0.8f, 0.3f, 0.35f, 0.4f);
+                    ring.Thickness = 0.35f;
+                    ring.Curl = -50f;
+                    ring.WaveHeight = 0.1f;
+                    ring.Segments = 64;
+                    ring.StartDelay = i * 0.05f;
+                }
+                if (VFXQuality.Secondary)
+                {
+                    b.Particles("Pull", b.Additive(ProceduralTextures.Droplet), new Vector3(0f, 0.8f, 0f)).Duration(0.4f).Rate(VFXQuality.Count(50))
+                        .Shape(ParticleSystemShapeType.Circle, 3.4f, 0f, 360f, null, new Vector3(-90f, 0f, 0f))
+                        .Life(0.4f, 0.6f).Speed(-4f, -2f).Size(0.06f, 0.12f).Color(b.Pal.Bright * 0.7f).Fade(0.05f, 0.5f);
+                }
             });
         }
     }

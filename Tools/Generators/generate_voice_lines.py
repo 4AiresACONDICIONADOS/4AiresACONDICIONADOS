@@ -52,7 +52,7 @@ def collect_lines():
     names = re.findall(r'Form\(\d+, \w+, "([^"]+)"\)', src) + re.findall(r'Ultimate\(style, \w+, "([^"]+)"\)', src)
     forms = [o + " Postura" for o in ORDINALS] + ["Forma Final"]
     # (text, spoken text, speed): names are shouted, calls are steady.
-    lines = [(t, t + ".", 0.8) for t in styles] + [(t, t + ".", 0.78) for t in forms] + [(t, "¡" + t + "!", 0.8) for t in names]
+    lines = [(t, t + ".", 0.66) for t in styles] + [(t, t + ".", 0.66) for t in forms] + [(t, "¡" + t + "!", 0.7) for t in names]
     seen, unique = set(), []
     for text, spoken, speed in lines:
         if key(text) not in seen:

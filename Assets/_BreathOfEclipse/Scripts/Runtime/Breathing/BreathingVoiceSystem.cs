@@ -19,6 +19,8 @@ namespace BreathOfEclipse.Breathing
     public sealed class BreathingVoiceSystem : MonoBehaviour
     {
         private const float StyleCallCooldown = 12f;
+        /// <summary>The technique name may land this long after the first strike (the effect is still on screen).</summary>
+        private const float NameLinger = 0.9f;
         private const float DuckLevel = 0.55f;
 
         private BreathingStyleSystem _breathing;
@@ -62,12 +64,23 @@ namespace BreathOfEclipse.Breathing
             bool callStyle = ultimate || style.styleId != _lastStyleId || Time.unscaledTime - _lastStyleCallTime > StyleCallCooldown;
             if (string.IsNullOrEmpty(style.styleCall)) callStyle = false;
 
-            _lines.Clear();
             string lang = settings.voiceLanguage;
-            if (callStyle) Add(style.styleCall, lang, 0f, "…");
-            if (!string.IsNullOrEmpty(formCall)) Add(formCall, lang, _lines.Count > 0 ? 0.08f : 0f, string.IsNullOrEmpty(nameCall) ? "" : "…");
-            if (!string.IsNullOrEmpty(nameCall)) Add(nameCall, lang, _lines.Count > 0 ? 0.04f : 0f, "!", "¡");
+            float strike = FirstStrikeDelay(skill);
+            float formAnchor = CueStart(skill, VoiceCue.Form);
+            float nameAnchor = CueStart(skill, VoiceCue.Name);
+            // Longest phrasing whose name still lands while the technique is on screen; the attack never waits.
+            // Full → "Séptima Postura… ¡Serpiente Ascendente!" → "Respiración del Agua… ¡…!" → just the name.
+            bool[][] options = { new[] { true, true }, new[] { false, true }, new[] { true, false }, new[] { false, false } };
+            float deadline = strike + (ultimate ? 2.5f : NameLinger);
+            foreach (var o in options)
+            {
+                bool withStyle = o[0] && callStyle, withForm = o[1] && !string.IsNullOrEmpty(formCall);
+                if (o[0] && !callStyle) continue;
+                BuildLines(style.styleCall, withStyle, formCall, withForm, nameCall, lang, formAnchor, nameAnchor);
+                if (string.IsNullOrEmpty(nameCall) || NameStart() <= deadline) break;
+            }
             if (_lines.Count == 0) return;
+            callStyle = !string.IsNullOrEmpty(style.styleCall) && _lines[0].Text.StartsWith(style.styleCall.Trim());
 
             if (callStyle)
             {
@@ -94,12 +107,44 @@ namespace BreathOfEclipse.Breathing
             _voice.Speak(_lines);
         }
 
-        private void Add(string text, string lang, float gap, string suffix, string prefix = "")
+        private void BuildLines(string styleCall, bool withStyle, string formCall, bool withForm, string nameCall, string lang, float formAnchor, float nameAnchor)
+        {
+            _lines.Clear();
+            if (withStyle) Add(styleCall, lang, 0f, 0f, "…");
+            if (withForm) Add(formCall, lang, _lines.Count > 0 ? 0.06f : 0f, formAnchor, string.IsNullOrEmpty(nameCall) ? "" : "…");
+            if (!string.IsNullOrEmpty(nameCall)) Add(nameCall, lang, _lines.Count > 0 ? 0.03f : 0f, nameAnchor, "!", "¡");
+        }
+
+        /// <summary>When the last line (the technique name) would start with the current line list.</summary>
+        private float NameStart()
+        {
+            float t = 0f, start = 0f;
+            foreach (var l in _lines)
+            {
+                start = Mathf.Max(t + l.Gap, l.NotBefore);
+                t = start + (l.Clip != null ? l.Clip.length : VoiceChannel.EstimateSeconds(l.Text));
+            }
+            return start;
+        }
+
+        private void Add(string text, string lang, float gap, float notBefore, string suffix, string prefix = "")
         {
             string display = text.Trim();
             if (!string.IsNullOrEmpty(prefix) && !display.StartsWith(prefix)) display = prefix + display;
             if (!string.IsNullOrEmpty(suffix) && !display.EndsWith(suffix)) display += suffix;
-            _lines.Add(new VoiceChannel.Line { Text = display, Clip = VoiceLibrary.Get(lang, text), Gap = gap });
+            _lines.Add(new VoiceChannel.Line { Text = display, Clip = VoiceLibrary.Get(lang, text), Gap = gap, NotBefore = notBefore });
+        }
+
+        /// <summary>Start time of the first phase tagged with <paramref name="cue"/> (0 when untagged).</summary>
+        private static float CueStart(SkillData skill, VoiceCue cue)
+        {
+            float t = 0f;
+            foreach (var p in skill.phases)
+            {
+                if (p.voiceCue == cue) return t;
+                t += Mathf.Max(0f, p.duration);
+            }
+            return 0f;
         }
 
         private static VoiceChannel.Line WithoutClip(VoiceChannel.Line l)

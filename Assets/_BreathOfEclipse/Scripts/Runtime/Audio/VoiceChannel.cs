@@ -68,6 +68,8 @@ namespace BreathOfEclipse.Audio
             public AudioClip Clip;
             /// <summary>Silence before this line (seconds).</summary>
             public float Gap;
+            /// <summary>Earliest start, in seconds after <see cref="VoiceChannel.Speak"/> (sync with a technique phase).</summary>
+            public float NotBefore;
         }
 
         /// <summary>(line index, line) when a line starts.</summary>
@@ -81,6 +83,7 @@ namespace BreathOfEclipse.Audio
         private readonly List<Line> _lines = new List<Line>();
         private int _index;
         private float _nextAt;
+        private float _speakStart;
         private bool _busy;
         private float _busyUntil;
         private float _fadeFrom, _fadeStart, _fadeDuration;
@@ -113,7 +116,8 @@ namespace BreathOfEclipse.Audio
             _lines.AddRange(lines);
             _index = 0;
             _busy = false;
-            _nextAt = Time.unscaledTime + (_lines.Count > 0 ? _lines[0].Gap : 0f);
+            _speakStart = Time.unscaledTime;
+            _nextAt = _speakStart + (_lines.Count > 0 ? Mathf.Max(_lines[0].Gap, _lines[0].NotBefore) : 0f);
         }
 
         /// <summary>Stops now (fade in seconds) and drops the queued lines.</summary>
@@ -162,7 +166,7 @@ namespace BreathOfEclipse.Audio
                     Finished?.Invoke();
                     return;
                 }
-                _nextAt = now + _lines[_index].Gap;
+                _nextAt = Mathf.Max(now + _lines[_index].Gap, _speakStart + _lines[_index].NotBefore);
             }
             if (_index >= _lines.Count || now < _nextAt) return;
 

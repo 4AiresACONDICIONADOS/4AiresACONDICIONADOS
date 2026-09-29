@@ -55,6 +55,12 @@ namespace BreathOfEclipse.Data
             return p;
         }
 
+        public static SkillPhase Voice(this SkillPhase p, VoiceCue cue)
+        {
+            p.voiceCue = cue;
+            return p;
+        }
+
         public static SkillPhase Cancelable(this SkillPhase p)
         {
             p.allowCancel = true;

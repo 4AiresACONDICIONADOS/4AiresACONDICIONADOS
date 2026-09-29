@@ -65,6 +65,18 @@ namespace BreathOfEclipse.Data
         SkyAboveTarget = 8
     }
 
+    /// <summary>Which part of the technique call should start (at the earliest) when this phase begins.</summary>
+    public enum VoiceCue
+    {
+        None = 0,
+        /// <summary>"Respiración del Agua…"</summary>
+        Style = 1,
+        /// <summary>"Séptima Postura…"</summary>
+        Form = 2,
+        /// <summary>"¡Serpiente Ascendente!"</summary>
+        Name = 3
+    }
+
     public enum TrailMode
     {
         Keep = 0,
@@ -224,6 +236,8 @@ namespace BreathOfEclipse.Data
     {
         public string name = "Phase";
         public float duration = 0.2f;
+        [Tooltip("Voice sync: this part of the call starts no earlier than this phase (never delays the phase).")]
+        public VoiceCue voiceCue;
 
         [Header("Animation")]
         public string motionId;

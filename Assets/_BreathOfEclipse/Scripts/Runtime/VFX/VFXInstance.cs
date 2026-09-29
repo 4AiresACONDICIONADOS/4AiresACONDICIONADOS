@@ -75,12 +75,24 @@ namespace BreathOfEclipse.VFX
     public static class VFXQuality
     {
         public static float Density = 1f;
+        /// <summary>
+        /// Hero-effect detail: High = full serpent (crest, horns, braid), foam and secondary droplets; Medium = fewer
+        /// secondary parts; Low = simplified hero shapes (the silhouette always stays).
+        /// </summary>
+        public static GraphicsQuality Tier = GraphicsQuality.High;
+        public static bool Secondary => Tier >= GraphicsQuality.Medium;
+        public static bool Full => Tier >= GraphicsQuality.High;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => Density = 1f;
+        private static void ResetStatics()
+        {
+            Density = 1f;
+            Tier = GraphicsQuality.High;
+        }
 
         public static void Apply(GraphicsQuality quality)
         {
+            Tier = quality;
             switch (quality)
             {
                 case GraphicsQuality.Low: Density = 0.45f; break;

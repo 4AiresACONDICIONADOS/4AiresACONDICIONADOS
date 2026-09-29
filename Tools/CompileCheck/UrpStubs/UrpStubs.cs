@@ -149,4 +149,10 @@ namespace UnityEngine.Rendering.Universal
         public ClampedFloatParameter temperature = new ClampedFloatParameter(0f, -100, 100f);
         public ClampedFloatParameter tint = new ClampedFloatParameter(0f, -100, 100f);
     }
+    public sealed class SplitToning : VolumeComponent
+    {
+        public ColorParameter shadows = new ColorParameter(Color.grey);
+        public ColorParameter highlights = new ColorParameter(Color.grey);
+        public ClampedFloatParameter balance = new ClampedFloatParameter(0f, -100f, 100f);
+    }
 }

@@ -63,9 +63,11 @@ namespace BreathOfEclipse.Environment
             {
                 float a = i * 20f;
                 Vector3 p = Quaternion.Euler(0f, a, 0f) * Vector3.forward * 40f;
-                EnvironmentKit.Tree(root, p, 1.3f, i * 31, new Color(0.14f, 0.24f, 0.26f));
+                if (i % 2 == 0) EnvironmentKit.BroadleafTree(root, p, 1.3f, i * 31, new Color(0.14f, 0.24f, 0.26f));
+                else EnvironmentKit.Tree(root, p, 1.3f, i * 31, new Color(0.14f, 0.24f, 0.26f));
             }
             EnvironmentKit.AmbientParticles(root, Vector3.zero, new Vector3(70f, 6f, 70f), true, true, true);
+            EnvironmentKit.BatchStatic(root);
         }
 
         protected override void ApplyAtmosphere()

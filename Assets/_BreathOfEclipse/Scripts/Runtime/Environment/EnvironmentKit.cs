@@ -234,6 +234,117 @@ namespace BreathOfEclipse.Environment
             return root;
         }
 
+        /// <summary>
+        /// Anime broadleaf tree: leaning trunk with two branches and a cluster of lumpy canopy blobs, darker below
+        /// and lit on top (painted-foliage look). Cheap: ~7 low-poly parts, all static-batched.
+        /// </summary>
+        public static GameObject BroadleafTree(Transform parent, Vector3 position, float scale, int seed, Color leaves)
+        {
+            var rng = new System.Random(seed);
+            var root = new GameObject("Broadleaf");
+            root.transform.SetParent(parent, false);
+            root.transform.position = position;
+            root.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
+            root.transform.localScale = Vector3.one * scale;
+            var bark = MaterialFactory.Toon(new Color(0.2f, 0.14f, 0.13f), 0.9f, false, null, 0.5f, 0.15f, 0f, ProceduralTextures.WoodDetail, 2f);
+            var shade = MaterialFactory.Toon(leaves * 0.8f, 0.8f, false, null, 0.42f, 0.3f);
+            var lit = MaterialFactory.Toon(Color.Lerp(leaves, new Color(0.55f, 0.75f, 0.85f), 0.25f), 0.8f, false, null, 0.45f, 0.45f);
+            float h = 2.8f + (float)rng.NextDouble() * 1.4f;
+            float lean = (float)rng.NextDouble() * 8f - 4f;
+            ProceduralMeshes.CreatePart("Trunk", ProceduralMeshes.OpenCylinder(0.34f, 0.2f, 8, 3), bark, root.transform, Vector3.zero, new Vector3(lean, 0f, lean * 0.5f), new Vector3(1f, h, 1f));
+            ProceduralMeshes.CreatePart("RootFlare", ProceduralMeshes.Cone(8), bark, root.transform, Vector3.zero, Vector3.zero, new Vector3(1.1f, 0.5f, 1.1f));
+            for (int i = 0; i < 2; i++)
+            {
+                float a = i * 150f + (float)rng.NextDouble() * 40f;
+                ProceduralMeshes.CreatePart("Branch" + i, ProceduralMeshes.OpenCylinder(0.12f, 0.06f, 6, 1), bark, root.transform, new Vector3(0f, h * 0.7f, 0f),
+                    new Vector3(-50f, a, 0f), new Vector3(1f, 1.4f, 1f));
+            }
+            int blobs = 4 + rng.Next(3);
+            for (int i = 0; i < blobs; i++)
+            {
+                float a = i / (float)blobs * Mathf.PI * 2f + (float)rng.NextDouble();
+                float r = i == 0 ? 0f : 0.9f + (float)rng.NextDouble() * 0.6f;
+                float y = h + 0.4f + (i == 0 ? 0.9f : (float)rng.NextDouble() * 0.7f);
+                float size = i == 0 ? 2.6f : 1.7f + (float)rng.NextDouble() * 0.8f;
+                bool top = i == 0 || y > h + 0.9f;
+                var blob = ProceduralMeshes.CreatePart("Canopy" + i, ProceduralMeshes.Blob(rng.Next(4)), top ? lit : shade, root.transform,
+                    new Vector3(Mathf.Cos(a) * r, y, Mathf.Sin(a) * r), new Vector3(0f, (float)rng.NextDouble() * 360f, 0f), new Vector3(size, size * 0.8f, size));
+                blob.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.On;
+            }
+            var col = root.AddComponent<CapsuleCollider>();
+            col.center = new Vector3(0f, h * 0.5f, 0f);
+            col.height = h;
+            col.radius = 0.28f;
+            return root;
+        }
+
+        /// <summary>Fern / grass clump: a few flattened blades fanning out (undergrowth, no collider).</summary>
+        public static GameObject Undergrowth(Transform parent, Vector3 position, int seed, Color color, float size = 1f)
+        {
+            var rng = new System.Random(seed);
+            var root = new GameObject("Undergrowth");
+            root.transform.SetParent(parent, false);
+            root.transform.position = position;
+            var mat = MaterialFactory.Toon(color, 0f, false, null, 0.5f, 0.3f);
+            int blades = 4 + rng.Next(3);
+            var blade = ProceduralMeshes.Cone(4, 0.35f);
+            for (int i = 0; i < blades; i++)
+            {
+                float a = i / (float)blades * 360f + (float)rng.NextDouble() * 30f;
+                float h = (0.45f + (float)rng.NextDouble() * 0.45f) * size;
+                var part = ProceduralMeshes.CreatePart("Blade" + i, blade, mat, root.transform, Vector3.zero,
+                    new Vector3(25f + (float)rng.NextDouble() * 30f, a, 0f), new Vector3(0.22f * size, h, 0.05f * size));
+                part.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+            }
+            return root;
+        }
+
+        /// <summary>Low ground mist: a few large soft horizontal sheets hugging the ground (fake volumetric).</summary>
+        public static void GroundMist(Transform parent, Vector3 center, Vector2 area, int count, int seed, Color color)
+        {
+            var rng = new System.Random(seed);
+            var mat = MaterialFactory.Vfx(ProceduralTextures.Smoke, VfxBlend.AlphaBlend, 1.5f);
+            for (int i = 0; i < count; i++)
+            {
+                var pos = center + new Vector3(((float)rng.NextDouble() - 0.5f) * area.x, 0.25f + (float)rng.NextDouble() * 0.6f, ((float)rng.NextDouble() - 0.5f) * area.y);
+                float size = 9f + (float)rng.NextDouble() * 8f;
+                var sheet = ProceduralMeshes.CreatePart("Mist" + i, ProceduralMeshes.GroundQuad(), mat, parent, pos, new Vector3(0f, (float)rng.NextDouble() * 360f, 0f), new Vector3(size, 1f, size));
+                var r = sheet.GetComponent<MeshRenderer>();
+                r.shadowCastingMode = ShadowCastingMode.Off;
+                r.receiveShadows = false;
+                var mpb = new MaterialPropertyBlock();
+                mpb.SetColor(ShaderIds.TintColor, color);
+                r.SetPropertyBlock(mpb);
+            }
+        }
+
+        /// <summary>
+        /// Static-batches the plain scenery under <paramref name="root"/> (no scripts, rigidbodies or particles on the
+        /// object or its parents): hundreds of trees, rocks and plants render in a few batches.
+        /// </summary>
+        public static void BatchStatic(Transform root)
+        {
+            var list = new System.Collections.Generic.List<GameObject>();
+            foreach (var r in root.GetComponentsInChildren<MeshRenderer>())
+            {
+                if (IsPlainScenery(r.transform, root)) list.Add(r.gameObject);
+            }
+            if (list.Count > 0) StaticBatchingUtility.Combine(list.ToArray(), root.gameObject);
+        }
+
+        private static bool IsPlainScenery(Transform t, Transform root)
+        {
+            for (var c = t; c != null; c = c.parent)
+            {
+                if (c.GetComponent<MonoBehaviour>() != null || c.GetComponent<Rigidbody>() != null || c.GetComponent<ParticleSystem>() != null) return false;
+                if (c == root) break;
+            }
+            // Mist sheets use a per-renderer tint (property block): keep them out of the batch.
+            if (t.GetComponent<MeshRenderer>().HasPropertyBlock()) return false;
+            var mf = t.GetComponent<MeshFilter>();
+            return mf != null && mf.sharedMesh != null && mf.sharedMesh.isReadable;
+        }
+
         public static GameObject Rock(Transform parent, Vector3 position, Vector3 scale, int seed, bool collider = true)
         {
             var rng = new System.Random(seed);

@@ -294,6 +294,50 @@ namespace BreathOfEclipse.Rendering
             return mesh;
         }
 
+        /// <summary>Low-poly lumpy sphere (anime tree canopies, bushes): ~100 triangles, noise-displaced, flat-ish shading.</summary>
+        public static Mesh Blob(int variant = 0, int lon = 10, int lat = 6, float lumpiness = 0.18f)
+        {
+            string key = $"blob_{variant}_{lon}_{lat}_{lumpiness:F2}";
+            if (Cache.TryGetValue(key, out var cached)) return cached;
+            var verts = new List<Vector3>();
+            var tris = new List<int>();
+            var uvs = new List<Vector2>();
+            float seed = variant * 13.7f;
+            for (int y = 0; y <= lat; y++)
+            {
+                float v = y / (float)lat;
+                float theta = v * Mathf.PI;
+                for (int x = 0; x <= lon; x++)
+                {
+                    float u = x / (float)lon;
+                    float phi = u * Mathf.PI * 2f;
+                    var dir = new Vector3(Mathf.Sin(theta) * Mathf.Cos(phi), Mathf.Cos(theta), Mathf.Sin(theta) * Mathf.Sin(phi));
+                    float n = Mathf.PerlinNoise(dir.x * 1.7f + seed, dir.z * 1.7f + dir.y * 0.9f + seed);
+                    // Flatter underside, puffy top: reads as foliage rather than a ball.
+                    float r = 0.5f * (1f + (n - 0.5f) * 2f * lumpiness) * (dir.y < 0f ? 0.8f : 1f);
+                    if (x == lon) dir = new Vector3(Mathf.Sin(theta), Mathf.Cos(theta), 0f);
+                    verts.Add(dir * r);
+                    uvs.Add(new Vector2(u, v));
+                }
+            }
+            int stride = lon + 1;
+            for (int y = 0; y < lat; y++)
+            for (int x = 0; x < lon; x++)
+            {
+                int a = y * stride + x, b = a + stride;
+                tris.Add(a); tris.Add(a + 1); tris.Add(b);
+                tris.Add(a + 1); tris.Add(b + 1); tris.Add(b);
+            }
+            var mesh = new Mesh { name = key };
+            mesh.SetVertices(verts);
+            mesh.SetUVs(0, uvs);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            Cache[key] = mesh;
+            return mesh;
+        }
+
         /// <summary>Inward-facing sphere for the sky dome.</summary>
         public static Mesh SkySphere(int lon = 48, int lat = 24)
         {

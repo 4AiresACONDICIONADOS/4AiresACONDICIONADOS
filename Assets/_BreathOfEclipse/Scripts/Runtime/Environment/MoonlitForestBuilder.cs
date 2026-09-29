@@ -76,20 +76,35 @@ namespace BreathOfEclipse.Environment
             var rng = new System.Random(1234);
             var leafColors = new[] { new Color(0.12f, 0.22f, 0.22f), new Color(0.15f, 0.26f, 0.2f), new Color(0.2f, 0.18f, 0.3f), new Color(0.35f, 0.2f, 0.32f) };
             int trees = 0;
-            for (float x = -100f; x <= 100f; x += 8f)
+            // Denser, mixed forest: rounded anime broadleaves in front, conifers behind (everything is static-batched).
+            for (float x = -100f; x <= 100f; x += 7f)
             {
-                for (float z = -95f; z <= 95f; z += 8f)
+                for (float z = -95f; z <= 95f; z += 7f)
                 {
-                    float jx = x + (float)(rng.NextDouble() * 6 - 3);
-                    float jz = z + (float)(rng.NextDouble() * 6 - 3);
+                    float jx = x + (float)(rng.NextDouble() * 5 - 2.5);
+                    float jz = z + (float)(rng.NextDouble() * 5 - 2.5);
                     if (Blocked(jx, jz)) continue;
-                    if (rng.NextDouble() < 0.28) continue;
+                    if (rng.NextDouble() < 0.24) continue;
                     var color = leafColors[rng.Next(leafColors.Length)];
-                    EnvironmentKit.Tree(root, OnGround(jx, jz) - Vector3.up * 0.1f, 1.1f + (float)rng.NextDouble() * 0.9f, rng.Next(), color);
+                    float size = 1.1f + (float)rng.NextDouble() * 0.9f;
+                    bool broadleaf = Mathf.Abs(jx) < 45f ? rng.NextDouble() < 0.65 : rng.NextDouble() < 0.3;
+                    if (broadleaf) EnvironmentKit.BroadleafTree(root, OnGround(jx, jz) - Vector3.up * 0.1f, size, rng.Next(), color);
+                    else EnvironmentKit.Tree(root, OnGround(jx, jz) - Vector3.up * 0.1f, size, rng.Next(), color);
                     trees++;
                 }
             }
-            for (int i = 0; i < 70; i++)
+            // Undergrowth: ferns along the path edges and under the trees.
+            var fernColors = new[] { new Color(0.12f, 0.24f, 0.2f), new Color(0.16f, 0.28f, 0.22f), new Color(0.2f, 0.22f, 0.3f) };
+            for (int i = 0; i < 650; i++)
+            {
+                float x = (float)(rng.NextDouble() * 190 - 95);
+                float z = (float)(rng.NextDouble() * 180 - 90);
+                if (Mathf.Abs(x) < 4.5f && z > -95f && z < 90f) continue;
+                if (Mathf.Abs(z - StreamZ) < 3f) continue;
+                if (Vector2.Distance(new Vector2(x, z), Courtyard) < 20f) continue;
+                EnvironmentKit.Undergrowth(root, OnGround(x, z), rng.Next(), fernColors[rng.Next(fernColors.Length)], 0.8f + (float)rng.NextDouble() * 0.7f);
+            }
+            for (int i = 0; i < 110; i++)
             {
                 float x = (float)(rng.NextDouble() * 180 - 90);
                 float z = (float)(rng.NextDouble() * 180 - 90);
@@ -124,6 +139,13 @@ namespace BreathOfEclipse.Environment
 
             EnvironmentKit.LightShafts(root, new Vector3(0f, 0f, 10f), MoonDir, 6, 40f);
             EnvironmentKit.AmbientParticles(root, new Vector3(0f, 0f, 0f), new Vector3(90f, 8f, 170f), true, true, true);
+            // Low mist over the stream, the clearings and the temple approach.
+            var mist = new Color(0.55f, 0.65f, 0.9f, 0.12f);
+            EnvironmentKit.GroundMist(root, new Vector3(0f, -0.3f, StreamZ), new Vector2(60f, 10f), 8, 11, mist);
+            EnvironmentKit.GroundMist(root, OnGround(ClearingA.x, ClearingA.y), new Vector2(26f, 26f), 5, 12, mist);
+            EnvironmentKit.GroundMist(root, OnGround(ClearingB.x, ClearingB.y), new Vector2(34f, 34f), 6, 13, mist);
+            EnvironmentKit.GroundMist(root, OnGround(0f, 55f), new Vector2(20f, 30f), 6, 14, new Color(0.6f, 0.55f, 0.9f, 0.14f));
+            EnvironmentKit.BatchStatic(root);
             Debug.Log($"[MoonlitForest] Built forest with {trees} trees.");
         }
 

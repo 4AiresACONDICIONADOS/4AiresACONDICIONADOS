@@ -42,7 +42,7 @@ namespace BreathOfEclipse.CameraSystem
         [Header("Base grading")]
         public float baseBloom = 0.85f;
         public float baseSaturation = 10f;
-        public float baseContrast = 14f;
+        public float baseContrast = 18f;
         public float baseExposure = 0.15f;
         public float baseVignette = 0.24f;
         public float baseTemperature = -10f;
@@ -77,7 +77,7 @@ namespace BreathOfEclipse.CameraSystem
             _tonemapping.mode.Override(TonemappingMode.ACES);
 
             _bloom = _profile.Add<Bloom>(true);
-            _bloom.threshold.Override(0.95f);
+            _bloom.threshold.Override(0.9f);
             _bloom.intensity.Override(baseBloom);
             _bloom.scatter.Override(0.72f);
             _bloom.tint.Override(new Color(0.95f, 0.97f, 1f));
@@ -93,6 +93,12 @@ namespace BreathOfEclipse.CameraSystem
             _whiteBalance = _profile.Add<WhiteBalance>(true);
             _whiteBalance.temperature.Override(baseTemperature);
             _whiteBalance.tint.Override(4f);
+
+            // Cinematic moonlight grade: cool violet shadows, pale silver-cyan highlights.
+            var split = _profile.Add<SplitToning>(true);
+            split.shadows.Override(new Color(0.34f, 0.36f, 0.62f));
+            split.highlights.Override(new Color(0.62f, 0.7f, 0.74f));
+            split.balance.Override(-15f);
 
             _vignette = _profile.Add<Vignette>(true);
             _vignette.intensity.Override(baseVignette);

@@ -213,6 +213,15 @@ namespace BreathOfEclipse.UI
                 InputReader.Instance?.ResetBindings();
                 RefreshBindings();
             }, 26);
+            // Quick slots 1-4 are chosen from the form wheel (hold F, aim, press 1-4); this restores every style's default.
+            UIFactory.Button("ResetQuickSlots", bottom, "RESET QUICK SLOTS", new Vector2(360f, 60f), () =>
+            {
+                var pc = Player.PlayerController.Instance;
+                SaveSystem.Settings.quickSlots.Clear();
+                SaveSystem.SaveSettings();
+                if (pc != null && pc.Breathing != null) pc.Breathing.ResetQuickSlots();
+                GameEvents.Notify("Quick slots restored to each style's defaults");
+            }, 26);
             UIFactory.Button("Back", bottom, "BACK", new Vector2(260f, 60f), () => ShowPage(false), 26);
             _controlsPage.gameObject.SetActive(false);
         }

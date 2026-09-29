@@ -292,6 +292,23 @@ namespace BreathOfEclipse.Characters
                 // Tear-like markings under the eyes.
                 for (int side = -1; side <= 1; side += 2)
                     Mark("TearMark" + side, ProceduralMeshes.Primitive(cube), head, new Vector3(hs * 0.17f * side, hs * 0.42f, hs * 0.55f), new Vector3(0f, 0f, -20f * side), new Vector3(0.012f, hs * 0.16f, 0.01f));
+                // Anime demon face: dark sockets around the glowing slits, an angry brow ridge, pointed ears and chin,
+                // lower fangs and a sigil on the forehead that flares with the other markings.
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    string sfx = side > 0 ? "R" : "L";
+                    Part("Socket" + sfx, sphere, p.skin * 0.35f, head, new Vector3(hs * 0.16f * side, hs * 0.55f, hs * 0.52f), new Vector3(0f, 0f, 14f * side),
+                        new Vector3(hs * 0.22f, hs * 0.12f, hs * 0.06f), false, false, true, 0f);
+                    Part("BrowRidge" + sfx, cube, p.skin * 0.7f, head, new Vector3(hs * 0.15f * side, hs * 0.66f, hs * 0.54f), new Vector3(-10f, 0f, -24f * side),
+                        new Vector3(hs * 0.24f, hs * 0.05f, hs * 0.08f), false, false, true, 0.8f);
+                    Part("Ear" + sfx, ProceduralMeshes.Cone(5, 0.2f), p.skin, head, new Vector3(hs * 0.42f * side, hs * 0.55f, -hs * 0.05f), new Vector3(0f, 0f, -80f * side),
+                        new Vector3(hs * 0.12f, hs * 0.32f, hs * 0.06f), false, false, true, 0.7f);
+                }
+                Part("Chin", ProceduralMeshes.Cone(6), p.skin, head, new Vector3(0f, hs * 0.14f, hs * 0.45f), new Vector3(160f, 0f, 0f), new Vector3(hs * 0.22f, hs * 0.2f, hs * 0.18f), false, false, true, 0.8f);
+                for (int i = 0; i < 3; i++)
+                    Part("LowFang" + i, ProceduralMeshes.Cone(5), new Color(0.9f, 0.88f, 0.8f), head, new Vector3((i - 1f) * hs * 0.1f, hs * 0.23f, hs * 0.6f), Vector3.zero,
+                        new Vector3(0.018f, hs * 0.06f, 0.018f), false, false, true, 0.5f);
+                Mark("ThirdEye", ProceduralMeshes.Primitive(cube), head, new Vector3(0f, hs * 0.74f, hs * 0.5f), new Vector3(0f, 0f, 45f), new Vector3(hs * 0.05f, hs * 0.05f, 0.012f));
                 Part("HornR", ProceduralMeshes.Cone(8, 0.6f), p.hair, head, new Vector3(hs * 0.22f, hs * 0.85f, 0f), new Vector3(-35f, 0f, -20f), new Vector3(0.06f, 0.32f, 0.06f), false, false, true);
                 Part("HornL", ProceduralMeshes.Cone(8, 0.6f), p.hair, head, new Vector3(-hs * 0.22f, hs * 0.85f, 0f), new Vector3(-35f, 0f, 20f), new Vector3(0.06f, 0.32f, 0.06f), false, false, true);
             }

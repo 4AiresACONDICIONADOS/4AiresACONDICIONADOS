@@ -189,8 +189,14 @@ namespace BreathOfEclipse.Core
             _light = _gameplay.FindAction("LightAttack", true);
             _heavy = _gameplay.FindAction("HeavyAttack", true);
             _block = _gameplay.FindAction("Block", true);
-            // Optional: older or customised assets may not have it.
+            // Older or customised assets may not have it: add it (F, as in the default asset) so every form stays reachable.
             _formWheel = _gameplay.FindAction("FormWheel", false);
+            if (_formWheel == null && !_gameplay.enabled)
+            {
+                _formWheel = _gameplay.AddAction("FormWheel", InputActionType.Button);
+                _formWheel.AddBinding("<Keyboard>/f");
+                Debug.Log("[InputReader] Input asset had no FormWheel action; added it on F.");
+            }
             _lockOn = _gameplay.FindAction("LockOn", true);
             _switchTarget = _gameplay.FindAction("SwitchTarget", true);
             _skill1 = _gameplay.FindAction("Skill1", true);

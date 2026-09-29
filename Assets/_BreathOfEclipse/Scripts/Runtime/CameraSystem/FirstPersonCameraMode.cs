@@ -18,6 +18,7 @@ namespace BreathOfEclipse.CameraSystem
         private Vector3 _smoothed;
         private bool _init;
         private float _roll;
+        private float _lastYaw;
 
         public float Yaw => _yaw;
 
@@ -27,6 +28,8 @@ namespace BreathOfEclipse.CameraSystem
             _yaw = ctx.Player != null ? ctx.Player.eulerAngles.y : e.y;
             _pitch = Mathf.Clamp(Mathf.DeltaAngle(0f, e.x), -60f, 60f);
             _init = false;
+            _lastYaw = _yaw;
+            _roll = 0f;
         }
 
         public CameraPose Evaluate(CameraContext ctx)
@@ -66,8 +69,10 @@ namespace BreathOfEclipse.CameraSystem
             _smoothed.z = Mathf.Lerp(_smoothed.z, anchor.z, 1f - Mathf.Exp(-30f * dt));
             _smoothed.y = Mathf.Lerp(_smoothed.y, anchor.y, 1f - Mathf.Exp(-12f * dt));
 
-            // Tiny cinematic roll while attacking; capped at 2.5 degrees.
-            float rollTarget = ctx.PlayerAttacking ? Mathf.Sin(Time.time * 9f) * 2.5f : 0f;
+            // Subtle bank into fast turns (no oscillating wobble: it causes motion sickness); capped at 2 degrees.
+            float turnRate = dt > 0f ? Mathf.DeltaAngle(_lastYaw, _yaw) / dt : 0f;
+            _lastYaw = _yaw;
+            float rollTarget = Mathf.Clamp(-turnRate * 0.01f, -2f, 2f) * (ctx.PlayerAttacking ? 1f : 0.5f);
             _roll = Mathf.Lerp(_roll, rollTarget, 1f - Mathf.Exp(-6f * dt));
 
             return new CameraPose(_smoothed, Quaternion.Euler(_pitch, _yaw, _roll), ctx.BaseFov + FovBonus);

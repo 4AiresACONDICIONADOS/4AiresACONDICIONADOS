@@ -132,6 +132,7 @@ namespace BreathOfEclipse.Tests
                 {
                     foreach (var v in p.vfx) Check(v.vfxId, s.skillId);
                     foreach (var h in p.hits) Check(h.impactVfx, s.skillId);
+                    Check(p.pathVfx, s.skillId);
                 }
             foreach (var style in _db.styles)
             {

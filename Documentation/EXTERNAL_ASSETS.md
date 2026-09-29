@@ -11,3 +11,17 @@ by code.
 
 Placeholder voices: replace any clip with a recording of the same file name (see `VoiceLibrary` in
 `Scripts/Runtime/Audio/VoiceChannel.cs`).
+
+## Recommended, not included (need the user's account or a manual download)
+
+No external model, texture or animation was added in v0.2.1. Checked licenses (all allow use in a commercial game):
+
+| # | Asset | Use in this project | License |
+|---|---|---|---|
+| 1 | VRoid Studio (pixiv) + UniVRM | Original anime protagonist → `CharacterVisualProfile.modelPrefab` | VRoid: models you create are yours; UniVRM: MIT |
+| 2 | Quaternius Universal Animation Library (https://quaternius.com/packs/universalanimationlibrary.html) | Humanoid locomotion / combat clips for Mecanim | CC0 |
+| 3 | Quaternius Stylized Nature MegaKit (https://quaternius.com/packs/stylizednaturemegakit.html) | Trees, rocks, plants for Moonlit Forest | CC0 |
+| 4 | Mixamo (Adobe account) | Sword attack / draw / sheathe animations | Royalty-free in projects; no raw redistribution |
+| 5 | Quaternius monster packs (https://quaternius.com/) | Base meshes for Nightspawn / Hollow Oni | CC0 |
+
+Never import ripped models or official characters from other franchises.

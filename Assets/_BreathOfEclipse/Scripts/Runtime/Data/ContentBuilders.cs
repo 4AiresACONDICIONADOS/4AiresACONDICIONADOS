@@ -49,6 +49,12 @@ namespace BreathOfEclipse.Data
             return p;
         }
 
+        public static SkillPhase PathVfx(this SkillPhase p, string id)
+        {
+            p.pathVfx = id;
+            return p;
+        }
+
         public static SkillPhase Trail(this SkillPhase p, TrailMode mode)
         {
             p.trail = mode;

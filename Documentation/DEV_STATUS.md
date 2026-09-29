@@ -1,17 +1,18 @@
 # DEV STATUS — Breath of Eclipse
 
-**Versión actual: v0.2.0 — Tidal Breath Overhaul** · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
+**Versión actual: v0.2.1 — Anime Visual Overhaul** · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
 
 - **Working (probado por el usuario en Unity 6.3, v0.1.1):** arranque de `03_CombatTest`, personaje, escenario, ataques y técnicas.
-- **Working (código, compilado sin errores; SIN verificar en Unity):**
-  - v0.1.2: fundido a negro hasta que la escena y sus shaders están listos; knockdown → suelo → levantarse.
-  - Formas variables por estilo (hasta XI), rueda de formas (mantener F) y 4 formas rápidas (1-4).
-  - Respiración del Agua con 7 formas; Rising Serpent (VII) con nuevo timing y cámara que se aleja un 15%.
-  - Voz en español (45 clips TTS de dominio público), subtítulos, título pequeño, ducking, opciones en Settings.
-  - Fundido de VFX cerca de la cámara (primera persona); fase 2 del Oni inmediata y visible; voces 3D de demonios.
-- **Incomplete:** modelos 3D reales (protagonista y demonios siguen siendo procedurales), animaciones Mecanim,
-  thunder Flash Breaker hero, combat feel (fase B), bosque más denso, ultimate del Agua sin rediseñar.
-- **Next:** probar v0.2.0 en Unity (F → rueda, Rising Serpent con voz, F1 → PLAYER HIT TEST) y reportar errores.
+- **Working (código compilado, 0 errores / 0 warnings; SIN verificar en Unity):**
+  - v0.2.0: formas variables + rueda (F), Agua con 7 formas, voz en español (45 clips), fase 2 del Oni.
+  - v0.2.1: shader `TidalWaterAnime`, `WaterRibbonRenderer`, `WaterSerpentRenderer` con cabeza, espuma anime,
+    VFX propio para cada forma del Agua, Rising Serpent y ultimate rehechos, voz sincronizada por fase.
+  - Combat feel (hit stop, cancel windows, cuerpo entero en cada golpe), protagonista y demonios con más detalle,
+    adaptador para modelo humanoide (`CharacterVisualProfile`), bosque más denso con niebla y static batching,
+    pulido de cámara (3.ª/1.ª/2.ª persona) y Flash Breaker del Trueno como técnica hero propia.
+- **Incomplete:** modelos 3D reales y animaciones Mecanim (adaptador listo, ningún modelo incorporado);
+  resto de formas del Trueno sin rediseño hero.
+- **Next:** probar v0.2.1 en Unity (Rising Serpent, forma VII y ultimate del Agua, Flash Breaker, bosque, FPS).
 
 ## ✅ PLAYTEST INFRASTRUCTURE READY
 
@@ -32,7 +33,7 @@ Primera prueba recomendada al abrir el proyecto:
 | Compilación editor + playtest + tests (con `UNITY_EDITOR`, `UnityEditor.*.dll`, NUnit de Unity) | ✅ 0 errores, 0 warnings |
 | Tests de la capa Logic (`dotnet test`) | ✅ 39/39 |
 | Tests EditMode (lógica, guardado, contenido, planes de playtest) | ⏳ escritos; se ejecutan en el Test Runner de Unity |
-| Shaders (12) compilados con DXC contra la ShaderLibrary de URP 17.3 | ✅ 62 compilaciones, 0 fallos (sin cambios en v0.1.1) |
+| Shaders (13) compilados con DXC contra la ShaderLibrary de URP 17.3 | ✅ 66 compilaciones, 0 fallos |
 | **Abrir y jugar en el Editor de Unity** | ❌ **No realizado** |
 
 La v0.2.0 empezará después de la primera prueba visual real.

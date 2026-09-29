@@ -373,8 +373,9 @@ namespace BreathOfEclipse.Breathing
                 to = wall.point - (to - from).normalized * 0.5f - up;
             if (HitQuery.GroundPoint(to + Vector3.up * 2f, out var ground, out _)) to.y = ground.y;
 
-            VFXLibrary.SpawnBetween("thunder_path", from, to, Element, 1f);
-            AfterimageSystem.SpawnAlongPath(_pc.Rig, from, to, 6, new Color(Palette.Core.r * 0.5f, Palette.Core.g * 0.5f, Palette.Core.b * 0.5f, 0.6f), 0.5f);
+            bool hero = !string.IsNullOrEmpty(p.pathVfx);
+            VFXLibrary.SpawnBetween(hero ? p.pathVfx : "thunder_path", from, to, Element, 1f);
+            AfterimageSystem.SpawnAlongPath(_pc.Rig, from, to, hero ? 9 : 6, new Color(Palette.Core.r * 0.5f, Palette.Core.g * 0.5f, Palette.Core.b * 0.5f, hero ? 0.75f : 0.6f), hero ? 0.65f : 0.5f);
             VFXLibrary.Spawn("thunder_blink", from, Quaternion.identity, 1f, Element);
             _pc.Motor.Teleport(to, target != null ? -dir : dir);
             VFXLibrary.Spawn("thunder_blink", to, Quaternion.identity, 1f, Element);

@@ -409,18 +409,25 @@ namespace BreathOfEclipse.Data
 
             var flash = Skill("thunder_flash_breaker", "Flash Breaker", "First Form", S, SkillTier.Normal, 16f, 0f, 4.5f,
                 "The blade returns to the sheath, lightning gathers, then one blinding step behind the enemy. The cut appears a moment later.");
-            flash.phases.Add(Phase("Sheathe", 0.35f, "SkillSheathe", 0.06f).Trail(TrailMode.Off)
-                .Vfx("thunder_charge", VFXAnchor.Self, 0f, 1f, true).Sfx("charge").Sfx("thunder", 0.1f, 0.4f)
-                .Cam(zoom: 0.88f, slowScale: 0.75f, slowDuration: 0.3f, saturation: -55f, bloom: 0.4f));
-            flash.phases.Add(Phase("Flash", 0.06f, "SkillIaiDraw", 0.01f).MotionSpan(0.2f).Move(SkillMoveMode.TeleportBehindTarget, 7f).Trail(TrailMode.Sword)
+            // Hero technique: hum → gather → one blinding step → pause → the cut appears → click of the sheath.
+            flash.phases.Add(Phase("Stance", 0.22f, "SkillSheathe", 0.06f).MotionSpan(0.6f).Voice(VoiceCue.Style).Trail(TrailMode.Off)
+                .Vfx("thunder_flash_stance", VFXAnchor.Self, 0f, 1f, true).Sfx("charge")
+                .Cam(zoom: 0.9f, saturation: -40f));
+            flash.phases.Add(Phase("Gather", 0.38f).Voice(VoiceCue.Form)
+                .Vfx("thunder_flash_charge", VFXAnchor.Self, 0f, 1f, true).Sfx("thunder", 0.05f, 0.35f).Sfx("thunder", 0.26f, 0.3f, 1.35f)
+                .Cam(zoom: 0.82f, slowScale: 0.75f, slowDuration: 0.3f, saturation: -70f, chromatic: 0.15f, bloom: 0.5f));
+            flash.phases.Add(Phase("Flash", 0.06f, "SkillIaiDraw", 0.01f).MotionSpan(0.2f).Voice(VoiceCue.Name).Move(SkillMoveMode.TeleportBehindTarget, 7f)
+                .PathVfx("thunder_flash_path").Trail(TrailMode.Sword)
                 .Sfx("thunder").Sfx("dash", 0f, 0.8f)
-                .Cam(fovPunch: 10f, chromatic: 0.6f, lens: -0.4f, speedLines: true));
-            flash.phases.Add(Phase("Dramatic Pause", 0.12f).Cam(slowScale: 0.35f, slowDuration: 0.12f));
-            flash.phases.Add(Phase("The Cut", 0.12f)
-                .Vfx("thunder_explosion", VFXAnchor.Target, 0.02f).Sfx("thunder_big")
-                .Hit(Spec(HitShape.AtTarget, 3.2f, HitReaction.Stun, 1.8f, 0f, 0f, knockback: 2f, hitStop: 0.08f, shake: 0.5f, impact: "thunder_cut", sfx: "thunder_big").Crit().Status(1.2f).Finisher())
-                .Cam(bloom: 1f));
-            flash.phases.Add(Phase("Resheathe", 0.3f, "SkillSheathe").Cancelable());
+                .Cam(fovPunch: 12f, chromatic: 0.7f, lens: -0.45f, speedLines: true));
+            flash.phases.Add(Phase("Dramatic Pause", 0.14f).Vfx("thunder_flash_pause", VFXAnchor.Self, 0f, 1f, true)
+                .Cam(zoom: 0.86f, slowScale: 0.3f, slowDuration: 0.14f));
+            flash.phases.Add(Phase("The Cut", 0.14f)
+                .Vfx("thunder_flash_cut", VFXAnchor.TargetGround).Sfx("thunder_big").Sfx("thunder", 0.08f, 0.6f, 0.8f)
+                .Hit(Spec(HitShape.AtTarget, 3.2f, HitReaction.Stun, 1.8f, 0f, 0f, knockback: 2f, hitStop: 0.09f, shake: 0.55f, impact: "thunder_cut", sfx: "thunder_big").Crit().Status(1.2f).Finisher())
+                .Cam(chromatic: 0.3f, bloom: 1.2f));
+            flash.phases.Add(Phase("Resheathe", 0.3f, "SkillSheathe").Vfx("thunder_flash_click", VFXAnchor.Self, 0.18f, 1f, true)
+                .Sfx("block", 0.18f, 0.35f, 1.8f).Cancelable());
 
             var chain = Skill("thunder_chain_spark", "Chain Spark", "Second Form", S, SkillTier.Normal, 14f, 0f, 5f,
                 "A lightning thrust whose discharge jumps between up to five enemies, stunning them.");

@@ -254,6 +254,8 @@ namespace BreathOfEclipse.Data
         public bool hideCharacter;
         public bool afterimages;
         public TrailMode trail;
+        [Tooltip("Flash-step trajectory effect (TeleportBehindTarget). Empty = the generic thunder_path.")]
+        public string pathVfx;
 
         [Header("Presentation")]
         public List<VFXCue> vfx = new List<VFXCue>();

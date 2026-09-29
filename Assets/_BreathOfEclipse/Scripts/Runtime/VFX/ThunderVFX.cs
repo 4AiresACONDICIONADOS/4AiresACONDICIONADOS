@@ -151,6 +151,188 @@ namespace BreathOfEclipse.VFX
                 CommonVFX.Sparks(b, "Sparks", 90, b.Pal.Bright, 8f, 22f, 0.7f, 0.09f, 0.4f);
                 b.Light("Light", Vector3.up * 2f, b.Pal.Bright, 25f, 16f, 0.6f);
             });
+
+            RegisterFlashBreaker();
+        }
+
+        // =================================================================== FLASH BREAKER (First Form) — hero set
+        // Visual language: static crawling over the ground, arcs climbing the body while the blade is sheathed, one
+        // blinding straight trajectory with parallel discharges and speed streaks, then a single horizontal iai line
+        // that appears a beat later and splits into branching lightning. No water shapes, no rings of liquid.
+
+        /// <summary>Static crawling radially over the ground (flat zigzag, never dips under the floor).</summary>
+        private static void GroundCrawl(VfxBuild b, string name, int count, float radius, float duration, float delay, float width)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                float a = (i + Random.Range(0f, 0.6f)) / count * Mathf.PI * 2f;
+                Vector3 dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                var bolt = b.Bolt(name + i, dir * radius * 0.12f + Vector3.up * 0.05f, dir * radius * Random.Range(0.65f, 1f) + Vector3.up * 0.05f,
+                    width, duration, i % 3 == 0 ? b.Pal.Accent : b.Pal.Bright, delay + i * 0.03f, 2);
+                bolt.Points = 12;
+                bolt.Jaggedness = 1.3f;
+                bolt.Flicker = 0.045f;
+                bolt.Flat = true;
+            }
+        }
+
+        /// <summary>Arcs climbing from the feet to the shoulders and the sheath at the left hip.</summary>
+        private static void BodyArcs(VfxBuild b, string name, int count, float duration, float delay, float width)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                float a = i / (float)count * Mathf.PI * 2f + Random.Range(-0.4f, 0.4f);
+                Vector3 foot = new Vector3(Mathf.Cos(a) * 0.45f, 0.08f, Mathf.Sin(a) * 0.45f);
+                Vector3 top = new Vector3(Mathf.Cos(a + 1.3f) * 0.3f, Random.Range(1.1f, 1.7f), Mathf.Sin(a + 1.3f) * 0.3f);
+                var bolt = b.Bolt(name + i, foot, top, width, duration, i % 2 == 0 ? b.Pal.Bright : Color.white * 3f, delay + i * 0.05f, 1);
+                bolt.Points = 10;
+                bolt.Jaggedness = 0.9f;
+                bolt.Flicker = 0.03f;
+            }
+        }
+
+        private static void RegisterFlashBreaker()
+        {
+            // ----------------------------------------------------------- stance: hand on the hilt, the ground starts to hum
+            VFXLibrary.Register("thunder_flash_stance", b =>
+            {
+                b.Lifetime = 0.8f;
+                bool extra = VFXQuality.Secondary;
+                GroundCrawl(b, "Crawl", extra ? 6 : 4, 2.2f, 0.5f, 0.05f, 0.05f);
+                b.Particles("Static", b.Additive(ProceduralTextures.Streak), new Vector3(0f, 0.1f, 0f)).Duration(0.5f).Rate(extra ? 60f : 30f)
+                    .Shape(ParticleSystemShapeType.Circle, 1.4f, 0f, 360f, null, new Vector3(-90f, 0f, 0f)).Life(0.1f, 0.2f).Speed(0.5f, 2f)
+                    .Size(0.02f, 0.05f).Color(b.Pal.Bright).Stretch(1.4f, 0.04f).Noise(3f, 5f).Fade(0.01f, 0.3f);
+                // Sheath glint at the left hip: the only bright point while the rest of the screen desaturates.
+                CommonVFX.Glint(b, "Tsuba", Color.white * 4f, 0.7f, 0.25f, new Vector3(-0.28f, 1f, 0.15f), 0.1f);
+                b.Light("Light", new Vector3(0f, 0.6f, 0f), b.Pal.Core, 5f, 2.5f, 0.6f);
+            });
+
+            // ----------------------------------------------------------- gather: arcs climb the body, dust lifts, light stutters
+            VFXLibrary.Register("thunder_flash_charge", b =>
+            {
+                b.Lifetime = 1f;
+                bool extra = VFXQuality.Secondary, full = VFXQuality.Full;
+                BodyArcs(b, "Climb", extra ? 7 : 4, 0.35f, 0f, 0.06f);
+                GroundCrawl(b, "Crawl", full ? 10 : extra ? 7 : 4, 3.2f, 0.45f, 0.08f, 0.07f);
+                b.Particles("Rising", b.Additive(ProceduralTextures.Streak), new Vector3(0f, 0.1f, 0f)).Duration(0.45f).Rate(extra ? 120f : 50f)
+                    .Shape(ParticleSystemShapeType.Circle, 0.9f, 0f, 360f, null, new Vector3(-90f, 0f, 0f)).Life(0.2f, 0.45f).Speed(2f, 6f)
+                    .Size(0.02f, 0.05f).Color(b.Pal.Bright, Color.white * 3f).Stretch(2f, 0.05f).Gravity(-0.4f).Fade(0.01f, 0.4f);
+                if (extra) CommonVFX.Dust(b, "Lift", 8, 1.2f, 0.8f, new Color(0.3f, 0.3f, 0.36f, 0.35f), 1.2f);
+                var ring = CommonVFX.FlatRing(b, "Static", b.Pal.Core * 0.7f, 3.2f, 0.4f, 0.05f, 0.05f, 0.94f);
+                ring.AlphaCurve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.15f, 1f), new Keyframe(0.3f, 0.3f), new Keyframe(0.5f, 1f), new Keyframe(1f, 0f));
+                b.Light("Light", new Vector3(0f, 1f, 0f), b.Pal.Core, 7f, 5f, 0.5f);
+                var l = b.Root.GetComponentInChildren<FlashLight>();
+                if (l != null) l.Curve = new AnimationCurve(new Keyframe(0f, 0.2f), new Keyframe(0.15f, 1f), new Keyframe(0.25f, 0.3f), new Keyframe(0.45f, 1f),
+                    new Keyframe(0.6f, 0.4f), new Keyframe(0.85f, 1f), new Keyframe(1f, 0f));
+            });
+
+            // ----------------------------------------------------------- trajectory (authored along +Z 0..1, stretched by SpawnBetween)
+            VFXLibrary.Register("thunder_flash_path", b =>
+            {
+                b.Lifetime = 1.4f;
+                bool extra = VFXQuality.Secondary, full = VFXQuality.Full;
+                // One blinding core line, a soft halo, and a wide faint sheet on the ground.
+                var core = b.Shape("Core", ProceduralMeshes.Primitive(PrimitiveType.Cylinder), b.Additive(ProceduralTextures.SoftCircle), new Vector3(0f, 1f, 0.5f),
+                    new Vector3(90f, 0f, 0f), new Vector3(0.14f, 0.5f, 0.14f), new Vector3(0.02f, 0.5f, 0.02f), 0.5f, Color.white * 7f);
+                core.AlphaCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.25f, 0.9f), new Keyframe(1f, 0f));
+                var halo = b.Shape("Halo", ProceduralMeshes.Primitive(PrimitiveType.Cylinder), b.Additive(ProceduralTextures.Glow), new Vector3(0f, 1f, 0.5f),
+                    new Vector3(90f, 0f, 0f), new Vector3(0.7f, 0.5f, 0.7f), new Vector3(0.1f, 0.5f, 0.1f), 0.7f, b.Pal.Core);
+                halo.AlphaCurve = CommonVFX.QuickFade;
+                var sheet = b.Shape("Scorch", ProceduralMeshes.GroundQuad(), b.Additive(ProceduralTextures.Band), new Vector3(0f, 0.04f, 0.5f),
+                    Vector3.zero, new Vector3(0.8f, 1f, 1f), new Vector3(0.2f, 1f, 1f), 1.1f, b.Pal.Core * 0.6f);
+                sheet.AlphaCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.4f, 0.5f), new Keyframe(1f, 0f));
+                // Main discharge plus parallel side discharges (they read as "the air split twice").
+                var main = b.Bolt("Main", new Vector3(0f, 1f, 0f), new Vector3(0f, 1f, 1f), 0.16f, 0.4f, Color.white * 5f, 0f, 3);
+                main.Points = 24;
+                main.Jaggedness = 2.5f;
+                main.Flicker = 0.025f;
+                int sides = extra ? 4 : 2;
+                for (int i = 0; i < sides; i++)
+                {
+                    float x = (i % 2 == 0 ? 1f : -1f) * (0.35f + 0.2f * (i / 2));
+                    float y = 0.55f + 0.5f * (i / 2);
+                    var side = b.Bolt("Side" + i, new Vector3(x, y, 0.05f), new Vector3(x * 0.6f, y + 0.2f, 0.95f), 0.06f, 0.3f, i % 2 == 0 ? b.Pal.Bright : b.Pal.Accent, 0.03f + i * 0.02f, 1);
+                    side.Points = 18;
+                    side.Jaggedness = 3f;
+                }
+                // Static left on the ground along the whole line.
+                int crawl = full ? 6 : extra ? 4 : 2;
+                for (int i = 0; i < crawl; i++)
+                {
+                    float z = (i + 0.5f) / crawl;
+                    var g = b.Bolt("Ground" + i, new Vector3(0f, 0.05f, z - 0.08f), new Vector3((i % 2 == 0 ? 1f : -1f) * Random.Range(0.6f, 1.1f), 0.05f, z + 0.06f),
+                        0.05f, 0.6f, b.Pal.Bright, 0.05f + i * 0.03f, 1);
+                    g.Points = 8;
+                    g.Jaggedness = 1.2f;
+                    g.Flat = true;
+                    g.Flicker = 0.05f;
+                }
+                // Speed streaks: long, thin, all running along the trajectory.
+                b.Particles("Streaks", b.Additive(ProceduralTextures.Streak), new Vector3(0f, 1f, 0.5f)).Burst(extra ? 60 : 24)
+                    .Shape(ParticleSystemShapeType.Box, 0.2f, 0f, 360f, new Vector3(1.2f, 1.4f, 1f)).Life(0.15f, 0.35f).Speed(0f, 0f)
+                    .Velocity(new Vector3(0f, 0f, 30f)).Size(0.02f, 0.05f).Color(Color.white * 3f, b.Pal.Bright).Stretch(6f, 0.02f).Fade(0.01f, 0.2f);
+                b.Particles("Sparks", b.Additive(ProceduralTextures.Streak), new Vector3(0f, 0.9f, 0.5f)).Burst(extra ? 50 : 20)
+                    .Shape(ParticleSystemShapeType.Box, 0.2f, 0f, 360f, new Vector3(0.3f, 0.4f, 1f)).Life(0.25f, 0.6f).Speed(1f, 5f)
+                    .Size(0.03f, 0.07f).Color(b.Pal.Bright, b.Pal.Accent).Stretch(1.5f, 0.05f).Gravity(0.8f).Fade(0.01f, 0.4f);
+                if (extra) CommonVFX.Dust(b, "Kick", 6, 0.4f, 0.7f, new Color(0.3f, 0.3f, 0.35f, 0.4f), 2.5f);
+                b.Light("Light", new Vector3(0f, 1f, 0.5f), b.Pal.Bright, 12f, 9f, 0.3f);
+            });
+
+            // ----------------------------------------------------------- dramatic pause: after-draw pose, residual static on the hero
+            VFXLibrary.Register("thunder_flash_pause", b =>
+            {
+                b.Lifetime = 0.9f;
+                BodyArcs(b, "Residual", VFXQuality.Secondary ? 4 : 2, 0.4f, 0f, 0.035f);
+                b.Particles("Drip", b.Additive(ProceduralTextures.Streak), new Vector3(0.35f, 1.1f, 0.4f)).Duration(0.3f).Rate(50f)
+                    .Shape(ParticleSystemShapeType.Sphere, 0.3f).Life(0.15f, 0.35f).Speed(0.5f, 2f)
+                    .Size(0.02f, 0.04f).Color(Color.white * 3f, b.Pal.Bright).Stretch(1.2f, 0.04f).Gravity(1.2f).Fade(0.01f, 0.3f);
+                CommonVFX.Glint(b, "Edge", Color.white * 5f, 1.1f, 0.2f, new Vector3(0.5f, 1.2f, 0.5f));
+            });
+
+            // ----------------------------------------------------------- the cut appears: one iai line, then it splits into lightning
+            VFXLibrary.Register("thunder_flash_cut", b =>
+            {
+                b.Lifetime = 1.6f;
+                bool extra = VFXQuality.Secondary, full = VFXQuality.Full;
+                const float h = 1.15f;
+                var line = b.Shape("IaiLine", ProceduralMeshes.Primitive(PrimitiveType.Cylinder), b.Additive(ProceduralTextures.SoftCircle), new Vector3(0f, h, 0f),
+                    new Vector3(0f, 0f, 90f), new Vector3(0.05f, 0.4f, 0.05f), new Vector3(0.02f, 3.4f, 0.02f), 0.45f, Color.white * 9f);
+                line.ScaleCurve = new AnimationCurve(new Keyframe(0f, 0f, 0f, 12f), new Keyframe(0.12f, 1f), new Keyframe(1f, 1f));
+                line.AlphaCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.35f, 1f), new Keyframe(1f, 0f));
+                var bloom = b.Shape("LineGlow", ProceduralMeshes.Primitive(PrimitiveType.Cylinder), b.Additive(ProceduralTextures.Glow), new Vector3(0f, h, 0f),
+                    new Vector3(0f, 0f, 90f), new Vector3(0.5f, 0.5f, 0.5f), new Vector3(0.25f, 3.6f, 0.25f), 0.5f, b.Pal.Core);
+                bloom.ScaleCurve = CommonVFX.FastOut;
+                bloom.AlphaCurve = CommonVFX.PopFade;
+                // Split: branching lightning erupting from points along the line a beat after it appears.
+                int split = full ? 12 : extra ? 8 : 5;
+                for (int i = 0; i < split; i++)
+                {
+                    float x = Mathf.Lerp(-2.6f, 2.6f, (i + 0.5f) / split) + Random.Range(-0.2f, 0.2f);
+                    float up = i % 2 == 0 ? 1f : -0.7f;
+                    Vector3 from = new Vector3(x, h, 0f);
+                    Vector3 to = from + new Vector3(Random.Range(-0.8f, 0.8f), up * Random.Range(1.2f, 2.4f), Random.Range(-1f, 1f));
+                    to.y = Mathf.Max(0.05f, to.y);
+                    var bolt = b.Bolt("Split" + i, from, to, 0.1f, 0.42f, i % 3 == 0 ? b.Pal.Accent : Color.white * 4f, 0.07f + Random.Range(0f, 0.05f), 2);
+                    bolt.Points = 14;
+                    bolt.Jaggedness = 0.8f;
+                }
+                GroundCrawl(b, "Ground", extra ? 8 : 4, 4f, 0.6f, 0.1f, 0.08f);
+                CommonVFX.Glint(b, "Glint", Color.white * 7f, 4.5f, 0.22f, new Vector3(0f, h, 0f));
+                CommonVFX.Glow(b, "Flash", b.Pal.Core * 1.3f, 5f, 0.3f, new Vector3(0f, h, 0f), 0.06f);
+                CommonVFX.Sparks(b, "Sparks", extra ? 60 : 25, b.Pal.Bright, 8f, 20f, 0.45f, 0.07f, 0.5f, 180f, default, 0.06f);
+                CommonVFX.FlatRing(b, "Shock", b.Pal.Bright, 5.5f, 0.35f, 0.05f, 0.08f);
+                if (extra) CommonVFX.Dust(b, "Dust", 10, 0.8f, 1f, new Color(0.35f, 0.35f, 0.4f, 0.45f), 3f);
+                b.Decal("Scorch", ProceduralTextures.Crack, new Color(1f, 0.95f, 0.7f, 0.85f), 3.2f, 2.5f);
+                b.Light("Light", new Vector3(0f, h, 0f), b.Pal.Bright, 14f, 14f, 0.35f, 0.02f);
+            });
+
+            // ----------------------------------------------------------- re-sheathe click: tiny spark at the sheath mouth
+            VFXLibrary.Register("thunder_flash_click", b =>
+            {
+                b.Lifetime = 0.5f;
+                CommonVFX.Glint(b, "Click", Color.white * 4f, 0.5f, 0.15f, new Vector3(-0.28f, 1f, 0.15f));
+                CommonVFX.Sparks(b, "Sparks", 8, b.Pal.Bright, 1f, 3f, 0.25f, 0.03f, 0.5f);
+            });
         }
     }
 }

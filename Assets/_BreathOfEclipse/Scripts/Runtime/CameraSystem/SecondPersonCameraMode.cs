@@ -48,6 +48,9 @@ namespace BreathOfEclipse.CameraSystem
             Vector3 eyes = target.position + Vector3.up * UpOffset;
             Vector3 toPlayer = playerFocus - eyes;
             Vector3 flat = new Vector3(toPlayer.x, 0f, toPlayer.z);
+            // Fighters overlapping: keep the last facing instead of spinning around a degenerate direction.
+            if (flat.sqrMagnitude < 0.6f) flat = _init ? _smoothedRot * Vector3.forward : Vector3.forward;
+            flat.y = 0f;
             if (flat.sqrMagnitude < 0.01f) flat = Vector3.forward;
             Quaternion facing = Quaternion.LookRotation(flat.normalized) * Quaternion.Euler(0f, _orbit, 0f);
             Vector3 desired = eyes + facing * new Vector3(SideOffset, 0.25f, -BackOffset);
@@ -75,7 +78,7 @@ namespace BreathOfEclipse.CameraSystem
             }
             _smoothed = Vector3.Lerp(_smoothed, desired, 1f - Mathf.Exp(-10f * dt));
             Vector3 lookDir = playerFocus - _smoothed;
-            if (lookDir.sqrMagnitude > 0.01f)
+            if (lookDir.sqrMagnitude > 0.25f)
                 _smoothedRot = Quaternion.Slerp(_smoothedRot, Quaternion.LookRotation(lookDir), 1f - Mathf.Exp(-14f * dt));
             _yaw = _smoothedRot.eulerAngles.y;
             return new CameraPose(_smoothed, _smoothedRot, ctx.BaseFov - 4f);

@@ -24,6 +24,8 @@ namespace BreathOfEclipse.CameraSystem
         private Vector3 _pivotSmoothed;
         private bool _hasPivot;
         private float _recenterUntil;
+        private float _fovOffset;
+        private float _lift;
 
         public float Yaw => _yaw;
         /// <summary>Diagnostics: geometry is pulling the camera closer than desired.</summary>
@@ -92,6 +94,12 @@ namespace BreathOfEclipse.CameraSystem
                     _yaw = Mathf.SmoothDampAngle(_yaw, playerYaw, ref _yawVelocity, 0.08f, 2000f, dt);
                     _pitch = Mathf.SmoothDampAngle(_pitch, 12f, ref _pitchVelocity, 0.1f, 600f, dt);
                 }
+                else if (ctx.PlayerAttacking && Time.unscaledTime - ctx.LastLookTime > 0.7f)
+                {
+                    // Combat framing: ease the orbit toward the swing direction so attacks stay readable.
+                    float delta = Mathf.DeltaAngle(_yaw, playerYaw);
+                    if (Mathf.Abs(delta) < 110f) _yaw += delta * Mathf.Clamp01(dt * 1.6f);
+                }
                 else if (ctx.AutoRecenter && idleLook && flatVel.magnitude > 2f)
                 {
                     // Gentle recentering behind the direction of travel.
@@ -112,7 +120,14 @@ namespace BreathOfEclipse.CameraSystem
             Quaternion rot = Quaternion.Euler(_pitch, _yaw, 0f);
             float shoulderTarget = locked ? ShoulderOffset * 0.45f : ShoulderOffset;
             _shoulder = Mathf.Lerp(_shoulder, shoulderTarget * scale, 1f - Mathf.Exp(-6f * dt));
-            Vector3 pivot = _pivotSmoothed + rot * Vector3.right * _shoulder;
+            // Shoulder probe: never push the pivot sideways through a wall or tree trunk.
+            float shoulder = _shoulder;
+            if (shoulder > 0.01f)
+                shoulder = Mathf.Min(shoulder, CameraCollision.SafeDistance(_pivotSmoothed, rot * Vector3.right, shoulder, CollisionRadius * 0.8f, Layers.CameraObstacleMask));
+            // When geometry pulls the camera in, lift it a little so the hero does not fill the screen.
+            float closeness = 1f - Mathf.Clamp01(_currentDistance / Mathf.Max(0.5f, desiredDistance));
+            _lift = Mathf.Lerp(_lift, closeness * 0.4f * scale, 1f - Mathf.Exp(-8f * dt));
+            Vector3 pivot = _pivotSmoothed + rot * Vector3.right * shoulder + Vector3.up * _lift;
 
             float safe = CameraCollision.SafeDistance(pivot, rot * Vector3.back, desiredDistance, CollisionRadius, Layers.CameraObstacleMask);
             Obstructed = safe < desiredDistance - 0.05f;
@@ -124,14 +139,17 @@ namespace BreathOfEclipse.CameraSystem
             if (locked)
             {
                 // Frame both fighters: aim between the player and the target.
-                Vector3 mid = Vector3.Lerp(pivot, ctx.LockTarget.position, 0.35f);
+                Vector3 lockPoint = ctx.LockTarget.position;
+                lockPoint.y = Mathf.Max(lockPoint.y, playerPos.y + 0.6f * scale);
+                Vector3 mid = Vector3.Lerp(pivot, lockPoint, 0.35f);
                 Vector3 dir = mid - position;
                 if (dir.sqrMagnitude > 0.01f) look = Quaternion.Slerp(rot, Quaternion.LookRotation(dir), 0.65f);
             }
 
-            float fov = ctx.BaseFov;
-            if (ctx.PlayerSprinting) fov += 7f;
-            return new CameraPose(position, look, fov);
+            // Dynamic FOV, eased: wider when sprinting or facing a boss, a touch tighter mid-swing.
+            float fovTarget = (ctx.PlayerSprinting ? 7f : 0f) + (locked && ctx.LockTargetIsBoss ? 3f : 0f) + (ctx.PlayerAttacking ? -1.5f : 0f);
+            _fovOffset = Mathf.Lerp(_fovOffset, fovTarget, 1f - Mathf.Exp(-4f * dt));
+            return new CameraPose(position, look, ctx.BaseFov + _fovOffset);
         }
     }
 }

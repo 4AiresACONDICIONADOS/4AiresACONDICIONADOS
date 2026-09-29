@@ -5,6 +5,28 @@ primera versión verificada como jugable dentro del Editor de Unity.**
 
 ---
 
+## v0.2.1 — Anime Visual Overhaul (2026-09-29)
+
+Sin verificar todavía en Unity (NOT PLAYTESTED).
+
+### Added
+- Shader `TidalWaterAnime` (bandas, espuma de borde y cresta, disolución, fade por profundidad y cerca de la cámara).
+- `WaterRibbonRenderer`, `WaterSerpentRenderer` (cuerpo, cresta, cabeza con mandíbula, cuernos y ojos), `AnimeFoam`.
+- VFX propio por forma del Agua (I–VII); nuevos `water_tide_cut`, `water_cascade`, `water_ring_current`.
+- Flash Breaker (Trueno I) hero: postura, carga con estática por el suelo y arcos por el cuerpo, trayectoria cegadora
+  con descargas paralelas y estelas, pausa, línea iai que se parte en relámpagos, clic de la vaina.
+- `CharacterVisualProfile` + `HumanoidCharacterVisual`: modelo humanoide opcional con sockets
+  `RightHandWeaponSocket` / `BladeBase` / `BladeTip`.
+- Bosque: árboles de copa ancha, 650 matas de sotobosque, niebla baja, static batching; split toning lunar.
+
+### Changed
+- Rising Serpent y la ultimate del Agua (Summon 1.2 / Leviathan 1.8 / Requiem 1.0 / Stillness 0.6 s) con serpiente real.
+- Voz anclada a fases (`VoiceCue`); si no cabe la frase completa, se prefiere «Respiración…» + nombre al cambiar de estilo.
+- Combat feel: hit stop 0.045 / 0.07 / 0.1 s, técnicas cancelables antes, cadera-torso-hombros en cada golpe.
+- Cámara: sonda de hombro contra paredes, elevación al acercarse por colisión, encuadre hacia el golpe, FOV suave;
+  primera persona sin balanceo oscilante; segunda persona estable con luchadores superpuestos.
+- Protagonista (ojos, pelo, vaina, mangas, hakama), Nightspawn (costillas, espinas, garras) y Oni (cuernos, grietas).
+
 ## v0.2.0 — Tidal Breath Overhaul (2026-09-29)
 
 Sin verificar todavía en Unity.

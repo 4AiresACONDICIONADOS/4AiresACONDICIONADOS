@@ -69,8 +69,9 @@ namespace BreathOfEclipse.Breathing
             float formAnchor = CueStart(skill, VoiceCue.Form);
             float nameAnchor = CueStart(skill, VoiceCue.Name);
             // Longest phrasing whose name still lands while the technique is on screen; the attack never waits.
-            // Full → "Séptima Postura… ¡Serpiente Ascendente!" → "Respiración del Agua… ¡…!" → just the name.
-            bool[][] options = { new[] { true, true }, new[] { false, true }, new[] { true, false }, new[] { false, false } };
+            // Full → "Respiración del Agua… ¡…!" (a style call is only due on first use / style switch, where naming the
+            // style matters most) → "Séptima Postura… ¡Serpiente Ascendente!" → just the name.
+            bool[][] options = { new[] { true, true }, new[] { true, false }, new[] { false, true }, new[] { false, false } };
             float deadline = strike + (ultimate ? 2.5f : NameLinger);
             foreach (var o in options)
             {

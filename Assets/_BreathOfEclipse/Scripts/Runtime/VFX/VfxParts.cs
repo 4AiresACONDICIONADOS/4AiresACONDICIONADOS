@@ -212,6 +212,8 @@ namespace BreathOfEclipse.VFX
         public float Flicker = 0.035f;
         public Color Tint = Color.white;
         public int Branches = 2;
+        /// <summary>Zigzag only sideways (ground-crawling static that must not dip under the floor).</summary>
+        public bool Flat;
         /// <summary>When set, endpoints follow these transforms (world space).</summary>
         public Transform FromTarget, ToTarget;
 
@@ -322,7 +324,7 @@ namespace BreathOfEclipse.VFX
                 if (i > 0 && i < n - 1)
                 {
                     float amp = jag * len * 0.12f * Mathf.Sin(k * Mathf.PI);
-                    p += perpA * UnityEngine.Random.Range(-amp, amp) + perpB * UnityEngine.Random.Range(-amp, amp);
+                    p += perpA * UnityEngine.Random.Range(-amp, amp) + (Flat ? Vector3.zero : perpB * UnityEngine.Random.Range(-amp, amp));
                 }
                 _buffer[i] = p;
             }

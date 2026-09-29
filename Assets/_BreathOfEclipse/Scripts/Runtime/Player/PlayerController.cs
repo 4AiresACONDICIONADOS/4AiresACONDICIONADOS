@@ -220,6 +220,8 @@ namespace BreathOfEclipse.Player
                 case PlayerState.Skill:
                     Breathing.Tick(dt);
                     if (!Breathing.IsExecuting) EnterLocomotion();
+                    // During the inhale only a dodge / jump can abort it (mashing the technique key must not restart the breath).
+                    else if (Breathing.Executor.Inhaling) { if (Breathing.Executor.CanCancel) TryActions(input, CancelFlags.Dodge | CancelFlags.Jump); }
                     else if (Breathing.Executor.CanCancel) TryActions(input, CancelFlags.Attack | CancelFlags.Dodge | CancelFlags.Jump | CancelFlags.Skill);
                     break;
                 case PlayerState.Dodge:

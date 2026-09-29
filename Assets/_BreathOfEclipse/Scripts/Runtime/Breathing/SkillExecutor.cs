@@ -70,7 +70,10 @@ namespace BreathOfEclipse.Breathing
         {
             get
             {
-                if (!Running || Phase == null || Skill.lockInput) return false;
+                if (!Running || Skill.lockInput) return false;
+                // The breath is not committed yet: dodging or attacking out of it costs nothing.
+                if (Inhaling) return true;
+                if (Phase == null) return false;
                 if (Phase.allowCancel) return true;
                 return PhaseIndex == Skill.phases.Count - 1 && PhaseTime >= Phase.duration * 0.5f;
             }

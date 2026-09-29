@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using BreathOfEclipse.CameraSystem;
 using BreathOfEclipse.Core;
+using BreathOfEclipse.Data;
 using BreathOfEclipse.Player;
 using BreathOfEclipse.UI;
 using UnityEngine;
@@ -34,8 +35,9 @@ namespace BreathOfEclipse.Playtest
         private static readonly string[] Names =
         {
             "Move (WASD)", "Sprint (Shift)", "Jump (Space)", "Light attack (LMB)", "Heavy attack (RMB)", "Combo 4+ hits",
-            "Dodge (Alt)", "Block (Q)", "Parry", "Perfect dodge", "Lock-on (Tab / MMB)", "Technique 1", "Technique 2",
-            "Technique 3", "Technique 4 (advanced)", "Ultimate (R)", "Change breathing style (X/Z)", "First person",
+            "Dodge (Alt)", "Block (Q)", "Parry", "Perfect dodge", "Lock-on (Tab / MMB)", "Quick form 1", "Quick form 2",
+            "Quick form 3", "Quick form 4", "Open the form wheel (hold F)", "Form from the wheel", "Form VII",
+            "Ultimate (R)", "Change breathing style (X/Z)", "First person",
             "Second person", "Third person", "Pause menu (Esc)", "Debug menu (F1)", "Defeat an enemy", "Boss phase 2"
         };
 
@@ -106,12 +108,16 @@ namespace BreathOfEclipse.Playtest
                 if (s.Time < _since) continue;
                 var style = pc.Breathing.Current;
                 if (style == null) continue;
-                for (int slot = 0; slot < 4; slot++)
+                for (int i = 0; i < style.FormCount; i++)
                 {
-                    var skill = style.GetSkill(slot);
-                    if (skill != null && skill.skillId == s.Id) Tick(slot == 3 ? "Technique 4 (advanced)" : $"Technique {slot + 1}", skill.displayName);
+                    var form = style.GetForm(i);
+                    if (form == null || form.skill == null || form.skill.skillId != s.Id) continue;
+                    int slot = pc.Breathing.SlotOfForm(i);
+                    Tick(slot >= 0 ? $"Quick form {slot + 1}" : "Form from the wheel", $"{Roman.Of(form.formNumber)} {form.skill.displayName}");
+                    if (form.formNumber == 7) Tick("Form VII", form.skill.displayName);
                 }
             }
+            if (FormWheel.IsOpen) Tick("Open the form wheel (hold F)");
 
             var rig = Ctx.Rig;
             if (rig != null && !rig.CinematicActive)

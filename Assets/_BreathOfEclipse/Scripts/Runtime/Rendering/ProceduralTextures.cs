@@ -47,6 +47,11 @@ namespace BreathOfEclipse.Rendering
             return tex;
         }
 
+        /// <summary>Cached procedural texture from a pixel function (u, v in 0..1).</summary>
+        public static Texture2D Generate(string key, int width, int height, System.Func<float, float, Color> pixel,
+            TextureWrapMode wrap = TextureWrapMode.Clamp, bool mips = true) =>
+            Make(key, width, height, (u, v) => pixel(u, v), wrap, mips);
+
         // ---------------------------------------------------------------- noise helpers
         private static float Hash(int x, int y, int seed)
         {

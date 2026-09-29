@@ -34,6 +34,14 @@ namespace BreathOfEclipse.AI
             rig.Build(profile, Layers.Enemy);
             var anim = go.AddComponent<ProceduralAnimator>();
             anim.Initialize(rig);
+            // Real 3D demon (Quaternius base body dressed as a demon); the mannequin stays if it cannot be built.
+            if (SaveSystem.Settings == null || SaveSystem.Settings.demonVisualMode == 0)
+            {
+                bool oni = data.archetype == EnemyArchetype.HollowOni;
+                var visual = CharacterVisualProfile.Runtime(oni ? VisualLook.HollowOni : VisualLook.Nightspawn,
+                    oni ? LocomotionSet.Brute : LocomotionSet.Demon, (oni ? 1.8f : 1.84f) * data.scale);
+                HumanoidCharacterVisual.AttachHybrid(go.transform, rig, anim, visual, Layers.Enemy);
+            }
             var damageable = go.AddComponent<Damageable>();
             damageable.Configure(Team.Enemy, data.maxHealth, rig.LockOnPoint, data.defense, data.weakness, data.resistance);
             var motor = go.AddComponent<EnemyMotor>();

@@ -54,10 +54,11 @@ namespace BreathOfEclipse.Breathing
             string sound = duration < 0.3f ? "inhale_short" : duration > 0.5f ? "inhale_deep" : "inhale";
             Sfx.Play2D(sound, 0.7f, Random.Range(0.97f, 1.03f), AudioCategory.Voice);
 
-            var head = _pc.Rig != null ? _pc.Rig.Bone(RigBone.Head) : null;
+            // MouthBreathSocket: in front of the drawn head's mouth (mannequin or the real 3D model's head bone).
+            var head = _pc.Rig != null ? (_pc.Rig.MouthSocket != null ? _pc.Rig.MouthSocket : _pc.Rig.HeadAnchor) : null;
             Vector3 fwd = _pc.transform.forward;
             Vector3 mouth = head != null
-                ? head.position + fwd * (0.12f * scale) - Vector3.up * (0.05f * scale)
+                ? head.position + (_pc.Rig.MouthSocket != null ? Vector3.zero : fwd * (0.12f * scale) - Vector3.up * (0.05f * scale))
                 : _pc.transform.position + Vector3.up * (1.55f * scale) + fwd * (0.12f * scale);
             if (_streams != null) _streams.Release();
             _streams = VFXLibrary.Spawn("inhale", mouth, Quaternion.LookRotation(fwd, Vector3.up), scale, element, head, duration + 0.7f);

@@ -28,15 +28,21 @@ namespace BreathOfEclipse.Player
             cc.minMoveDistance = 0f;
 
             // Gameplay root → visual → animator → weapon socket. The mannequin always provides the gameplay points
-            // (weapon, blade base / tip, lock-on, eyes); an imported humanoid, when assigned, only replaces the look.
+            // (weapon, blade base / tip, lock-on, eyes) and the procedural animator stays the animation authority;
+            // the real 3D model (default: the anime swordsman on the Quaternius base body) only replaces the look.
             var rig = go.AddComponent<CharacterRig>();
             rig.Build(RigProfile.Hero(), Layers.Player);
-            ICharacterAnimator animator = HumanoidCharacterVisual.Attach(go.transform, rig, db.playerVisual, Layers.Player);
+            ICharacterAnimator animator = null;
+            var profile = PlayerVisualProfile(db);
+            if (profile != null && !profile.hybridAnimation)
+                animator = HumanoidCharacterVisual.Attach(go.transform, rig, profile, Layers.Player);
             if (animator == null)
             {
                 var procedural = go.AddComponent<ProceduralAnimator>();
                 procedural.Initialize(rig);
                 animator = procedural;
+                if (profile != null && profile.hybridAnimation)
+                    HumanoidCharacterVisual.AttachHybrid(go.transform, rig, procedural, profile, Layers.Player);
             }
 
             var damageable = go.AddComponent<Damageable>();
@@ -56,6 +62,17 @@ namespace BreathOfEclipse.Player
             combat.Initialize(pc, db.playerCombos, db.playerWeapon);
             pc.Initialize(db.player, db.playerWeapon, db.playerCombos, db, rig, animator, motor, stats, combat, defense, lockOn, breathing, damageable);
             return pc;
+        }
+
+        /// <summary>
+        /// The player's look: the GameDatabase's imported model when one is assigned, otherwise the built-in anime
+        /// swordsman; null when Settings choose the procedural mannequin.
+        /// </summary>
+        public static CharacterVisualProfile PlayerVisualProfile(GameDatabase db)
+        {
+            if (SaveSystem.Settings != null && SaveSystem.Settings.playerVisualMode == 1) return null;
+            if (db != null && db.playerVisual != null) return db.playerVisual;
+            return CharacterVisualProfile.Runtime(VisualLook.AnimeSwordsman, LocomotionSet.Swordsman, 1.78f);
         }
 
         /// <summary>Connects the camera rig to the player.</summary>

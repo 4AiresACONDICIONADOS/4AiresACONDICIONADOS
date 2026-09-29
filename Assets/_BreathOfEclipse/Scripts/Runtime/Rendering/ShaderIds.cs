@@ -6,6 +6,7 @@ namespace BreathOfEclipse.Rendering
     public static class ShaderIds
     {
         public const string ToonLit = "BreathOfEclipse/ToonLit";
+        public const string AnimeCharacterToon = "BreathOfEclipse/AnimeCharacterToon";
         public const string VfxAdditive = "BreathOfEclipse/VFXAdditive";
         public const string VfxAlpha = "BreathOfEclipse/VFXAlphaBlend";
         public const string ElementRibbon = "BreathOfEclipse/ElementRibbon";
@@ -36,6 +37,12 @@ namespace BreathOfEclipse.Rendering
         public static readonly int HitFlashColor = Shader.PropertyToID("_HitFlashColor");
         public static readonly int Dissolve = Shader.PropertyToID("_Dissolve");
         public static readonly int DissolveColor = Shader.PropertyToID("_DissolveColor");
+        public static readonly int MarkColor = Shader.PropertyToID("_MarkColor");
+        public static readonly int MarkScale = Shader.PropertyToID("_MarkScale");
+        public static readonly int ShadeColor2 = Shader.PropertyToID("_Shade2Color");
+        public static readonly int Shade2Threshold = Shader.PropertyToID("_Shade2Threshold");
+        public static readonly int FaceFlatten = Shader.PropertyToID("_FaceFlatten");
+        public static readonly int RimThreshold = Shader.PropertyToID("_RimThreshold");
 
         public static readonly int MainTex = Shader.PropertyToID("_MainTex");
         public static readonly int TintColor = Shader.PropertyToID("_TintColor");

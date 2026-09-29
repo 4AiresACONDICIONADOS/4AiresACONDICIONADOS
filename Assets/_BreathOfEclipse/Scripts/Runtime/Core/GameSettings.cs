@@ -82,6 +82,10 @@ namespace BreathOfEclipse.Core
         public string lastEquippedStyle = "tidal";
         [Tooltip("Per-style quick slot assignments made from the form wheel (hold F, press 1-4).")]
         public List<StyleQuickSlots> quickSlots = new List<StyleQuickSlots>();
+        [Tooltip("0 = real 3D anime model (humanoid, real animations), 1 = procedural mannequin. Saves without it keep the 3D model.")]
+        public int playerVisualMode;
+        [Tooltip("0 = real 3D demons (humanoid), 1 = procedural demon mannequins.")]
+        public int demonVisualMode;
 
         /// <summary>The saved quick slots of a style, or null when the player never changed them.</summary>
         public StyleQuickSlots FindQuickSlots(string styleId)
@@ -123,6 +127,8 @@ namespace BreathOfEclipse.Core
             if (string.IsNullOrEmpty(lastEquippedStyle)) lastEquippedStyle = "tidal";
             if (quickSlots == null) quickSlots = new List<StyleQuickSlots>();
             quickSlots.RemoveAll(q => q == null || string.IsNullOrEmpty(q.styleId) || q.forms == null);
+            playerVisualMode = Mathf.Clamp(playerVisualMode, 0, 1);
+            demonVisualMode = Mathf.Clamp(demonVisualMode, 0, 1);
             version = CurrentVersion;
         }
 

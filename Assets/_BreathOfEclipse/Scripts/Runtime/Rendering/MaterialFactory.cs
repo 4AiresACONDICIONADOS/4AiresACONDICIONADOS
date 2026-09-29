@@ -86,6 +86,73 @@ namespace BreathOfEclipse.Rendering
             });
         }
 
+        /// <summary>Look presets of <see cref="AnimeCharacter"/>.</summary>
+        public enum CharacterSurface
+        {
+            /// <summary>Cloth: two soft bands, low rim.</summary>
+            Cloth = 0,
+            /// <summary>Skin of the body: warm shade, soft.</summary>
+            Skin = 1,
+            /// <summary>Face: flattened shading (anime faces carry little shadow).</summary>
+            Face = 2,
+            /// <summary>Hair: deep shade, crisp rim and a hard highlight.</summary>
+            Hair = 3,
+            /// <summary>Eyes: unlit-ish, no outline.</summary>
+            Eye = 4,
+            /// <summary>Demon skin: dark bands, strong rim, markings (color from _MarkColor, set per renderer).</summary>
+            DemonSkin = 5,
+            /// <summary>Horn / bone / claw / mask: bright rim, glossy highlight.</summary>
+            Bone = 6
+        }
+
+        /// <summary>
+        /// AnimeCharacterToon material for imported characters (cached per look). Per-character values (hit flash,
+        /// dissolve, accent, eye glow, markings) are MaterialPropertyBlocks set by CharacterRig.
+        /// </summary>
+        public static Material AnimeCharacter(Color baseColor, CharacterSurface surface, float outline = 1.4f, Texture texture = null,
+            Color? emission = null, float markScale = 9f)
+        {
+            Color em = emission ?? Color.black;
+            string key = $"anime_{surface}_{ColorKey(baseColor)}_{outline:F2}_{(texture != null ? texture.name : "none")}_{ColorKey(em)}_{markScale:F1}";
+            return Get(key, ShaderIds.AnimeCharacterToon, m =>
+            {
+                float shadeK, shade2K, threshold, rim, spec, flatten = 0f, rimThreshold = 0.26f;
+                Color tint;
+                switch (surface)
+                {
+                    case CharacterSurface.Skin: shadeK = 0.72f; shade2K = 0.5f; threshold = 0.4f; rim = 0.3f; spec = 0f; tint = new Color(1f, 0.82f, 0.86f); break;
+                    case CharacterSurface.Face: shadeK = 0.8f; shade2K = 0.62f; threshold = 0.36f; rim = 0.18f; spec = 0f; flatten = 0.75f; tint = new Color(1f, 0.84f, 0.88f); break;
+                    case CharacterSurface.Hair: shadeK = 0.5f; shade2K = 0.3f; threshold = 0.45f; rim = 0.6f; spec = 0.35f; tint = new Color(0.85f, 0.85f, 1.1f); rimThreshold = 0.22f; break;
+                    case CharacterSurface.Eye: shadeK = 0.9f; shade2K = 0.8f; threshold = 0.2f; rim = 0f; spec = 0f; flatten = 1f; tint = Color.white; break;
+                    case CharacterSurface.DemonSkin: shadeK = 0.45f; shade2K = 0.22f; threshold = 0.46f; rim = 0.9f; spec = 0.1f; tint = new Color(0.9f, 0.8f, 1.15f); rimThreshold = 0.2f; break;
+                    case CharacterSurface.Bone: shadeK = 0.6f; shade2K = 0.4f; threshold = 0.42f; rim = 0.55f; spec = 0.45f; tint = new Color(0.95f, 0.9f, 1f); break;
+                    default: shadeK = 0.55f; shade2K = 0.34f; threshold = 0.44f; rim = 0.35f; spec = 0f; tint = new Color(0.88f, 0.86f, 1.12f); break;
+                }
+                Color shade = new Color(baseColor.r * shadeK * tint.r, baseColor.g * shadeK * tint.g, Mathf.Min(1f, baseColor.b * shadeK * tint.b + 0.015f), 1f);
+                Color shade2 = new Color(baseColor.r * shade2K * tint.r, baseColor.g * shade2K * tint.g, Mathf.Min(1f, baseColor.b * shade2K * tint.b + 0.02f), 1f);
+                m.SetColor(ShaderIds.BaseColor, baseColor);
+                m.SetColor(ShaderIds.ShadeColor, shade);
+                m.SetColor(ShaderIds.ShadeColor2, shade2);
+                m.SetFloat(ShaderIds.ShadeThreshold, threshold);
+                m.SetFloat(ShaderIds.Shade2Threshold, threshold * 0.42f);
+                m.SetFloat(ShaderIds.ShadeSoftness, surface == CharacterSurface.Face || surface == CharacterSurface.Skin ? 0.05f : 0.03f);
+                m.SetFloat(ShaderIds.FaceFlatten, flatten);
+                m.SetColor(ShaderIds.RimColor, new Color(0.55f, 0.65f, 1f) * rim);
+                m.SetFloat(ShaderIds.RimPower, 3.2f);
+                m.SetFloat(ShaderIds.RimThreshold, rimThreshold);
+                m.SetColor(ShaderIds.SpecColor, Color.white * spec);
+                m.SetFloat(ShaderIds.SpecSize, surface == CharacterSurface.Hair ? 0.05f : 0.08f);
+                m.SetColor(ShaderIds.EmissionColor, em);
+                m.SetColor(ShaderIds.MarkColor, Color.black);
+                m.SetFloat(ShaderIds.MarkScale, markScale);
+                m.SetColor(ShaderIds.OutlineColor, surface == CharacterSurface.Hair ? new Color(0.02f, 0.02f, 0.06f, 1f) : new Color(0.03f, 0.02f, 0.05f, 1f));
+                m.SetFloat(ShaderIds.OutlineWidth, surface == CharacterSurface.Eye ? 0f : outline);
+                m.SetFloat(ShaderIds.IsCharacter, 1f);
+                if (texture != null) m.SetTexture(ShaderIds.BaseMap, texture);
+                m.enableInstancing = true;
+            });
+        }
+
         /// <summary>Particle / sprite material.</summary>
         public static Material Vfx(Texture texture, VfxBlend blend = VfxBlend.Additive, float softParticles = 0.4f)
         {

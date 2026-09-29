@@ -71,6 +71,7 @@ namespace BreathOfEclipse.Characters
         private float _breathTime;
 
         private static readonly RaycastHit[] GroundHits = new RaycastHit[4];
+        private string _actionId;
 
         public void Initialize(CharacterRig rig)
         {
@@ -109,6 +110,8 @@ namespace BreathOfEclipse.Characters
         {
             var clip = MotionLibrary.Get(motionId) ?? MotionLibrary.Get("L1");
             if (clip == null) return;
+            _actionId = motionId;
+            ActionSerial++;
             int n = clip.Keys.Length;
             var times = new float[n];
             windup = Mathf.Max(0.01f, windup);
@@ -139,6 +142,8 @@ namespace BreathOfEclipse.Characters
                 Debug.LogWarning($"[ProceduralAnimator] Unknown motion '{motionId}'.");
                 return;
             }
+            _actionId = motionId;
+            ActionSerial++;
             int n = clip.Keys.Length;
             var times = new float[n];
             duration = Mathf.Max(0.02f, duration);
@@ -172,6 +177,7 @@ namespace BreathOfEclipse.Characters
             _hitStrength = reaction == HitReaction.Light ? 0.6f : 1f;
             _hitDuration = reaction == HitReaction.Light ? 0.28f : 0.5f;
             _hitTimer = _hitDuration;
+            HitSerial++;
         }
 
         public void SetDodge(Vector3 worldDirection, float duration)
@@ -212,6 +218,50 @@ namespace BreathOfEclipse.Characters
         }
 
         public void SetLookTarget(Transform target) => _lookTarget = target;
+
+        // ------------------------------------------------------------------ read-only view (visual followers)
+        // An imported humanoid model (HumanoidVisualDriver) follows this animator: it plays real clips for the
+        // same actions and retargets the procedural pose, so gameplay keeps a single animation authority.
+
+        /// <summary>Motion id of the playing action (attack or technique pose), null when none.</summary>
+        public string ActionId => _action != null ? _actionId : null;
+        /// <summary>Increments on every PlayAttack / PlayMotion (restarts of the same id included).</summary>
+        public int ActionSerial { get; private set; }
+        public bool ActionIsAttack => _action != null && _action.IsAttack;
+        public float ActionElapsed => _action != null ? _action.Elapsed : 0f;
+        public float ActionWindup => _action != null ? _action.Windup : 0f;
+        public float ActionActive => _action != null ? _action.Active : 0f;
+        public float ActionRecovery => _action != null ? _action.Recovery : 0f;
+        /// <summary>Total length: windup + active + recovery for attacks, the last key time for poses.</summary>
+        public float ActionLength => _action == null ? 0f : _action.IsAttack ? _action.Windup + _action.Active + _action.Recovery : _action.Times[_action.Times.Length - 1];
+        /// <summary>Blend weight of the action layer (fades out through the recovery / StopAction).</summary>
+        public float ActionWeight => _action != null ? _action.Weight : 0f;
+        /// <summary>0..1..0 over the dodge.</summary>
+        public float DodgeWeight => _dodgeTimer > 0f ? Mathf.Sin((1f - Mathf.Clamp01(_dodgeTimer / _dodgeDuration)) * Mathf.PI) : 0f;
+        public float DodgeProgress => _dodgeTimer > 0f ? 1f - Mathf.Clamp01(_dodgeTimer / _dodgeDuration) : 1f;
+        public Vector3 DodgeLocalDirection => _dodgeLocalDir;
+        public int HitSerial { get; private set; }
+        /// <summary>0.6 light, 1 heavy.</summary>
+        public float HitStrength => _hitStrength;
+        public float HitWeight => _hitTimer > 0f ? Mathf.Clamp01(_hitTimer / _hitDuration) : 0f;
+        public Vector3 HitLocalDirection => _hitLocalDir;
+        public bool Down => _down;
+        public float DownWeight => _downWeight;
+        public float GetUpDuration => 1f / Mathf.Max(0.01f, _downBlendOutRate);
+        public bool Dead => _dead;
+        public float DeadWeight => _deadWeight;
+        public LocomotionState Locomotion => _state;
+        public float AirWeight => _airWeight;
+        public float SprintWeight => _sprintWeight;
+        public float CombatWeight => _combatWeight;
+        public float BlockWeight => _blockWeight;
+        /// <summary>Landing squash timer (seconds left).</summary>
+        public float LandTimer => _landTimer;
+        public Transform LookTarget => _lookTarget;
+        public float LookWeight => _lookWeight;
+        /// <summary>Stance lean (degrees) and crouch (m) currently applied (boss phase 2).</summary>
+        public float PostureLean => _postureLean * _postureWeight;
+        public float PostureCrouch => _postureCrouch * _postureWeight;
 
         // ------------------------------------------------------------------ evaluation
 

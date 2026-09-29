@@ -94,6 +94,21 @@ namespace BreathOfEclipse.Audio
 
         public bool IsSpeaking => _index < _lines.Count || _busy;
 
+        private readonly float[] _levelBuffer = new float[256];
+
+        /// <summary>Loudness of the line being spoken (RMS of the output, ~0..0.5): drives the character's mouth.</summary>
+        public float Level
+        {
+            get
+            {
+                if (_source == null || !_source.isPlaying) return 0f;
+                _source.GetOutputData(_levelBuffer, 0);
+                float sum = 0f;
+                for (int i = 0; i < _levelBuffer.Length; i++) sum += _levelBuffer[i] * _levelBuffer[i];
+                return Mathf.Sqrt(sum / _levelBuffer.Length);
+            }
+        }
+
         private AudioSource _source;
         /// <summary>Carries the previous line while it fades out when a new call interrupts it (no clicks).</summary>
         private AudioSource _tail;

@@ -43,6 +43,23 @@ namespace BreathOfEclipse.Characters
             /// <summary>Emissive marking: glows with the eye color scaled by the mark intensity (demon markings).</summary>
             public bool Mark;
             public Color BaseColor;
+            /// <summary>Belongs to an imported model registered with <see cref="RegisterExternal"/>.</summary>
+            public bool External;
+        }
+
+        /// <summary>How a renderer of an imported model reacts to the rig's controls.</summary>
+        [System.Flags]
+        public enum ExternalPart
+        {
+            None = 0,
+            /// <summary>Takes the breathing style color (sash, trims).</summary>
+            Accent = 1,
+            /// <summary>Glowing eyes (demons).</summary>
+            Eye = 2,
+            /// <summary>Emissive markings driven by <see cref="SetMarkIntensity"/>.</summary>
+            Mark = 4,
+            /// <summary>Hidden from the first-person camera (head, hair, face).</summary>
+            FirstPersonHidden = 8
         }
 
         public RigProfile Profile { get; private set; }
@@ -52,6 +69,14 @@ namespace BreathOfEclipse.Characters
         public Transform SheathSocket { get; private set; }
         public Transform LockOnPoint { get; private set; }
         public Transform EyePoint { get; private set; }
+        /// <summary>In front of the mouth: breath / inhale effects spawn and follow here.</summary>
+        public Transform MouthSocket { get; private set; }
+        /// <summary>Head of what is drawn: the mannequin head, or the imported model's head bone.</summary>
+        public Transform HeadAnchor => _headAnchor != null ? _headAnchor : Bone(RigBone.Head);
+        /// <summary>Root of the drawn body (mannequin Visual, or the imported model's visual root) for scale effects.</summary>
+        public Transform DrawnRoot => _drawnRoot != null ? _drawnRoot : Bone(RigBone.Visual);
+        /// <summary>True once an imported model replaces the mannequin's body.</summary>
+        public bool HasImportedBody { get; private set; }
         public float Scale => Profile != null ? Profile.scale : 1f;
 
         private readonly Transform[] _bones = new Transform[19];
@@ -69,6 +94,13 @@ namespace BreathOfEclipse.Characters
         private Color _edgeColor = Color.black;
         private bool _dirty = true;
         private bool _visible = true;
+        private Transform _headAnchor;
+        private Transform _drawnRoot;
+        private readonly HashSet<Renderer> _hiddenBody = new HashSet<Renderer>();
+        private readonly List<SkinnedMeshRenderer> _skinned = new List<SkinnedMeshRenderer>();
+        private readonly List<MeshFilter> _externalFilters = new List<MeshFilter>();
+        private Mesh[] _bakeRing;
+        private int _bakeNext;
 
         public Transform Bone(RigBone bone) => _bones[(int)bone];
 
@@ -121,6 +153,9 @@ namespace BreathOfEclipse.Characters
             EyePoint = new GameObject("EyePoint").transform;
             EyePoint.SetParent(head, false);
             EyePoint.localPosition = new Vector3(0f, profile.headSize * 0.5f, profile.headSize * 0.3f);
+            MouthSocket = new GameObject("MouthBreathSocket").transform;
+            MouthSocket.SetParent(head, false);
+            MouthSocket.localPosition = new Vector3(0f, profile.headSize * 0.18f, profile.headSize * 0.62f);
 
             Layers.SetLayerRecursively(visual.gameObject, layer);
             _dirty = true;
@@ -559,13 +594,79 @@ namespace BreathOfEclipse.Characters
         public void SetBodyVisible(bool visible, bool keepScabbard = true)
         {
             var weapon = Bone(RigBone.Weapon);
+            _hiddenBody.Clear();
             foreach (var e in _renderers)
             {
-                if (e.Renderer == null) continue;
+                if (e.Renderer == null || e.External) continue;
                 var t = e.Renderer.transform;
                 if (weapon != null && t.IsChildOf(weapon)) continue;
                 if (keepScabbard && SheathSocket != null && t.IsChildOf(SheathSocket)) continue;
-                e.Renderer.enabled = visible;
+                e.Renderer.enabled = visible && _visible;
+                if (!visible) _hiddenBody.Add(e.Renderer);
+            }
+        }
+
+        /// <summary>Hides the weapon's own meshes (a model that brings its own claws); blade points keep working.</summary>
+        public void SetWeaponMeshVisible(bool visible)
+        {
+            var weapon = Bone(RigBone.Weapon);
+            if (weapon == null) return;
+            foreach (var e in _renderers)
+            {
+                if (e.Renderer == null || e.External || !e.Renderer.transform.IsChildOf(weapon)) continue;
+                e.Renderer.enabled = visible && _visible;
+                if (visible) _hiddenBody.Remove(e.Renderer);
+                else _hiddenBody.Add(e.Renderer);
+            }
+        }
+
+        /// <summary>
+        /// Registers a renderer of an imported model so hit flash, dissolve, accent / eye / mark colors, visibility,
+        /// first-person hiding and afterimages treat it like the mannequin's own parts.
+        /// </summary>
+        public void RegisterExternal(Renderer r, ExternalPart flags, Color baseColor)
+        {
+            if (r == null) return;
+            _renderers.Add(new RendererEntry
+            {
+                Renderer = r,
+                Accent = (flags & ExternalPart.Accent) != 0,
+                Eye = (flags & ExternalPart.Eye) != 0,
+                Mark = (flags & ExternalPart.Mark) != 0,
+                BaseColor = baseColor,
+                External = true
+            });
+            if ((flags & ExternalPart.FirstPersonHidden) != 0) _firstPersonHidden.Add(r);
+            if (r is SkinnedMeshRenderer smr) _skinned.Add(smr);
+            else if (r.TryGetComponent<MeshFilter>(out var mf)) _externalFilters.Add(mf);
+            r.enabled = _visible;
+            _dirty = true;
+        }
+
+        /// <summary>Back to the mannequin (a failed model attach).</summary>
+        public void ClearImportedBody()
+        {
+            HasImportedBody = false;
+            _headAnchor = null;
+            _drawnRoot = null;
+        }
+
+        /// <summary>The imported model now provides the head (first-person camera, mouth effects) and the drawn body root.</summary>
+        public void SetImportedBody(Transform head, Transform drawnRoot, Vector3 mouthWorld, Vector3 eyeWorld)
+        {
+            HasImportedBody = true;
+            _headAnchor = head;
+            _drawnRoot = drawnRoot;
+            if (head == null) return;
+            if (MouthSocket != null)
+            {
+                MouthSocket.SetParent(head, true);
+                MouthSocket.position = mouthWorld;
+            }
+            if (EyePoint != null)
+            {
+                EyePoint.SetParent(head, true);
+                EyePoint.position = eyeWorld;
             }
         }
 
@@ -603,7 +704,8 @@ namespace BreathOfEclipse.Characters
         {
             if (_visible == visible) return;
             _visible = visible;
-            foreach (var e in _renderers) if (e.Renderer != null) e.Renderer.enabled = visible;
+            foreach (var e in _renderers)
+                if (e.Renderer != null) e.Renderer.enabled = visible && !_hiddenBody.Contains(e.Renderer);
             if (_edgeGlow != null) _edgeGlow.enabled = visible && _edgeColor.maxColorComponent > 0.01f;
         }
 
@@ -622,9 +724,42 @@ namespace BreathOfEclipse.Characters
             foreach (var mf in _meshFilters)
             {
                 if (mf == null || mf.sharedMesh == null) continue;
+                if (_hiddenBody.Count > 0 && mf.TryGetComponent<Renderer>(out var mr) && _hiddenBody.Contains(mr)) continue;
                 meshes.Add(mf.sharedMesh);
                 matrices.Add(mf.transform.localToWorldMatrix);
             }
+            foreach (var mf in _externalFilters)
+            {
+                if (mf == null || mf.sharedMesh == null) continue;
+                meshes.Add(mf.sharedMesh);
+                matrices.Add(mf.transform.localToWorldMatrix);
+            }
+            if (_skinned.Count == 0) return;
+            // Skinned parts: baked into a small ring of meshes (a ghost lives well under a second).
+            int ringSize = Mathf.Max(16, _skinned.Count * 20);
+            if (_bakeRing == null || _bakeRing.Length != ringSize) _bakeRing = new Mesh[ringSize];
+            foreach (var smr in _skinned)
+            {
+                if (smr == null || smr.sharedMesh == null || !smr.gameObject.activeInHierarchy) continue;
+                var mesh = _bakeRing[_bakeNext];
+                if (mesh == null)
+                {
+                    mesh = new Mesh { name = "AfterimageBake" };
+                    mesh.MarkDynamic();
+                    _bakeRing[_bakeNext] = mesh;
+                }
+                _bakeNext = (_bakeNext + 1) % _bakeRing.Length;
+                smr.BakeMesh(mesh, true);
+                meshes.Add(mesh);
+                matrices.Add(smr.transform.localToWorldMatrix);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_bakeRing == null) return;
+            foreach (var m in _bakeRing)
+                if (m != null) Destroy(m);
         }
 
         private void LateUpdate()
@@ -655,8 +790,16 @@ namespace BreathOfEclipse.Characters
                 if (e.Mark)
                 {
                     Color glow = _eyeColor * _markIntensity;
-                    _mpb.SetColor(ShaderIds.BaseColor, Color.Lerp(new Color(0.05f, 0.03f, 0.05f), glow, Mathf.Clamp01(_markIntensity * 2f)));
-                    _mpb.SetColor(ShaderIds.EmissionColor, glow);
+                    if (e.External)
+                    {
+                        // Imported demon skin: the AnimeCharacterToon shader draws the markings itself.
+                        _mpb.SetColor(ShaderIds.MarkColor, glow);
+                    }
+                    else
+                    {
+                        _mpb.SetColor(ShaderIds.BaseColor, Color.Lerp(new Color(0.05f, 0.03f, 0.05f), glow, Mathf.Clamp01(_markIntensity * 2f)));
+                        _mpb.SetColor(ShaderIds.EmissionColor, glow);
+                    }
                 }
                 if (_hitFlash > 0f)
                 {

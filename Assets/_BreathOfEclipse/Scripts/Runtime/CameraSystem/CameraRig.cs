@@ -148,7 +148,7 @@ namespace BreathOfEclipse.CameraSystem
             _player = player;
             _playerRig = rig;
             _playerScale = rig != null ? rig.Scale : 1f;
-            First.HeadBone = rig != null ? rig.Bone(RigBone.Head) : null;
+            First.HeadBone = rig != null ? rig.HeadAnchor : null;
             Vector3 behind = player.position - player.forward * 5f + Vector3.up * 2.5f;
             _current = new CameraPose(behind, Quaternion.LookRotation(player.position + Vector3.up * 1.4f - behind), SaveSystem.Settings.fieldOfView);
             Third.SetOrbit(player.eulerAngles.y, 14f);

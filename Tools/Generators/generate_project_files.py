@@ -63,9 +63,75 @@ def meta_text(rel_path, is_dir):
                 "    compressionFormat: 1\n    quality: 0.7\n    conversionMode: 0\n    preloadAudioData: 1\n"
                 "  platformSettingOverrides: {}\n  forceToMono: 0\n  normalize: 0\n  loadInBackground: 0\n  ambisonic: 0\n  3D: 1\n"
                 "  userData: \n  assetBundleName: \n  assetBundleVariant: \n")
+    if ext == ".fbx":
+        return model_meta(g, rel_path)
+    if ext in (".png", ".tga", ".jpg"):
+        return texture_meta(g)
     if ext in (".md", ".txt", ".json", ".xml", ".bytes", ".csv"):
         return f"fileFormatVersion: 2\nguid: {g}\nTextScriptImporter:\n  externalObjects: {{}}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
     return f"fileFormatVersion: 2\nguid: {g}\nDefaultImporter:\n  externalObjects: {{}}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
+
+
+def model_meta(g, rel_path):
+    """
+    FBX import settings (Quaternius setup): bake axis conversion, file units, no material import (the game
+    converts every renderer to its own toon shader). Characters and the animation libraries are Humanoid with an
+    avatar created from the file; hair meshes are plain static meshes. Characters/HumanoidImportPostprocessor.cs
+    applies the same settings (plus per-clip loop / bake-into-pose flags) on every import.
+    """
+    p = rel_path.replace("\\", "/")
+    hair = "/Hair/" in p
+    animations = "/Animations/" in p
+    animation_type = 0 if hair else 3
+    return (f"fileFormatVersion: 2\nguid: {g}\nModelImporter:\n  serializedVersion: 22200\n  internalIDToNameTable: []\n"
+            "  externalObjects: {}\n  materials:\n    materialImportMode: 0\n    materialName: 0\n    materialSearch: 1\n"
+            "    materialLocation: 1\n  animations:\n    legacyGenerateAnimations: 4\n    bakeSimulation: 0\n"
+            "    resampleCurves: 1\n    optimizeGameObjects: 0\n    removeConstantScaleCurves: 0\n    motionNodeName: \n"
+            "    animationImportErrors: \n    animationImportWarnings: \n    animationRetargetingWarnings: \n"
+            "    animationDoRetargetingWarnings: 0\n    importAnimatedCustomProperties: 0\n    importConstraints: 0\n"
+            "    animationCompression: 1\n    animationRotationError: 0.5\n    animationPositionError: 0.5\n"
+            "    animationScaleError: 0.5\n    animationWrapMode: 0\n    extraExposedTransformPaths: []\n"
+            f"    extraUserProperties: []\n    clipAnimations: []\n    isReadable: {0 if animations else 1}\n  meshes:\n"
+            "    lODScreenPercentages: []\n    globalScale: 1\n    meshCompression: 0\n    addColliders: 0\n"
+            "    useSRGBMaterialColor: 1\n    sortHierarchyByName: 1\n    importPhysicalCameras: 0\n    importVisibility: 1\n"
+            "    importBlendShapes: 1\n    importCameras: 0\n    importLights: 0\n    nodeNameCollisionStrategy: 1\n"
+            "    fileIdsGeneration: 2\n    swapUVChannels: 0\n    generateSecondaryUV: 0\n    useFileUnits: 1\n"
+            "    keepQuads: 0\n    weldVertices: 1\n    bakeAxisConversion: 1\n    preserveHierarchy: 0\n"
+            "    skinWeightsMode: 0\n    maxBonesPerVertex: 4\n    minBoneWeight: 0.001\n    optimizeBones: 1\n"
+            "    meshOptimizationFlags: -1\n    indexFormat: 0\n    useFileScale: 1\n    strictVertexDataChecks: 0\n"
+            "  tangentSpace:\n    normalSmoothAngle: 60\n    normalImportMode: 0\n    tangentImportMode: 3\n"
+            "    normalCalculationMode: 4\n    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0\n"
+            "    blendShapeNormalImportMode: 1\n    normalSmoothingSource: 0\n  referencedClips: []\n"
+            f"  importAnimation: {1 if animations else 0}\n  humanDescription:\n    serializedVersion: 3\n    human: []\n"
+            "    skeleton: []\n    armTwist: 0.5\n    foreArmTwist: 0.5\n    upperLegTwist: 0.5\n    legTwist: 0.5\n"
+            "    armStretch: 0.05\n    legStretch: 0.05\n    feetSpacing: 0\n    globalScale: 1\n    rootMotionBoneName: \n"
+            "    hasTranslationDoF: 0\n    hasExtraRoot: 0\n    skeletonHasParents: 1\n"
+            "  lastHumanDescriptionAvatarSource: {instanceID: 0}\n  autoGenerateAvatarMappingIfUnspecified: 1\n"
+            f"  animationType: {animation_type}\n  humanoidOversampling: 1\n  avatarSetup: {0 if hair else 1}\n"
+            "  addHumanoidExtraRootOnlyWhenUsingAvatar: 1\n  importBlendShapeDeformPercent: 1\n"
+            "  remapMaterialsIfMaterialImportModeIsNone: 0\n  additionalBone: 0\n  userData: \n  assetBundleName: \n"
+            "  assetBundleVariant: \n")
+
+
+def texture_meta(g):
+    """Color texture, mipmapped, at most 1K (performance budget), normal-quality compression."""
+    return (f"fileFormatVersion: 2\nguid: {g}\nTextureImporter:\n  internalIDToNameTable: []\n  externalObjects: {{}}\n"
+            "  serializedVersion: 13\n  mipmaps:\n    mipMapMode: 0\n    enableMipMap: 1\n    sRGBTexture: 1\n"
+            "    linearTexture: 0\n    fadeOut: 0\n    borderMipMap: 0\n    mipMapsPreserveCoverage: 0\n"
+            "    alphaTestReferenceValue: 0.5\n    mipMapFadeDistanceStart: 1\n    mipMapFadeDistanceEnd: 3\n"
+            "  bumpmap:\n    convertToNormalMap: 0\n    externalNormalMap: 0\n    heightScale: 0.25\n    normalMapFilter: 0\n"
+            "    flipGreenChannel: 0\n  isReadable: 0\n  streamingMipmaps: 0\n  streamingMipmapsPriority: 0\n  vTOnly: 0\n"
+            "  ignoreMipmapLimit: 0\n  grayScaleToAlpha: 0\n  generateCubemap: 6\n  cubemapConvolution: 0\n"
+            "  seamlessCubemap: 0\n  textureFormat: 1\n  maxTextureSize: 1024\n  textureSettings:\n    serializedVersion: 2\n"
+            "    filterMode: 1\n    aniso: 1\n    mipBias: 0\n    wrapU: 1\n    wrapV: 1\n    wrapW: 1\n  nPOTScale: 1\n"
+            "  lightmap: 0\n  compressionQuality: 50\n  spriteMode: 0\n  alphaUsage: 1\n  alphaIsTransparency: 0\n"
+            "  textureType: 0\n  textureShape: 1\n  singleChannelComponent: 0\n  maxTextureSizeSet: 0\n"
+            "  compressionQualitySet: 0\n  textureFormatSet: 0\n  ignorePngGamma: 0\n  applyGammaDecoding: 0\n"
+            "  swizzle: 50462976\n  cookieLightType: 0\n  platformSettings:\n  - serializedVersion: 4\n"
+            "    buildTarget: DefaultTexturePlatform\n    maxTextureSize: 1024\n    resizeAlgorithm: 0\n    textureFormat: -1\n"
+            "    textureCompression: 1\n    compressionQuality: 50\n    crunchedCompression: 0\n    allowsAlphaSplitting: 0\n"
+            "    overridden: 0\n    ignorePlatformSupport: 0\n    androidETC2FallbackOverride: 0\n"
+            "    forceMaximumCompressionQuality_BC6H_BC7: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n")
 
 
 def ensure_metas():

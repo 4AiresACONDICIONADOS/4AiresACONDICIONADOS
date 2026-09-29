@@ -88,15 +88,150 @@ namespace BreathOfEclipse.EditorTools
             }
         }
 
-        [MenuItem("Breath of Eclipse/Characters/Use Procedural Mannequin", priority = 62)]
-        private static void UseMannequin()
+        [MenuItem("Breath of Eclipse/Characters/Use Built-in Anime Swordsman", priority = 62)]
+        private static void UseBuiltIn()
         {
             var db = AssetDatabase.LoadAssetAtPath<GameDatabase>(ContentExporter.DatabasePath);
             if (db == null) return;
             db.playerVisual = null;
             EditorUtility.SetDirty(db);
             AssetDatabase.SaveAssets();
-            Debug.Log("[Breath of Eclipse] Player visual cleared: the procedural mannequin is used again.");
+            Debug.Log("[Breath of Eclipse] Imported player model cleared: the built-in anime swordsman (Quaternius base body) is used. " +
+                      "Settings → Player visual (or F1 debug) switches to the procedural mannequin.");
+        }
+
+        public const string PlayerImportFolder = ImportFolder + "/Player";
+
+        /// <summary>
+        /// VRoid / custom player route: drop Player.vrm (with UniVRM installed) or a Humanoid FBX / prefab into
+        /// Characters/Import/Player/ and run this. It configures the rig (Humanoid avatar), validates the skeleton,
+        /// creates a hybrid CharacterVisualProfile (real clips + retargeted combat, toon materials, sockets built
+        /// from the hand bones) and installs it as the player's VisualModel under the existing gameplay root.
+        /// </summary>
+        [MenuItem("Breath of Eclipse/Characters/Import Player Model", priority = 58)]
+        public static void ImportPlayerModel()
+        {
+            EnsureFolder(PlayerImportFolder);
+            GameObject model = null;
+            string modelPath = null;
+            foreach (var guid in AssetDatabase.FindAssets("t:GameObject", new[] { PlayerImportFolder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (go == null || go.GetComponentInChildren<SkinnedMeshRenderer>(true) == null) continue;
+                // prefer prefabs (UniVRM output) over raw model files
+                if (model == null || path.EndsWith(".prefab"))
+                {
+                    model = go;
+                    modelPath = path;
+                }
+            }
+            if (model == null)
+            {
+                bool vrm = Directory.Exists(PlayerImportFolder) && Directory.GetFiles(PlayerImportFolder, "*.vrm").Length > 0;
+                EditorUtility.DisplayDialog("Import Player Model",
+                    vrm
+                        ? "Player.vrm found, but Unity has not imported it as a model. Install UniVRM (github.com/vrm-c/UniVRM, MIT license) " +
+                          "through the Package Manager so the .vrm becomes a prefab, then run this command again."
+                        : $"Put Player.vrm (with UniVRM installed), a Humanoid FBX or a character prefab in {PlayerImportFolder}/ and run this again.",
+                    "OK");
+                return;
+            }
+
+            if (AssetImporter.GetAtPath(modelPath) is ModelImporter mi && mi.animationType != ModelImporterAnimationType.Human)
+            {
+                mi.animationType = ModelImporterAnimationType.Human;
+                mi.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+                mi.isReadable = true;
+                mi.SaveAndReimport();
+                model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+            }
+
+            string report = ValidateModel(model, 1.75f, out bool ok);
+            if (!ok)
+            {
+                EditorUtility.DisplayDialog("Import Player Model", $"{model.name} cannot drive the player yet:\n{report}\n\nThe game keeps the built-in character.", "OK");
+                Debug.LogWarning($"[Breath of Eclipse] Player model {modelPath} rejected: {report}");
+                return;
+            }
+
+            EnsureFolder(GeneratedFolder);
+            string profilePath = $"{GeneratedFolder}/Player_Visual.asset";
+            var profile = AssetDatabase.LoadAssetAtPath<CharacterVisualProfile>(profilePath);
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<CharacterVisualProfile>();
+                AssetDatabase.CreateAsset(profile, profilePath);
+            }
+            profile.modelPrefab = model;
+            profile.resourcesModel = null;
+            profile.hybridAnimation = true;
+            profile.look = VisualLook.Toonify;
+            profile.locomotion = LocomotionSet.Swordsman;
+            profile.targetHeight = 1.75f;
+            profile.toonMaterials = true;
+            profile.keepScabbard = true;
+            EditorUtility.SetDirty(profile);
+            var db = AssetDatabase.LoadAssetAtPath<GameDatabase>(ContentExporter.DatabasePath);
+            if (db != null)
+            {
+                db.playerVisual = profile;
+                EditorUtility.SetDirty(db);
+            }
+            AssetDatabase.SaveAssets();
+            Selection.activeObject = profile;
+            string msg = $"[Breath of Eclipse] Player model installed: {modelPath}\n{report}\nProfile: {profilePath}" +
+                         (db != null ? " (assigned to the GameDatabase)." : " — no GameDatabase asset yet: run Data/Export Default Content, then this again.") +
+                         "\nIt plays the Quaternius clips through its Humanoid avatar and the combat poses through IK; press Play to check it. " +
+                         "'Characters/Use Built-in Anime Swordsman' reverts.";
+            Debug.Log(msg);
+            EditorUtility.DisplayDialog("Import Player Model", $"{model.name} installed as the player's VisualModel.\n\n{report}", "OK");
+        }
+
+        /// <summary>Skeleton validation: avatar, required bones, hand / head sockets, root scale, animation library.</summary>
+        [MenuItem("Breath of Eclipse/Characters/Validate Character Models", priority = 63)]
+        public static void ValidateModels()
+        {
+            var sb = new StringBuilder("[Breath of Eclipse] Character model validation\n");
+            var body = Resources.Load<GameObject>(CharacterVisualProfile.BaseBody);
+            sb.AppendLine(body != null ? $"Base body ({CharacterVisualProfile.BaseBody}): {ValidateModel(body, 1.78f, out _)}" : $"Base body missing: Resources/{CharacterVisualProfile.BaseBody}");
+            var db = AssetDatabase.LoadAssetAtPath<GameDatabase>(ContentExporter.DatabasePath);
+            if (db != null && db.playerVisual != null)
+            {
+                var m = db.playerVisual.ResolveModel();
+                sb.AppendLine(m != null ? $"Imported player ({m.name}): {ValidateModel(m, db.playerVisual.targetHeight, out _)}" : "Imported player profile has no model.");
+            }
+            int clips = HumanoidClipLibrary.Count;
+            sb.AppendLine($"Animation library: {clips} clips, {(HumanoidClipLibrary.Available ? "Humanoid OK" : "NOT Humanoid (check the UAL FBX Rig tab) — the procedural retarget is used")}.");
+            foreach (var need in new[] { "Idle_Loop", "Walk_Loop", "Jog_Fwd_Loop", "Sprint_Loop", "Sword_Idle", "Sword_Regular_A", "Sword_Regular_B", "Hit_Chest", "Hit_Knockback", "LayToIdle", "Death01", "Roll", "Zombie_Walk_Fwd_Loop" })
+                if (HumanoidClipLibrary.Get(need) == null) sb.AppendLine("  missing clip: " + need);
+            Debug.Log(sb.ToString());
+            EditorUtility.DisplayDialog("Validate Character Models", sb.ToString(), "OK");
+        }
+
+        /// <summary>Instantiates the model off-screen and runs the runtime validation (HumanoidSkeleton.Build).</summary>
+        public static string ValidateModel(GameObject model, float height, out bool ok)
+        {
+            var temp = Object.Instantiate(model);
+            temp.hideFlags = HideFlags.HideAndDontSave;
+            try
+            {
+                var sk = HumanoidSkeleton.Build(temp, height, out var report);
+                ok = sk != null;
+                if (sk == null) return "INVALID — " + report;
+                var sb = new StringBuilder(report.Replace("\n", " · "));
+                if (sk[HumanBodyBones.RightHand] == null || sk[HumanBodyBones.LeftHand] == null) sb.Append(" · missing hand sockets");
+                if (sk[HumanBodyBones.Head] == null) sb.Append(" · missing head");
+                bool readable = true;
+                foreach (var r in sk.Renderers)
+                    if (r is SkinnedMeshRenderer smr && smr.sharedMesh != null && !smr.sharedMesh.isReadable) readable = false;
+                if (!readable) sb.Append(" · mesh not Read/Write (anime outfit generation off; toon materials only)");
+                return sb.ToString();
+            }
+            finally
+            {
+                Object.DestroyImmediate(temp);
+            }
         }
 
         /// <summary>Builds controller + profile for <paramref name="model"/> and assigns it to the GameDatabase.</summary>
@@ -266,36 +401,75 @@ namespace BreathOfEclipse.EditorTools
         }
     }
 
-    /// <summary>FBX files dropped in the character import folder are imported as Humanoid; locomotion clips loop.</summary>
+    /// <summary>
+    /// FBX files dropped in the character import folder are imported as Humanoid; locomotion clips loop.
+    /// The Quaternius CC0 packs under ThirdParty/Quaternius get their documented setup: bake axis conversion,
+    /// Humanoid avatars (characters + animation libraries), Read/Write on character meshes (the anime outfit is
+    /// generated from them), no material import, clips ending in _Loop loop, root motion baked into the pose.
+    /// </summary>
     public sealed class HumanoidImportPostprocessor : AssetPostprocessor
     {
+        public const string QuaterniusFolder = "Assets/_BreathOfEclipse/ThirdParty/Quaternius";
+
+        public override uint GetVersion() => 3;
+
         private void OnPreprocessModel()
         {
-            if (!assetPath.StartsWith(HumanoidImportTool.ImportFolder)) return;
             var importer = (ModelImporter)assetImporter;
+            if (assetPath.StartsWith(QuaterniusFolder))
+            {
+                bool hair = assetPath.Contains("/Hair/");
+                bool animations = assetPath.Contains("/Animations/");
+                importer.bakeAxisConversion = true;
+                importer.useFileScale = true;
+                importer.globalScale = 1f;
+                importer.materialImportMode = ModelImporterMaterialImportMode.None;
+                importer.isReadable = !animations;
+                importer.importAnimation = animations;
+                importer.importCameras = false;
+                importer.importLights = false;
+                if (hair)
+                {
+                    importer.animationType = ModelImporterAnimationType.None;
+                }
+                else if (importer.animationType != ModelImporterAnimationType.Human)
+                {
+                    importer.animationType = ModelImporterAnimationType.Human;
+                    importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+                }
+                return;
+            }
+            if (!assetPath.StartsWith(HumanoidImportTool.ImportFolder)) return;
             if (importer.animationType != ModelImporterAnimationType.Human)
             {
                 importer.animationType = ModelImporterAnimationType.Human;
                 importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
             }
+            // The hybrid animator retargets and the anime look builder may read the mesh.
+            importer.isReadable = true;
         }
 
         private void OnPreprocessAnimation()
         {
-            if (!assetPath.StartsWith(HumanoidImportTool.ImportFolder)) return;
+            bool quaternius = assetPath.StartsWith(QuaterniusFolder);
+            if (!quaternius && !assetPath.StartsWith(HumanoidImportTool.ImportFolder)) return;
             var importer = (ModelImporter)assetImporter;
             var clips = importer.defaultClipAnimations;
             if (clips == null || clips.Length == 0) return;
             foreach (var c in clips)
             {
                 string n = c.name.ToLowerInvariant();
-                bool loop = n.Contains("idle") || n.Contains("walk") || n.Contains("run") || n.Contains("sprint") || n.Contains("jog");
+                bool loop = quaternius
+                    ? n.EndsWith("_loop")
+                    : n.Contains("idle") || n.Contains("walk") || n.Contains("run") || n.Contains("sprint") || n.Contains("jog");
                 c.loopTime = loop;
+                // In-place clips: keep the authored pose relative to the root (lying down, crouching, lunges).
                 c.lockRootRotation = true;
                 c.lockRootHeightY = true;
-                c.lockRootPositionXZ = loop;
+                c.lockRootPositionXZ = quaternius || loop;
                 c.keepOriginalOrientation = true;
                 c.keepOriginalPositionY = true;
+                c.keepOriginalPositionXZ = true;
             }
             importer.clipAnimations = clips;
         }

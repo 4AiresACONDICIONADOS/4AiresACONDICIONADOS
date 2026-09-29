@@ -151,6 +151,10 @@ namespace BreathOfEclipse.Scenes
             _animator = go.AddComponent<ProceduralAnimator>();
             _animator.Initialize(_hero);
             _animator.SetLocomotion(new LocomotionState { Grounded = true, CombatStance = true });
+            // The title screen shows the same 3D anime swordsman as the game (mannequin if it cannot be built).
+            if (SaveSystem.Settings == null || SaveSystem.Settings.playerVisualMode == 0)
+                HumanoidCharacterVisual.AttachHybrid(go.transform, _hero, _animator,
+                    CharacterVisualProfile.Runtime(VisualLook.AnimeSwordsman, LocomotionSet.Swordsman, 1.78f), Layers.Default);
             _trail = SwordTrail.Create("MenuTrail", go.transform, _hero.WeaponBase, _hero.WeaponTip,
                 MaterialFactory.SwordTrail("menu", TrailGradient(Element.Water), VfxBlend.Additive));
             ApplyElement(Element.Water);

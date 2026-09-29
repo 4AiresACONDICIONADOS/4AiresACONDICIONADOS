@@ -102,10 +102,10 @@ namespace BreathOfEclipse.AI
         {
             VFXLibrary.Spawn("oni_transform", e.transform.position, e.transform.rotation, e.Data.scale * 0.6f, Element.Dark, e.transform);
             LightFlicker.Run(e.transform.position, 26f, 2.4f);
-            var visual = e.Rig.Bone(RigBone.Visual);
+            var visual = e.Rig.DrawnRoot;
             var horns = new System.Collections.Generic.List<Transform>();
             foreach (var r in e.Rig.GetComponentsInChildren<Renderer>(true))
-                if (r.name.StartsWith("Horn")) horns.Add(r.transform);
+                if (r.name.StartsWith("Horn") && r.enabled) horns.Add(r.transform);
             var hornScales = new Vector3[horns.Count];
             for (int i = 0; i < horns.Count; i++) hornScales[i] = horns[i].localScale;
             Vector3 visualScale = visual != null ? visual.localScale : Vector3.one;

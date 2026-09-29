@@ -137,11 +137,9 @@ namespace BreathOfEclipse.Breathing
         public void AssignQuickSlot(int slot, int formIndex)
         {
             if (Current == null || slot < 0 || slot >= BreathingStyleData.QuickSlotCount || formIndex < 0 || formIndex >= Current.FormCount) return;
-            var map = new int[BreathingStyleData.QuickSlotCount];
-            for (int i = 0; i < map.Length; i++) map[i] = QuickSlotForm(i);
-            int previous = Array.IndexOf(map, formIndex);
-            if (previous >= 0) map[previous] = map[slot];
-            map[slot] = formIndex;
+            var current = new int[BreathingStyleData.QuickSlotCount];
+            for (int i = 0; i < current.Length; i++) current[i] = QuickSlotForm(i);
+            var map = QuickSlotMap.Assign(current, slot, formIndex);
 
             var settings = SaveSystem.Settings;
             var saved = settings.FindQuickSlots(Current.styleId);

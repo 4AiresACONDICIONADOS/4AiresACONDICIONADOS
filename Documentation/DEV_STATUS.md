@@ -32,7 +32,7 @@ Primera prueba recomendada al abrir el proyecto:
 | Compilación runtime (player build, sin `UNITY_EDITOR`) contra `UnityEngine.*.dll` de Unity 6.3 + Input System + uGUI + URP | ✅ 0 errores, 0 warnings |
 | Compilación del ensamblado de playtest como **Development build** separado (valida límites entre ensamblados) | ✅ 0 errores, 0 warnings |
 | Compilación editor + playtest + tests (con `UNITY_EDITOR`, `UnityEditor.*.dll`, NUnit de Unity) | ✅ 0 errores, 0 warnings |
-| Tests de la capa Logic (`dotnet test`) | ✅ 40/40 |
+| Tests de la capa Logic (`dotnet test`) | ✅ 43/43 |
 | Tests EditMode (lógica, guardado, contenido, planes de playtest) | ⏳ escritos; se ejecutan en el Test Runner de Unity |
 | Shaders (13) compilados con DXC contra la ShaderLibrary de URP 17.3 | ✅ 66 compilaciones, 0 fallos |
 | **Abrir y jugar en el Editor de Unity** | ❌ **No realizado** |

@@ -163,6 +163,9 @@ namespace BreathOfEclipse.Characters
             return Get(segment.Clip) != null;
         }
 
+        /// <summary>Motion ids that have a real clip segment.</summary>
+        public static IEnumerable<string> SegmentIds => Segments.Keys;
+
         /// <summary>Every clip a visual may need, for building its playable graph once.</summary>
         public static IEnumerable<string> SegmentClips()
         {

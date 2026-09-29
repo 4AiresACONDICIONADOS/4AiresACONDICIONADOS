@@ -15,6 +15,7 @@ namespace BreathOfEclipse.Playtest
                 case PlaytestMode.Full:
                     steps.AddRange(SceneFlowSuite.BootAndMenu());
                     steps.AddRange(MovementSuite.Steps());
+                    steps.AddRange(ModelSuite.Steps());
                     steps.AddRange(CombatSuite.Steps());
                     steps.AddRange(TechniqueSuite.Reference());
                     steps.AddRange(CameraSuite.Steps());
@@ -30,6 +31,7 @@ namespace BreathOfEclipse.Playtest
                 case PlaytestMode.Auto:
                     steps.Add(EnsureCombatTestStep());
                     steps.AddRange(MovementSuite.Steps());
+                    steps.AddRange(ModelSuite.Steps());
                     steps.AddRange(CombatSuite.Steps());
                     steps.AddRange(TechniqueSuite.Reference());
                     steps.AddRange(TechniqueSuite.Sweep());

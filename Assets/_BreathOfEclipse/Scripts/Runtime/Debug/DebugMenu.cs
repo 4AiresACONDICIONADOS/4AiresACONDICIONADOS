@@ -22,7 +22,7 @@ namespace BreathOfEclipse.Core
 
         private static readonly float[] SlowMoPresets = { 1f, 0.5f, 0.25f, 0.1f };
 
-        private Rect _window = new Rect(20f, 20f, 380f, 640f);
+        private Rect _window = new Rect(20f, 20f, 390f, 680f);
         private Vector2 _scroll;
         private PlayerController _appliedTo;
         private HitboxDebugRenderer _hitboxRenderer;
@@ -209,6 +209,9 @@ namespace BreathOfEclipse.Core
                 if (GUILayout.Button("Second")) rig.SetMode(CameraMode.SecondPerson);
                 GUILayout.EndHorizontal();
             }
+
+            AnimationLab.DrawDebugSection(_header, pc, ReloadScene);
+            if (AnimationLab.Open && GetComponent<AnimationLab>() == null) gameObject.AddComponent<AnimationLab>();
 
             if (pc != null && pc.Breathing != null && pc.Breathing.Styles.Count > 0)
             {

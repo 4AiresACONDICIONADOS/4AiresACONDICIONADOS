@@ -37,6 +37,7 @@ namespace BreathOfEclipse.Characters
         private float _nextBlink;
         private float _blinkUntil;
         private bool _demon;
+        private float _nextVoiceLookup;
 
         private SkinnedMeshRenderer _shapes;
         private int _bsBlink = -1, _bsMouth = -1, _bsAngry = -1, _bsSorrow = -1, _bsFocus = -1;
@@ -50,7 +51,7 @@ namespace BreathOfEclipse.Characters
             _mouthRenderer = mouth != null ? mouth.GetComponent<Renderer>() : null;
             _demon = demon;
             _restOpen = restOpen;
-            _voice = GetComponentInChildren<VoiceChannel>();
+            _voice = source != null ? source.GetComponentInChildren<VoiceChannel>() : null;
             _nextBlink = Time.time + Random.Range(1.5f, 4f);
         }
 
@@ -82,7 +83,12 @@ namespace BreathOfEclipse.Characters
             if (_src == null) return;
             float dt = Time.deltaTime;
             if (dt <= 0f) return;
-            if (_voice == null) _voice = GetComponentInChildren<VoiceChannel>();
+            // The voice channel is created after the visual (PlayerController / EnemyVoice): look it up lazily.
+            if (_voice == null && Time.time >= _nextVoiceLookup)
+            {
+                _nextVoiceLookup = Time.time + 1f;
+                _voice = _src.GetComponentInChildren<VoiceChannel>();
+            }
 
             // ---- expression from what the character is doing
             Expression e = Expression.Neutral;

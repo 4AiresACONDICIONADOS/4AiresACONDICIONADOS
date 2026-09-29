@@ -91,6 +91,7 @@ namespace BreathOfEclipse.Playtest
         public const string Combat = "COMBAT";
         public const string Techniques = "TECHNIQUES";
         public const string Cameras = "CAMERAS";
+        public const string Model = "3D MODEL";
         public const string Vfx = "VFX";
         public const string Enemies = "ENEMIES";
         public const string Boss = "BOSS";

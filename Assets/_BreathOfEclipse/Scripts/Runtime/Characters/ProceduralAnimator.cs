@@ -65,6 +65,7 @@ namespace BreathOfEclipse.Characters
         private bool _down, _dead;
         private float _downWeight, _deadWeight;
         private float _downBlendOutRate = 2.5f;
+        private float _postureLean, _postureCrouch, _postureWeight;
         private Transform _lookTarget;
         private float _lookWeight;
         private float _breathTime;
@@ -186,6 +187,14 @@ namespace BreathOfEclipse.Characters
             _down = value;
             _downBlendOutRate = 1f / Mathf.Max(0.05f, getUpDuration);
             if (value) _dodgeTimer = 0f;
+        }
+
+        /// <summary>Permanent stance change (boss phase 2: hunched forward, lower, more aggressive).</summary>
+        public void SetPosture(float leanDegrees, float crouch)
+        {
+            _postureLean = leanDegrees;
+            _postureCrouch = crouch;
+            _postureWeight = 0f;
         }
 
         /// <summary>Diagnostics: the knockdown pose still has weight.</summary>
@@ -354,6 +363,16 @@ namespace BreathOfEclipse.Characters
                     new Vector3(_hitLocalDir.z * 10f * s, 0f, 0f),
                     new Vector3(_hitLocalDir.z * 22f * s, _hitLocalDir.x * 14f * s, 0f));
                 pose.hips.y -= 0.05f * s;
+            }
+
+            // ---- stance (blends in over ~1 s)
+            _postureWeight = Mathf.MoveTowards(_postureWeight, 1f, dt);
+            if (_postureLean != 0f || _postureCrouch != 0f)
+            {
+                pose.visualEuler.x += _postureLean * _postureWeight;
+                pose.chestEuler.x += _postureLean * 0.6f * _postureWeight;
+                pose.headEuler.x -= _postureLean * 0.8f * _postureWeight;
+                pose.hips.y -= _postureCrouch * _postureWeight;
             }
 
             // ---- knockdown / death

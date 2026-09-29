@@ -75,7 +75,8 @@ namespace BreathOfEclipse.AI
             // The change must read instantly, without text: eyes blaze, markings ignite, the aura erupts and the
             // night itself turns crimson.
             e.Rig.SetEyeColor(e.Data.phase2EyeColor * 1.5f);
-            e.Rig.SetAccentColor(e.Data.phase2EyeColor * 0.6f);
+            e.Rig.SetMarkIntensity(1.2f);
+            e.Anim.SetPosture(9f, 0.07f);
             e.Rig.SetHitFlash(1f, new Color(1f, 0.2f, 0.45f));
             _aura = VFXLibrary.Spawn("boss_aura", e.transform.position, Quaternion.identity, e.Data.scale * 0.8f, Element.Dark, e.transform);
             FlashFrameSystem.Trigger(e.LockOnPoint.position, new Color(3f, 0.4f, 1.2f), 2, FlashFrameStyle.Silhouette);

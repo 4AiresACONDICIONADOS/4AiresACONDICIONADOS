@@ -27,10 +27,17 @@ namespace BreathOfEclipse.Player
             cc.slopeLimit = 50f;
             cc.minMoveDistance = 0f;
 
+            // Gameplay root → visual → animator → weapon socket. The mannequin always provides the gameplay points
+            // (weapon, blade base / tip, lock-on, eyes); an imported humanoid, when assigned, only replaces the look.
             var rig = go.AddComponent<CharacterRig>();
             rig.Build(RigProfile.Hero(), Layers.Player);
-            var animator = go.AddComponent<ProceduralAnimator>();
-            animator.Initialize(rig);
+            ICharacterAnimator animator = HumanoidCharacterVisual.Attach(go.transform, rig, db.playerVisual, Layers.Player);
+            if (animator == null)
+            {
+                var procedural = go.AddComponent<ProceduralAnimator>();
+                procedural.Initialize(rig);
+                animator = procedural;
+            }
 
             var damageable = go.AddComponent<Damageable>();
             damageable.Configure(Team.Player, db.player.maxHealth, rig.LockOnPoint);

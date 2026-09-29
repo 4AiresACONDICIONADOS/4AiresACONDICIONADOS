@@ -40,6 +40,8 @@ namespace BreathOfEclipse.Characters
             public Renderer Renderer;
             public bool Accent;
             public bool Eye;
+            /// <summary>Emissive marking: glows with the eye color scaled by the mark intensity (demon markings).</summary>
+            public bool Mark;
             public Color BaseColor;
         }
 
@@ -58,6 +60,7 @@ namespace BreathOfEclipse.Characters
         private Renderer _edgeGlow;
         private Color _accent;
         private Color _eyeColor;
+        private float _markIntensity = 0.3f;
         private float _hitFlash;
         private float _dissolve;
         private Color _flashColor = Color.white;
@@ -132,25 +135,28 @@ namespace BreathOfEclipse.Characters
         }
 
         private Renderer Part(string name, Mesh mesh, Color color, Transform parent, Vector3 pos, Vector3 euler, Vector3 scale,
-            bool accent = false, bool eye = false, bool hideFirstPerson = false, float outline = -1f, Color? emission = null, float spec = 0f)
+            bool accent = false, bool eye = false, bool hideFirstPerson = false, float outline = -1f, Color? emission = null, float spec = 0f, bool mark = false)
         {
-            var mat = eye
+            var mat = eye || mark
                 ? MaterialFactory.Toon(color, 0f, true, color, 1f, 0f)
                 : MaterialFactory.Toon(color, outline < 0f ? Profile.outline : outline, true, emission, 0.5f, 0.4f, spec);
             var go = ProceduralMeshes.CreatePart(name, mesh, mat, parent, pos, Quaternion.Euler(euler), scale);
             var r = go.GetComponent<MeshRenderer>();
             r.shadowCastingMode = eye ? UnityEngine.Rendering.ShadowCastingMode.Off : UnityEngine.Rendering.ShadowCastingMode.On;
-            _renderers.Add(new RendererEntry { Renderer = r, Accent = accent, Eye = eye, BaseColor = color });
+            _renderers.Add(new RendererEntry { Renderer = r, Accent = accent, Eye = eye, Mark = mark, BaseColor = color });
             _meshFilters.Add(go.GetComponent<MeshFilter>());
             if (hideFirstPerson) _firstPersonHidden.Add(r);
             return r;
         }
 
         private Renderer Part(string name, PrimitiveType type, Color color, Transform parent, Vector3 pos, Vector3 euler, Vector3 scale,
-            bool accent = false, bool eye = false, bool hideFirstPerson = false, float outline = -1f, Color? emission = null, float spec = 0f)
+            bool accent = false, bool eye = false, bool hideFirstPerson = false, float outline = -1f, Color? emission = null, float spec = 0f, bool mark = false)
         {
-            return Part(name, ProceduralMeshes.Primitive(type), color, parent, pos, euler, scale, accent, eye, hideFirstPerson, outline, emission, spec);
+            return Part(name, ProceduralMeshes.Primitive(type), color, parent, pos, euler, scale, accent, eye, hideFirstPerson, outline, emission, spec, mark);
         }
+
+        private Renderer Mark(string name, Mesh mesh, Transform parent, Vector3 pos, Vector3 euler, Vector3 scale) =>
+            Part(name, mesh, Profile.eyes, parent, pos, euler, scale, false, false, true, 0f, null, 0f, true);
 
         /// <summary>Capsule along a limb bone (+Z).</summary>
         private void Limb(string name, Transform bone, float length, float thickness, Color color, bool accent = false, bool hideFp = false)
@@ -188,16 +194,30 @@ namespace BreathOfEclipse.Characters
                 Part("HaoriTrimL", cube, p.accent, chest, new Vector3(-p.torsoWidth * 0.36f, -0.36f, p.torsoDepth * 0.56f), new Vector3(8f, 0f, 0f), new Vector3(0.135f, 0.06f, 0.03f), true, false, true, 0.8f);
                 Part("Belt", cube, p.accent * 0.5f + Color.black * 0.5f, hips, new Vector3(0f, 0.07f, 0f), Vector3.zero, new Vector3(p.torsoWidth * 1.0f, 0.07f, p.torsoDepth * 1.08f), false, false, true, 0.8f);
                 Part("Collar", cube, p.secondary, chest, new Vector3(0f, p.chestLength * 0.86f, 0.02f), new Vector3(20f, 0f, 0f), new Vector3(0.2f, 0.06f, 0.16f), false, false, true);
+                // Scabbard (saya) on the left hip, mouth near the belt and tip trailing back and down.
+                var lacquer = new Color(0.07f, 0.05f, 0.1f);
+                var gold = new Color(0.72f, 0.55f, 0.2f);
+                Part("Saya", PrimitiveType.Cylinder, lacquer, hips, new Vector3(-p.torsoWidth * 0.62f, -0.13f, -0.33f), new Vector3(-110f, 0f, 10f), new Vector3(0.05f, 0.5f, 0.045f), false, false, false, 1f, null, 0.6f);
+                Part("SayaMouth", PrimitiveType.Cylinder, gold, hips, new Vector3(-p.torsoWidth * 0.62f, 0.04f, 0.12f), new Vector3(-110f, 0f, 10f), new Vector3(0.058f, 0.02f, 0.052f), false, false, false, 0.8f, null, 0.8f);
+                Part("SayaTip", PrimitiveType.Cylinder, gold, hips, new Vector3(-p.torsoWidth * 0.62f, -0.3f, -0.8f), new Vector3(-110f, 0f, 10f), new Vector3(0.056f, 0.025f, 0.05f), false, false, false, 0.8f, null, 0.8f);
+                Part("SageoCord", cube, p.accent, hips, new Vector3(-p.torsoWidth * 0.58f, -0.02f, 0.05f), new Vector3(30f, 0f, 0f), new Vector3(0.015f, 0.14f, 0.015f), true, false, false, 0.5f);
             }
             else if (demon)
             {
                 Part("Loincloth", cube, p.secondary, hips, new Vector3(0f, -0.2f, 0.06f), new Vector3(8f, 0f, 0f), new Vector3(0.22f, 0.34f, 0.03f), false, false, false, 1f);
+                // Glowing rib markings and a sigil (driven by the eye color: they flare when the demon rages).
                 for (int i = 0; i < 3; i++)
-                {
-                    Part("Rib" + i, cube, p.accent, chest, new Vector3(0f, 0.05f + i * 0.07f, p.torsoDepth * 0.5f), Vector3.zero,
-                        new Vector3(p.torsoWidth * (0.7f - i * 0.1f), 0.015f, 0.02f), false, false, false, 0f, p.accent * 2.2f);
-                }
-                Part("SpineRidge", ProceduralMeshes.Cone(6), p.hair, chest, new Vector3(0f, 0.2f, -p.torsoDepth * 0.5f), new Vector3(-110f, 0f, 0f), new Vector3(0.08f, 0.2f, 0.08f));
+                    Mark("Rib" + i, ProceduralMeshes.Primitive(cube), chest, new Vector3(0f, 0.05f + i * 0.07f, p.torsoDepth * 0.5f), Vector3.zero,
+                        new Vector3(p.torsoWidth * (0.7f - i * 0.1f), 0.015f, 0.02f));
+                Mark("Sigil", ProceduralMeshes.Primitive(cube), chest, new Vector3(0f, 0.28f, p.torsoDepth * 0.52f), new Vector3(0f, 0f, 45f), new Vector3(0.05f, 0.05f, 0.015f));
+                // Jagged spine ridge and shoulder spikes: a hunched, bladed silhouette.
+                for (int i = 0; i < 4; i++)
+                    Part("SpineRidge" + i, ProceduralMeshes.Cone(6, 0.3f), p.hair, i < 2 ? chest : spine, new Vector3(0f, i < 2 ? 0.26f - i * 0.12f : 0.14f - (i - 2) * 0.1f, -p.torsoDepth * 0.5f),
+                        new Vector3(-115f, 0f, 0f), new Vector3(0.07f, 0.22f - i * 0.03f, 0.07f));
+                for (int side = -1; side <= 1; side += 2)
+                    for (int i = 0; i < 2; i++)
+                        Part("ShoulderSpike" + side + i, ProceduralMeshes.Cone(6, 0.4f), p.hair, chest, new Vector3((p.shoulderWidth + 0.02f) * side, p.shoulderHeight + 0.03f, -0.03f - i * 0.06f),
+                            new Vector3(-30f - i * 20f, 0f, -35f * side), new Vector3(0.06f, 0.22f - i * 0.06f, 0.06f));
             }
             else if (oni)
             {
@@ -206,6 +226,18 @@ namespace BreathOfEclipse.Characters
                 Part("ShoulderPadR", cube, p.primary, chest, new Vector3(p.shoulderWidth + 0.04f, p.shoulderHeight + 0.06f, 0f), new Vector3(0f, 0f, -18f), new Vector3(0.2f, 0.07f, 0.24f));
                 Part("ShoulderPadL", cube, p.primary, chest, new Vector3(-p.shoulderWidth - 0.04f, p.shoulderHeight + 0.06f, 0f), new Vector3(0f, 0f, 18f), new Vector3(0.2f, 0.07f, 0.24f));
                 Part("Chains", cube, p.accent * 0.6f, chest, new Vector3(0f, p.chestLength * 0.4f, p.torsoDepth * 0.52f), new Vector3(0f, 0f, 35f), new Vector3(0.6f, 0.03f, 0.02f));
+                // Spiked pauldrons, back spikes and burning cracks across the chest (marks: they blaze in phase 2).
+                for (int side = -1; side <= 1; side += 2)
+                    for (int i = 0; i < 3; i++)
+                        Part("PadSpike" + side + i, ProceduralMeshes.Cone(6, 0.2f), new Color(0.75f, 0.72f, 0.66f), chest,
+                            new Vector3((p.shoulderWidth + 0.02f + i * 0.05f) * side, p.shoulderHeight + 0.1f, -0.06f + i * 0.06f), new Vector3(-10f, 0f, -25f * side),
+                            new Vector3(0.06f, 0.2f, 0.06f), false, false, false, 0.8f);
+                for (int i = 0; i < 3; i++)
+                    Part("BackSpike" + i, ProceduralMeshes.Cone(6, 0.3f), p.hair * 0.8f, chest, new Vector3(0f, p.chestLength * (0.75f - i * 0.25f), -p.torsoDepth * 0.5f),
+                        new Vector3(-120f, 0f, 0f), new Vector3(0.09f, 0.3f - i * 0.05f, 0.09f), false, false, false, 1f);
+                Mark("ChestCrack0", ProceduralMeshes.Primitive(cube), chest, new Vector3(0.06f, p.chestLength * 0.5f, p.torsoDepth * 0.51f), new Vector3(0f, 0f, 25f), new Vector3(0.015f, 0.2f, 0.01f));
+                Mark("ChestCrack1", ProceduralMeshes.Primitive(cube), chest, new Vector3(-0.08f, p.chestLength * 0.35f, p.torsoDepth * 0.51f), new Vector3(0f, 0f, -35f), new Vector3(0.012f, 0.16f, 0.01f));
+                Mark("ChestCrack2", ProceduralMeshes.Primitive(cube), chest, new Vector3(0f, p.chestLength * 0.7f, p.torsoDepth * 0.5f), new Vector3(0f, 0f, 80f), new Vector3(0.012f, 0.12f, 0.01f));
             }
 
             // ---------------- head
@@ -216,12 +248,19 @@ namespace BreathOfEclipse.Characters
                 Part("Head", sphere, p.skin, head, new Vector3(0f, hs * 0.5f, 0f), Vector3.zero, new Vector3(hs * 1.05f, hs * 1.05f, hs * 1.05f), false, false, true);
                 // Hollow mask: white face plate with dark hollow eye sockets.
                 Part("Mask", sphere, p.secondary, head, new Vector3(0f, hs * 0.52f, hs * 0.18f), Vector3.zero, new Vector3(hs * 0.95f, hs * 1.0f, hs * 0.7f), false, false, true, 1.4f);
-                Part("MaskCrack", cube, new Color(0.1f, 0.05f, 0.05f), head, new Vector3(hs * 0.12f, hs * 0.75f, hs * 0.5f), new Vector3(0f, 0f, 30f), new Vector3(0.01f, hs * 0.35f, 0.01f), false, false, true, 0f);
+                Mark("MaskCrack", ProceduralMeshes.Primitive(cube), head, new Vector3(hs * 0.12f, hs * 0.75f, hs * 0.5f), new Vector3(0f, 0f, 30f), new Vector3(0.012f, hs * 0.35f, 0.012f));
+                Part("BrowRidge", cube, new Color(0.3f, 0.07f, 0.08f), head, new Vector3(0f, hs * 0.7f, hs * 0.44f), new Vector3(-15f, 0f, 0f), new Vector3(hs * 0.62f, hs * 0.08f, hs * 0.12f), false, false, true, 1.2f);
+                for (int side = -1; side <= 1; side += 2)
+                    Part("Tusk" + side, ProceduralMeshes.Cone(6, 0.35f), new Color(0.92f, 0.9f, 0.82f), head, new Vector3(hs * 0.17f * side, hs * 0.25f, hs * 0.45f),
+                        new Vector3(-15f, 0f, 12f * side), new Vector3(0.04f, hs * 0.26f, 0.04f), false, false, true, 0.8f);
                 Part("EyeR", sphere, p.eyes, head, new Vector3(hs * 0.18f, hs * 0.58f, hs * 0.5f), Vector3.zero, Vector3.one * hs * 0.14f, false, true, true);
                 Part("EyeL", sphere, p.eyes, head, new Vector3(-hs * 0.18f, hs * 0.58f, hs * 0.5f), Vector3.zero, Vector3.one * hs * 0.14f, false, true, true);
                 Part("Mouth", cube, p.eyes * 0.6f, head, new Vector3(0f, hs * 0.3f, hs * 0.5f), Vector3.zero, new Vector3(hs * 0.4f, hs * 0.05f, 0.02f), false, true, true);
-                Part("HornR", ProceduralMeshes.Cone(10, 0.35f), p.secondary * 0.9f, head, new Vector3(hs * 0.3f, hs * 0.85f, 0.02f), new Vector3(-10f, 0f, -28f), new Vector3(0.1f, 0.42f, 0.1f), false, false, true);
-                Part("HornL", ProceduralMeshes.Cone(10, 0.35f), p.secondary * 0.9f, head, new Vector3(-hs * 0.3f, hs * 0.85f, 0.02f), new Vector3(-10f, 0f, 28f), new Vector3(0.1f, 0.42f, 0.1f), false, false, true);
+                // Great curved horns and a smaller pair behind them: a boss silhouette readable from afar.
+                Part("HornR", ProceduralMeshes.Cone(10, 0.45f), p.secondary * 0.9f, head, new Vector3(hs * 0.3f, hs * 0.85f, 0.02f), new Vector3(-14f, 0f, -30f), new Vector3(0.13f, 0.62f, 0.13f), false, false, true);
+                Part("HornL", ProceduralMeshes.Cone(10, 0.45f), p.secondary * 0.9f, head, new Vector3(-hs * 0.3f, hs * 0.85f, 0.02f), new Vector3(-14f, 0f, 30f), new Vector3(0.13f, 0.62f, 0.13f), false, false, true);
+                Part("HornBackR", ProceduralMeshes.Cone(8, 0.3f), p.secondary * 0.75f, head, new Vector3(hs * 0.22f, hs * 0.8f, -hs * 0.2f), new Vector3(-50f, 0f, -20f), new Vector3(0.07f, 0.28f, 0.07f), false, false, true);
+                Part("HornBackL", ProceduralMeshes.Cone(8, 0.3f), p.secondary * 0.75f, head, new Vector3(-hs * 0.22f, hs * 0.8f, -hs * 0.2f), new Vector3(-50f, 0f, 20f), new Vector3(0.07f, 0.28f, 0.07f), false, false, true);
                 for (int i = 0; i < 9; i++)
                 {
                     float a = (i / 8f - 0.5f) * 220f;
@@ -236,14 +275,33 @@ namespace BreathOfEclipse.Characters
                 Part("EyeR", sphere, p.eyes, head, new Vector3(hs * 0.16f, hs * 0.55f, hs * 0.55f), Vector3.zero, new Vector3(hs * 0.16f, hs * 0.07f, hs * 0.08f), false, true, true);
                 Part("EyeL", sphere, p.eyes, head, new Vector3(-hs * 0.16f, hs * 0.55f, hs * 0.55f), Vector3.zero, new Vector3(hs * 0.16f, hs * 0.07f, hs * 0.08f), false, true, true);
                 Part("Maw", cube, p.eyes * 0.5f, head, new Vector3(0f, hs * 0.26f, hs * 0.6f), Vector3.zero, new Vector3(hs * 0.35f, hs * 0.04f, 0.02f), false, true, true);
+                for (int i = 0; i < 4; i++)
+                    Part("Fang" + i, ProceduralMeshes.Cone(5), new Color(0.9f, 0.88f, 0.8f), head, new Vector3((i - 1.5f) * hs * 0.08f, hs * 0.29f, hs * 0.6f),
+                        new Vector3(180f, 0f, 0f), new Vector3(0.02f, hs * (i == 0 || i == 3 ? 0.12f : 0.07f), 0.02f), false, false, true, 0.6f);
+                // Tear-like markings under the eyes.
+                for (int side = -1; side <= 1; side += 2)
+                    Mark("TearMark" + side, ProceduralMeshes.Primitive(cube), head, new Vector3(hs * 0.17f * side, hs * 0.42f, hs * 0.55f), new Vector3(0f, 0f, -20f * side), new Vector3(0.012f, hs * 0.16f, 0.01f));
                 Part("HornR", ProceduralMeshes.Cone(8, 0.6f), p.hair, head, new Vector3(hs * 0.22f, hs * 0.85f, 0f), new Vector3(-35f, 0f, -20f), new Vector3(0.06f, 0.32f, 0.06f), false, false, true);
                 Part("HornL", ProceduralMeshes.Cone(8, 0.6f), p.hair, head, new Vector3(-hs * 0.22f, hs * 0.85f, 0f), new Vector3(-35f, 0f, 20f), new Vector3(0.06f, 0.32f, 0.06f), false, false, true);
             }
             else
             {
                 Part("Head", sphere, p.skin, head, new Vector3(0f, hs * 0.5f, 0f), Vector3.zero, Vector3.one * hs, false, false, true);
-                Part("EyeR", cube, p.eyes, head, new Vector3(hs * 0.17f, hs * 0.52f, hs * 0.47f), Vector3.zero, new Vector3(hs * 0.1f, hs * 0.14f, 0.02f), false, true, true);
-                Part("EyeL", cube, p.eyes, head, new Vector3(-hs * 0.17f, hs * 0.52f, hs * 0.47f), Vector3.zero, new Vector3(hs * 0.1f, hs * 0.14f, 0.02f), false, true, true);
+                Part("Jaw", sphere, p.skin, head, new Vector3(0f, hs * 0.3f, hs * 0.1f), Vector3.zero, new Vector3(hs * 0.72f, hs * 0.5f, hs * 0.75f), false, false, true);
+                // Anime eyes: white, iris in the breathing-style color, dark pupil and a highlight; brows, nose, mouth.
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    string sfx = side > 0 ? "R" : "L";
+                    float x = hs * 0.17f * side;
+                    Part("EyeWhite" + sfx, sphere, new Color(0.97f, 0.97f, 1f), head, new Vector3(x, hs * 0.52f, hs * 0.455f), new Vector3(0f, 0f, -8f * side),
+                        new Vector3(hs * 0.17f, hs * 0.2f, hs * 0.05f), false, false, true, 0f);
+                    Part("Iris" + sfx, sphere, p.accent, head, new Vector3(x, hs * 0.51f, hs * 0.475f), Vector3.zero, new Vector3(hs * 0.1f, hs * 0.15f, hs * 0.03f), true, false, true, 0f);
+                    Part("Eye" + sfx, sphere, p.eyes, head, new Vector3(x, hs * 0.51f, hs * 0.49f), Vector3.zero, new Vector3(hs * 0.05f, hs * 0.08f, hs * 0.02f), false, true, true);
+                    Part("Glint" + sfx, sphere, Color.white, head, new Vector3(x + hs * 0.02f, hs * 0.55f, hs * 0.5f), Vector3.zero, Vector3.one * hs * 0.03f, false, false, true, 0f, Color.white * 1.5f);
+                    Part("Brow" + sfx, cube, p.hair, head, new Vector3(x, hs * 0.67f, hs * 0.455f), new Vector3(0f, 0f, 12f * side), new Vector3(hs * 0.2f, hs * 0.028f, hs * 0.03f), false, false, true, 0f);
+                }
+                Part("Nose", sphere, p.skin * 0.94f, head, new Vector3(0f, hs * 0.42f, hs * 0.5f), Vector3.zero, new Vector3(hs * 0.04f, hs * 0.06f, hs * 0.04f), false, false, true, 0f);
+                Part("Mouth", cube, new Color(0.5f, 0.22f, 0.22f), head, new Vector3(0f, hs * 0.3f, hs * 0.485f), Vector3.zero, new Vector3(hs * 0.1f, hs * 0.014f, hs * 0.01f), false, false, true, 0f);
                 // Spiky anime hair.
                 Part("HairCap", sphere, p.hair, head, new Vector3(0f, hs * 0.66f, -hs * 0.06f), Vector3.zero, new Vector3(hs * 1.06f, hs * 0.8f, hs * 1.08f), false, false, true);
                 var spikes = new[]
@@ -259,6 +317,20 @@ namespace BreathOfEclipse.Characters
                     Part("HairSpike" + i, ProceduralMeshes.Cone(6, 0.25f), p.hair, head, new Vector3(s.x * hs, s.y * hs, s.z * hs),
                         new Vector3(s.w, 0f, -side), new Vector3(hs * 0.32f, hs * 0.75f, hs * 0.32f), false, false, true, 1.2f);
                 }
+                // Fringe over the forehead, side locks and a tied ponytail: the anime silhouette.
+                for (int i = 0; i < 4; i++)
+                {
+                    float fx = (i - 1.5f) * 0.18f;
+                    Part("Fringe" + i, ProceduralMeshes.Cone(6, 0.2f), p.hair, head, new Vector3(fx * hs, hs * 0.86f, hs * 0.36f),
+                        new Vector3(160f + i * 3f, 0f, fx * 40f), new Vector3(hs * 0.22f, hs * 0.42f, hs * 0.16f), false, false, true, 1.1f);
+                }
+                for (int side = -1; side <= 1; side += 2)
+                    Part(side > 0 ? "SideLockR" : "SideLockL", ProceduralMeshes.Cone(6, 0.15f), p.hair, head, new Vector3(0.43f * hs * side, hs * 0.62f, hs * 0.12f),
+                        new Vector3(176f, 0f, 6f * side), new Vector3(hs * 0.16f, hs * 0.5f, hs * 0.12f), false, false, true, 1.1f);
+                Part("PonytailTie", sphere, p.accent, head, new Vector3(0f, hs * 0.74f, -hs * 0.48f), Vector3.zero, Vector3.one * hs * 0.14f, true, false, true, 0.8f);
+                Part("Ponytail", ProceduralMeshes.Cone(8, 0.35f), p.hair, head, new Vector3(0f, hs * 0.72f, -hs * 0.52f),
+                    new Vector3(-125f, 0f, 0f), new Vector3(hs * 0.3f, hs * 0.95f, hs * 0.26f), false, false, true, 1.1f);
+
                 // Headband with tails in the style accent color.
                 Part("Headband", PrimitiveType.Cylinder, p.accent, head, new Vector3(0f, hs * 0.66f, 0f), Vector3.zero, new Vector3(hs * 1.08f, 0.022f, hs * 1.08f), true, false, true, 0.8f);
                 Part("BandTailR", cube, p.accent, head, new Vector3(0.04f, hs * 0.5f, -hs * 0.6f), new Vector3(-60f, 15f, 0f), new Vector3(0.035f, 0.26f, 0.01f), true, false, true, 0.6f);
@@ -273,15 +345,55 @@ namespace BreathOfEclipse.Characters
             Limb("LowerArmL", lowerL, p.lowerArm, p.armThickness * 0.85f, hero ? p.primary : p.skin);
             Part("HandR", cube, p.skin, handR, new Vector3(0f, 0f, 0.02f), Vector3.zero, new Vector3(p.armThickness * 0.8f, p.armThickness * 0.9f, p.armThickness * 0.9f));
             Part("HandL", cube, p.skin, handL, new Vector3(0f, 0f, 0.02f), Vector3.zero, new Vector3(p.armThickness * 0.8f, p.armThickness * 0.9f, p.armThickness * 0.9f));
+            if (hero)
+            {
+                // Wide haori sleeves flaring toward the elbow, and wrapped wrists.
+                foreach (var (upper, lower, n) in new[] { (upperR, lowerR, "R"), (upperL, lowerL, "L") })
+                {
+                    Part("Sleeve" + n, ProceduralMeshes.Cone(10), p.secondary, upper, new Vector3(0f, 0f, p.upperArm * 1.02f), new Vector3(-90f, 0f, 0f),
+                        new Vector3(p.armThickness * 3.1f, p.upperArm * 0.9f, p.armThickness * 2.7f), false, false, true, 1.1f);
+                    Part("SleeveTrim" + n, PrimitiveType.Cylinder, p.accent, upper, new Vector3(0f, 0f, p.upperArm * 1.0f), new Vector3(90f, 0f, 0f),
+                        new Vector3(p.armThickness * 3.15f, 0.012f, p.armThickness * 2.75f), true, false, true, 0.6f);
+                    Part("WristWrap" + n, PrimitiveType.Cylinder, p.secondary, lower, new Vector3(0f, 0f, p.lowerArm * 0.82f), new Vector3(90f, 0f, 0f),
+                        new Vector3(p.armThickness * 0.95f, 0.035f, p.armThickness * 0.95f), false, false, false, 0.7f);
+                }
+            }
             if (demon)
             {
                 foreach (var hand in new[] { handR, handL })
                 {
+                    // Four long hooked claws per hand.
+                    for (int i = 0; i < 4; i++)
+                    {
+                        float x = (i - 1.5f) * 0.028f;
+                        Part("Claw" + i, ProceduralMeshes.Cone(6, -0.45f), p.hair, hand, new Vector3(x, 0.02f, 0.05f), new Vector3(90f, 0f, 0f),
+                            new Vector3(0.024f, i == 0 || i == 3 ? 0.2f : 0.27f, 0.024f), false, false, false, 1f, p.accent * 0.6f);
+                    }
+                }
+            }
+
+            if (demon)
+            {
+                // Glowing veins along the forearms.
+                foreach (var lower in new[] { lowerR, lowerL })
+                    Mark("Vein", ProceduralMeshes.Primitive(cube), lower, new Vector3(0f, p.armThickness * 0.45f, p.lowerArm * 0.5f), new Vector3(0f, 0f, 0f), new Vector3(0.012f, 0.012f, p.lowerArm * 0.7f));
+            }
+            else if (oni)
+            {
+                // Bracers with studs, burning arm stripes (marks).
+                foreach (var (upper, lower) in new[] { (upperR, lowerR), (upperL, lowerL) })
+                {
+                    Part("Bracer", PrimitiveType.Cylinder, p.primary, lower, new Vector3(0f, 0f, p.lowerArm * 0.6f), new Vector3(90f, 0f, 0f),
+                        new Vector3(p.armThickness * 1.25f, p.lowerArm * 0.22f, p.armThickness * 1.25f), false, false, false, 1.1f);
                     for (int i = 0; i < 3; i++)
                     {
-                        float x = (i - 1) * 0.03f;
-                        Part("Claw" + i, ProceduralMeshes.Cone(6, -0.4f), p.hair, hand, new Vector3(x, 0.02f, 0.05f), new Vector3(90f, 0f, 0f), new Vector3(0.025f, 0.2f, 0.025f), false, false, false, 1f, p.accent * 0.6f);
+                        var dir = Quaternion.Euler(0f, 0f, i * 120f) * Vector3.up;
+                        Part("BracerStud" + i, ProceduralMeshes.Cone(5), new Color(0.6f, 0.55f, 0.5f), lower, dir * p.armThickness * 0.62f + new Vector3(0f, 0f, p.lowerArm * 0.6f),
+                            Quaternion.LookRotation(Vector3.forward, dir).eulerAngles, new Vector3(0.05f, 0.07f, 0.05f), false, false, false, 0.6f);
                     }
+                    for (int i = 0; i < 2; i++)
+                        Mark("ArmStripe" + i, ProceduralMeshes.Primitive(PrimitiveType.Cylinder), upper, new Vector3(0f, 0f, p.upperArm * (0.35f + i * 0.2f)), new Vector3(90f, 0f, 0f),
+                            new Vector3(p.armThickness * 1.03f, 0.01f, p.armThickness * 1.03f));
                 }
             }
 
@@ -296,6 +408,14 @@ namespace BreathOfEclipse.Characters
             Part("FootL", cube, footColor, footL, new Vector3(0f, -0.02f, 0.06f), Vector3.zero, new Vector3(0.09f, 0.06f, 0.22f));
             if (hero)
             {
+                // Hakama flaring from the thighs to the knees, and split-toe boots.
+                foreach (var (thigh, foot, n) in new[] { (thighR, footR, "R"), (thighL, footL, "L") })
+                {
+                    Part("Hakama" + n, ProceduralMeshes.Cone(10), p.primary * 0.92f, thigh, new Vector3(0f, 0f, p.thigh * 1.05f), new Vector3(-90f, 0f, 0f),
+                        new Vector3(p.legThickness * 2.3f, p.thigh * 1.0f, p.legThickness * 2.0f), false, false, false, 1.1f);
+                    Part("BootToe" + n, sphere, new Color(0.1f, 0.09f, 0.1f), foot, new Vector3(0f, -0.02f, 0.15f), Vector3.zero, new Vector3(0.1f, 0.07f, 0.1f), false, false, false, 0.9f);
+                    Part("BootCuff" + n, PrimitiveType.Cylinder, p.secondary * 0.85f, foot, new Vector3(0f, 0.03f, -0.01f), Vector3.zero, new Vector3(0.1f, 0.03f, 0.1f), false, false, false, 0.8f);
+                }
                 // Wrapped shins (kyahan) in white.
                 Part("WrapR", PrimitiveType.Cylinder, p.secondary, shinR, new Vector3(0f, 0f, p.shin * 0.7f), new Vector3(90f, 0f, 0f), new Vector3(p.legThickness * 0.95f, p.shin * 0.22f, p.legThickness * 0.95f), false, false, false, 0.8f);
                 Part("WrapL", PrimitiveType.Cylinder, p.secondary, shinL, new Vector3(0f, 0f, p.shin * 0.7f), new Vector3(90f, 0f, 0f), new Vector3(p.legThickness * 0.95f, p.shin * 0.22f, p.legThickness * 0.95f), false, false, false, 0.8f);
@@ -304,9 +424,12 @@ namespace BreathOfEclipse.Characters
 
         private void BuildWeapon(RigProfile p, Transform weapon)
         {
-            WeaponBase = new GameObject("WeaponBase").transform;
+            // Sockets: the weapon lives on RightHandWeaponSocket; hit detection and trails use BladeBase / BladeTip,
+            // so a new katana or an imported character only has to provide these three points.
+            weapon.name = "RightHandWeaponSocket";
+            WeaponBase = new GameObject("BladeBase").transform;
             WeaponBase.SetParent(weapon, false);
-            WeaponTip = new GameObject("WeaponTip").transform;
+            WeaponTip = new GameObject("BladeTip").transform;
             WeaponTip.SetParent(weapon, false);
 
             switch (p.weapon)
@@ -369,6 +492,22 @@ namespace BreathOfEclipse.Characters
         {
             _eyeColor = color;
             _dirty = true;
+        }
+
+        /// <summary>Glow of demon markings (0 = dark, 1 = as bright as the eyes). Boss phase 2 raises it.</summary>
+        public void SetMarkIntensity(float intensity)
+        {
+            _markIntensity = Mathf.Max(0f, intensity);
+            _dirty = true;
+        }
+
+        /// <summary>Hides every body part but keeps the weapon (an imported character model replaces the mannequin).</summary>
+        public void SetBodyVisible(bool visible)
+        {
+            var weapon = Bone(RigBone.Weapon);
+            foreach (var e in _renderers)
+                if (e.Renderer != null && (weapon == null || !e.Renderer.transform.IsChildOf(weapon)))
+                    e.Renderer.enabled = visible;
         }
 
         /// <summary>White flash on hit (0..1).</summary>
@@ -454,6 +593,12 @@ namespace BreathOfEclipse.Characters
                     _mpb.SetColor(ShaderIds.BaseColor, _eyeColor);
                     _mpb.SetColor(ShaderIds.EmissionColor, _eyeColor);
                 }
+                if (e.Mark)
+                {
+                    Color glow = _eyeColor * _markIntensity;
+                    _mpb.SetColor(ShaderIds.BaseColor, Color.Lerp(new Color(0.05f, 0.03f, 0.05f), glow, Mathf.Clamp01(_markIntensity * 2f)));
+                    _mpb.SetColor(ShaderIds.EmissionColor, glow);
+                }
                 if (_hitFlash > 0f)
                 {
                     _mpb.SetFloat(ShaderIds.HitFlash, _hitFlash);
@@ -464,7 +609,7 @@ namespace BreathOfEclipse.Characters
                     _mpb.SetFloat(ShaderIds.Dissolve, _dissolve);
                     _mpb.SetColor(ShaderIds.DissolveColor, Profile != null && Profile.decoration != RigDecoration.Hero ? new Color(3f, 0.4f, 0.8f) : new Color(1f, 1.5f, 3f));
                 }
-                if (e.Accent || e.Eye || _hitFlash > 0f || _dissolve > 0f) e.Renderer.SetPropertyBlock(_mpb);
+                if (e.Accent || e.Eye || e.Mark || _hitFlash > 0f || _dissolve > 0f) e.Renderer.SetPropertyBlock(_mpb);
                 else e.Renderer.SetPropertyBlock(null);
             }
         }

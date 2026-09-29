@@ -23,6 +23,8 @@ namespace BreathOfEclipse.Characters
         Transform WeaponBase { get; }
         Transform WeaponTip { get; }
         bool IsActionPlaying { get; }
+        /// <summary>Diagnostics: the character is shown lying down.</summary>
+        bool KnockdownPoseActive { get; }
 
         void SetLocomotion(LocomotionState state);
         /// <summary>Plays an attack: windup (anticipation), active (swing), recovery (follow-through).</summary>

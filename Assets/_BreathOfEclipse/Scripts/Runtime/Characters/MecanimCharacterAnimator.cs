@@ -36,6 +36,14 @@ namespace BreathOfEclipse.Characters
         public Transform WeaponBase => weaponBase != null ? weaponBase : transform;
         public Transform WeaponTip => weaponTip != null ? weaponTip : transform;
         public bool IsActionPlaying => Time.time < _actionEnd;
+        public bool KnockdownPoseActive => _animator != null && _animator.GetBool(KnockedDownId);
+
+        /// <summary>Blade points on the imported model's weapon (hit detection, trails, VFX anchors).</summary>
+        public void SetWeaponPoints(Transform bladeBase, Transform bladeTip)
+        {
+            weaponBase = bladeBase;
+            weaponTip = bladeTip;
+        }
 
         private void Awake() => _animator = GetComponent<Animator>();
 

@@ -17,6 +17,8 @@ namespace BreathOfEclipse.Data
         public int contentVersion;
 
         public PlayerData player;
+        [Tooltip("Optional imported humanoid for the player (null = procedural mannequin).")]
+        public Characters.CharacterVisualProfile playerVisual;
         public WeaponData playerWeapon;
         public ComboData playerCombos;
         public List<BreathingStyleData> styles = new List<BreathingStyleData>();

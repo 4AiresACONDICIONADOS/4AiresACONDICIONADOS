@@ -52,7 +52,8 @@ namespace BreathOfEclipse.Player
         public PlayerDefense Defense { get; private set; }
         public TargetLockSystem LockOn { get; private set; }
         public BreathingStyleSystem Breathing { get; private set; }
-        public ProceduralAnimator Animator { get; private set; }
+        /// <summary>Procedural mannequin or an imported humanoid (Mecanim): gameplay only sees the interface.</summary>
+        public ICharacterAnimator Animator { get; private set; }
         public CharacterRig Rig { get; private set; }
         public Damageable Damageable { get; private set; }
 
@@ -94,7 +95,7 @@ namespace BreathOfEclipse.Player
 
         // ------------------------------------------------------------------ setup
 
-        public void Initialize(PlayerData data, WeaponData weapon, ComboData combos, GameDatabase db, CharacterRig rig, ProceduralAnimator animator,
+        public void Initialize(PlayerData data, WeaponData weapon, ComboData combos, GameDatabase db, CharacterRig rig, ICharacterAnimator animator,
             PlayerMotor motor, PlayerStats stats, PlayerCombat combat, PlayerDefense defense, TargetLockSystem lockOn,
             BreathingStyleSystem breathing, Damageable damageable)
         {

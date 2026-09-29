@@ -263,8 +263,13 @@ namespace BreathOfEclipse.Characters
             Vector3 palm = right ? Vector3.Cross(fingers, thumbSide) : Vector3.Cross(thumbSide, fingers);
             palm.Normalize();
 
-            // Grip frame: the blade leaves the fist on the thumb side, the edge faces the front of the fist.
-            Quaternion grip = Quaternion.LookRotation(thumbSide, fingers);
+            // Grip frame: the handle lies diagonally across the palm (heel of the hand → index knuckle), so the blade
+            // leaves the fist on the thumb side tilted toward the fingers and the edge faces the front of the fist.
+            // The tilt keeps the wrists straight in guard (forearm, fist and blade line up like a real kamae).
+            const float tilt = 38f * Mathf.Deg2Rad;
+            Vector3 blade = (thumbSide * Mathf.Cos(tilt) + fingers * Mathf.Sin(tilt)).normalized;
+            Vector3 edge = Vector3.ProjectOnPlane(fingers, blade).normalized;
+            Quaternion grip = Quaternion.LookRotation(blade, edge);
             Quaternion gripToHand = Quaternion.Inverse(grip) * hand.rotation;
             float scale = Height / 1.8f;
             Vector3 palmPoint = hand.position + fingers * (palmLen * 0.55f) + palm * (0.028f * scale);

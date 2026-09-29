@@ -79,6 +79,9 @@ namespace BreathOfEclipse.UI
             Number(left, "Gamepad sensitivity", () => s.gamepadSensitivity, v => s.gamepadSensitivity = v, 0.1f, 4f, 0.1f, "0.0");
             Toggle(left, "Invert Y", () => s.invertY, v => s.invertY = v);
             Cycle(left, "Dodge input", new[] { "Alt only", "Alt / Dir+Space (lock-on)", "Alt / Dir+Space (always)" }, () => s.dodgeInputMode, v => s.dodgeInputMode = v);
+            Header(left, "CHARACTERS (next scene)");
+            Cycle(left, "Player model", new[] { "3D anime", "Mannequin" }, () => s.playerVisualMode, v => s.playerVisualMode = v);
+            Cycle(left, "Demon models", new[] { "3D", "Mannequin" }, () => s.demonVisualMode, v => s.demonVisualMode = v);
 
             Header(right, "CAMERA");
             Number(right, "Field of view", () => s.fieldOfView, v => s.fieldOfView = v, 50f, 90f, 1f, "0");

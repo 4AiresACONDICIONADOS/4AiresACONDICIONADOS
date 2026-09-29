@@ -973,7 +973,10 @@ namespace BreathOfEclipse.Data
             leap.groundSlam = true;
             leap.aoeRadius = 2.2f;
             leap.parryable = false;
-            e.attacks = new List<EnemyAttackData> { claws, lunge, leap };
+            // Heavy: rears up and brings both claws down crossed — slow, telegraphed, punishes greed.
+            var cross = EAttack("rending_cross", "Rending Cross", "EnemyHeavy", 0f, 2.6f, 1.2f, 5f, 0.75f, 0.16f, 0.7f, 1.8f, HitReaction.Heavy, 5f, 2.1f, 100f, EnemyAttackMovement.Lunge, 1.2f);
+            cross.telegraphed = true;
+            e.attacks = new List<EnemyAttackData> { claws, lunge, leap, cross };
             return e;
         }
 

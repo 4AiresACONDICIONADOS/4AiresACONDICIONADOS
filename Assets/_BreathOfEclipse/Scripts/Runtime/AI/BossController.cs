@@ -1,5 +1,6 @@
 using BreathOfEclipse.Audio;
 using BreathOfEclipse.CameraSystem;
+using BreathOfEclipse.Characters;
 using BreathOfEclipse.Combat;
 using BreathOfEclipse.Core;
 using BreathOfEclipse.Player;
@@ -59,7 +60,8 @@ namespace BreathOfEclipse.AI
             special.Duration = 2.6f;
             special.OnDone = FinishTransition;
             e.ChangeState(EnemyStateId.Special);
-            e.Anim.PlayMotion("OniRoar", 2.6f, 0.15f);
+            e.Anim.PlayMotion("OniTransform", 2.6f, 0.15f);
+            StartCoroutine(Transform(e));
             e.PlaySfx("boss_roar", 1f);
             CameraFX.Shake(0.9f);
             CameraFX.Zoom(1.3f, 2.4f, 0.3f, 0.6f);
@@ -93,6 +95,36 @@ namespace BreathOfEclipse.AI
             e.Phase = 2;
             GameEvents.RaiseBossPhaseChanged(e.gameObject, 2);
             Sfx.Music(e.Data.phase2Music, 0.8f);
+        }
+
+        /// <summary>The body grows ~8% and the horns ~35% while it shudders; the ground cracks and nearby lights falter.</summary>
+        private System.Collections.IEnumerator Transform(EnemyController e)
+        {
+            VFXLibrary.Spawn("oni_transform", e.transform.position, e.transform.rotation, e.Data.scale * 0.6f, Element.Dark, e.transform);
+            LightFlicker.Run(e.transform.position, 26f, 2.4f);
+            var visual = e.Rig.Bone(RigBone.Visual);
+            var horns = new System.Collections.Generic.List<Transform>();
+            foreach (var r in e.Rig.GetComponentsInChildren<Renderer>(true))
+                if (r.name.StartsWith("Horn")) horns.Add(r.transform);
+            var hornScales = new Vector3[horns.Count];
+            for (int i = 0; i < horns.Count; i++) hornScales[i] = horns[i].localScale;
+            Vector3 visualScale = visual != null ? visual.localScale : Vector3.one;
+            yield return new WaitForSeconds(0.5f);
+            for (float t = 0f; t < 1f; t += Time.deltaTime / 1.1f)
+            {
+                if (e == null || !e.IsAlive) yield break;
+                float k = Mathf.SmoothStep(0f, 1f, t) + Mathf.Sin(t * 60f) * 0.02f * (1f - t);
+                if (visual != null) visual.localScale = visualScale * Mathf.Lerp(1f, 1.08f, k);
+                for (int i = 0; i < horns.Count; i++)
+                    if (horns[i] != null) horns[i].localScale = new Vector3(hornScales[i].x * Mathf.Lerp(1f, 1.2f, k), hornScales[i].y * Mathf.Lerp(1f, 1.35f, k), hornScales[i].z * Mathf.Lerp(1f, 1.2f, k));
+                yield return null;
+            }
+            // The rise and roar (~1.6 s into the transformation): second shockwave.
+            if (e != null && e.IsAlive)
+            {
+                CameraFX.Shake(0.7f);
+                VFXLibrary.Spawn("shockwave", e.transform.position, Quaternion.identity, 2.4f, Element.Dark);
+            }
         }
 
         private void FinishTransition()
@@ -148,6 +180,42 @@ namespace BreathOfEclipse.AI
     /// Slight environment reaction for boss phases: fog, sky ambient and moonlight drift toward a target over a
     /// few seconds. Runs on its own scene object so it completes even if the boss is removed meanwhile.
     /// </summary>
+    /// <summary>Point lights near a point stutter for a moment (boss transformation: the night itself falters).</summary>
+    internal sealed class LightFlicker : MonoBehaviour
+    {
+        private Light[] _lights;
+        private float[] _base;
+        private float _seconds, _t;
+
+        public static void Run(Vector3 center, float radius, float seconds)
+        {
+            var found = new System.Collections.Generic.List<Light>();
+            foreach (var l in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+                if (l != null && l.type == LightType.Point && l.enabled && (l.transform.position - center).sqrMagnitude < radius * radius && l.GetComponent<VFX.FlashLight>() == null)
+                    found.Add(l);
+            if (found.Count == 0) return;
+            var go = new GameObject("[LightFlicker]");
+            var f = go.AddComponent<LightFlicker>();
+            f._lights = found.ToArray();
+            f._base = new float[f._lights.Length];
+            for (int i = 0; i < f._lights.Length; i++) f._base[i] = f._lights[i].intensity;
+            f._seconds = seconds;
+        }
+
+        private void Update()
+        {
+            _t += Time.deltaTime;
+            bool done = _t >= _seconds;
+            for (int i = 0; i < _lights.Length; i++)
+            {
+                if (_lights[i] == null) continue;
+                float n = Mathf.PerlinNoise(i * 3.1f, Time.time * 14f);
+                _lights[i].intensity = done ? _base[i] : _base[i] * Mathf.Lerp(0.15f, 1.1f, n);
+            }
+            if (done) Destroy(gameObject);
+        }
+    }
+
     internal sealed class NightShift : MonoBehaviour
     {
         private Color _fog0, _amb0, _sun0, _fog, _amb, _sun;

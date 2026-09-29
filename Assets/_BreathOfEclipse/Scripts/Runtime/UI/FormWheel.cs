@@ -35,6 +35,9 @@ namespace BreathOfEclipse.UI
         public static bool IsOpen { get; private set; }
 
         private RectTransform _root;
+        private RectTransform _ring;
+        /// <summary>Wheel radius for the current form count: 7 forms fit at 230 px, 11 forms spread wider.</summary>
+        private float _radius = Radius;
         private CanvasGroup _group;
         private Text _title;
         private Text _detail;
@@ -70,8 +73,8 @@ namespace BreathOfEclipse.UI
             shade.raycastTarget = false;
 
             var center = new Vector2(0.5f, 0.5f);
-            UIFactory.Image("Ring", _root, new Color(1f, 1f, 1f, 0.12f), center, center, Vector2.zero, new Vector2(Radius * 2f + 90f, Radius * 2f + 90f),
-                ProceduralTextures.UISprite("ring"));
+            _ring = UIFactory.Image("Ring", _root, new Color(1f, 1f, 1f, 0.12f), center, center, Vector2.zero, new Vector2(Radius * 2f + 90f, Radius * 2f + 90f),
+                ProceduralTextures.UISprite("ring")).rectTransform;
             _pointer = UIFactory.Image("Pointer", _root, new Color(0.6f, 0.9f, 1f, 0.9f), center, center, Vector2.zero, new Vector2(22f, 22f),
                 ProceduralTextures.UISprite("diamond"));
             _title = UIFactory.Text("Title", _root, "", 30, UIColors.Text, center, center, new Vector2(0f, 18f), new Vector2(420f, 44f),
@@ -88,12 +91,14 @@ namespace BreathOfEclipse.UI
             _builtCount = style != null ? style.FormCount : 0;
             if (style == null) return;
 
+            _radius = Mathf.Max(Radius, _builtCount * 30f);
+            _ring.sizeDelta = new Vector2(_radius * 2f + 90f, _radius * 2f + 90f);
             var center = new Vector2(0.5f, 0.5f);
             var sprite = ProceduralTextures.UISprite("circle");
             for (int i = 0; i < _builtCount; i++)
             {
                 var form = style.GetForm(i);
-                Vector2 pos = Direction(i, _builtCount) * Radius;
+                Vector2 pos = Direction(i, _builtCount) * _radius;
                 var rt = UIFactory.Rect("Form" + (i + 1), _root, center, center, center, pos, new Vector2(170f, 96f));
                 var seg = new Segment { Root = rt };
                 seg.Back = UIFactory.Image("Back", rt, new Color(0.05f, 0.07f, 0.14f, 0.85f), center, center, new Vector2(0f, 12f), new Vector2(74f, 74f), sprite);

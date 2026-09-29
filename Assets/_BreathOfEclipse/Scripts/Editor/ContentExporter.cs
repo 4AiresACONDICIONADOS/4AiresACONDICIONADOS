@@ -74,6 +74,14 @@ namespace BreathOfEclipse.EditorTools
         public static void Export()
         {
             var db = DefaultContent.Build();
+            // Hand-assigned references survive a re-export (imported character, prefab VFX overrides).
+            var previous = AssetDatabase.LoadAssetAtPath<GameDatabase>(DatabasePath);
+            if (previous != null)
+            {
+                db.playerVisual = previous.playerVisual;
+                foreach (var v in previous.vfxOverrides)
+                    if (v != null && !db.vfxOverrides.Contains(v)) db.vfxOverrides.Add(v);
+            }
             EnsureFolder(DataRoot);
             var written = new HashSet<Object>();
 

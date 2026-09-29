@@ -1,18 +1,19 @@
 # DEV STATUS — Breath of Eclipse
 
-**Versión actual: v0.2.1 — Anime Visual Overhaul** · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
+**Versión actual: v0.3.0 — Forms & Character Evolution** · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
 
 - **Working (probado por el usuario en Unity 6.3, v0.1.1):** arranque de `03_CombatTest`, personaje, escenario, ataques y técnicas.
 - **Working (código compilado, 0 errores / 0 warnings; SIN verificar en Unity):**
-  - v0.2.0: formas variables + rueda (F), Agua con 7 formas, voz en español (45 clips), fase 2 del Oni.
-  - v0.2.1: shader `TidalWaterAnime`, `WaterRibbonRenderer`, `WaterSerpentRenderer` con cabeza, espuma anime,
-    VFX propio para cada forma del Agua, Rising Serpent y ultimate rehechos, voz sincronizada por fase.
-  - Combat feel (hit stop, cancel windows, cuerpo entero en cada golpe), protagonista y demonios con más detalle,
-    adaptador para modelo humanoide (`CharacterVisualProfile`), bosque más denso con niebla y static batching,
-    pulido de cámara (3.ª/1.ª/2.ª persona) y Flash Breaker del Trueno como técnica hero propia.
-- **Incomplete:** modelos 3D reales y animaciones Mecanim (adaptador listo, ningún modelo incorporado);
-  resto de formas del Trueno sin rediseño hero.
-- **Next:** probar v0.2.1 en Unity (Rising Serpent, forma VII y ultimate del Agua, Flash Breaker, bosque, FPS).
+  - Formas jugables: 7 por estilo (35), rueda F con un segmento por forma, slots 1-4 asignables (F + apuntar + 1-4)
+    y guardados por estilo, HUD con todas las formas (numeral, cooldown, coste de BREATH, disponibilidad).
+  - Inhalación visible antes de cada forma / avanzada / ultimate: pose, corrientes de aire del elemento, sonido de
+    inhalación, foco en la hoja; un golpe durante la inhalación cancela todo sin gastar BREATH.
+  - Voz natural (Chatterbox Multilingual, MIT) con personalidad por estilo; control de calidad con Whisper.
+  - Katana nueva (hamon, tsuba, tsuka con ito) + `SheathSocket`; importación humanoide automatizada (menú Characters).
+  - Nightspawn: ataque pesado y tambaleo; Hollow Oni: transformación de fase 2 (crece, cuernos, suelo, luces).
+- **Incomplete:** ningún modelo humanoide ni animación real incorporados (pipeline listo: ver EXTERNAL_ASSETS);
+  formas VIII-XI (arquitectura lista, sin contenido).
+- **Next:** probar v0.3.0 en Unity: rueda F, las 7 formas del Agua, inhalación + voz, Thunder IV-VII, fase 2.
 
 ## ✅ PLAYTEST INFRASTRUCTURE READY
 
@@ -31,7 +32,7 @@ Primera prueba recomendada al abrir el proyecto:
 | Compilación runtime (player build, sin `UNITY_EDITOR`) contra `UnityEngine.*.dll` de Unity 6.3 + Input System + uGUI + URP | ✅ 0 errores, 0 warnings |
 | Compilación del ensamblado de playtest como **Development build** separado (valida límites entre ensamblados) | ✅ 0 errores, 0 warnings |
 | Compilación editor + playtest + tests (con `UNITY_EDITOR`, `UnityEditor.*.dll`, NUnit de Unity) | ✅ 0 errores, 0 warnings |
-| Tests de la capa Logic (`dotnet test`) | ✅ 39/39 |
+| Tests de la capa Logic (`dotnet test`) | ✅ 40/40 |
 | Tests EditMode (lógica, guardado, contenido, planes de playtest) | ⏳ escritos; se ejecutan en el Test Runner de Unity |
 | Shaders (13) compilados con DXC contra la ShaderLibrary de URP 17.3 | ✅ 66 compilaciones, 0 fallos |
 | **Abrir y jugar en el Editor de Unity** | ❌ **No realizado** |

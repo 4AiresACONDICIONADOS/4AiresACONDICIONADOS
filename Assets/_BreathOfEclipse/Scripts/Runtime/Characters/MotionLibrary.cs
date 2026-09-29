@@ -597,6 +597,38 @@ namespace BreathOfEclipse.Characters
             roar.headEuler = new Vector3(-30f, 0f, 0f);
             Clip("EnemyRoar", K(0.25f, roar, Ease.Out), K(1f, roar));
             Clip("EnemyBlock", K(1f, block, Ease.Out));
+            // Heavy: rears up with both claws high and brings them down crossed (Rending Cross).
+            var heavyA = b;
+            heavyA.handR = new Vector3(0.5f, 1.95f, -0.15f);
+            heavyA.handL = new Vector3(-0.5f, 1.95f, -0.15f);
+            heavyA.bladeDir = new Vector3(0f, 0.7f, -0.7f).normalized;
+            heavyA.spineEuler = new Vector3(-14f, 0f, 0f);
+            heavyA.chestEuler = new Vector3(-10f, 0f, 0f);
+            heavyA.headEuler = new Vector3(-20f, 0f, 0f);
+            heavyA.hips = new Vector3(0f, 0.04f, 0f);
+            heavyA.footL = new Vector3(-0.2f, 0f, 0.2f);
+            heavyA.footR = new Vector3(0.22f, 0f, -0.25f);
+            var heavyB = heavyA;
+            heavyB.handR = new Vector3(-0.25f, 0.7f, 0.75f);
+            heavyB.handL = new Vector3(0.25f, 0.72f, 0.72f);
+            heavyB.bladeDir = new Vector3(0f, -0.75f, 0.65f).normalized;
+            heavyB.spineEuler = new Vector3(38f, 0f, 0f);
+            heavyB.chestEuler = new Vector3(10f, 0f, 0f);
+            heavyB.headEuler = new Vector3(-30f, 0f, 0f);
+            heavyB.hips = new Vector3(0f, -0.34f, 0.12f);
+            heavyB.footL = new Vector3(-0.2f, 0f, 0.55f);
+            heavyB.footR = new Vector3(0.22f, 0f, -0.4f);
+            Attack("EnemyHeavy", heavyA, heavyB, heavyB);
+            // Stagger: knocked off balance, arms flung, head snapped back.
+            var reel = b;
+            reel.handR = new Vector3(0.6f, 1.4f, -0.2f);
+            reel.handL = new Vector3(-0.55f, 1.2f, -0.3f);
+            reel.spineEuler = new Vector3(-20f, 10f, 6f);
+            reel.headEuler = new Vector3(-28f, -12f, 0f);
+            reel.hips = new Vector3(0f, -0.1f, -0.1f);
+            reel.footL = new Vector3(-0.2f, 0f, -0.1f);
+            reel.footR = new Vector3(0.18f, 0f, -0.35f);
+            Clip("EnemyStagger", K(0.2f, reel, Ease.Snap), K(0.7f, reel), K(1f, b, Ease.InOut));
             var hop = b;
             hop.visualEuler = new Vector3(-18f, 0f, 0f);
             hop.hips = new Vector3(0f, -0.25f, 0f);
@@ -683,6 +715,29 @@ namespace BreathOfEclipse.Characters
             roar.chestEuler = new Vector3(-18f, 0f, 0f);
             roar.headEuler = new Vector3(-30f, 0f, 0f);
             Clip("OniRoar", K(0.2f, roar, Ease.Out), K(1f, roar));
+            // Phase 2 transformation: curls in clutching its head, shudders as it grows, then rises with arms
+            // flung wide and the head thrown back, settling into the hunched phase-2 stance.
+            var curl = b;
+            curl.handR = new Vector3(0.2f, 1.55f, 0.25f);
+            curl.handL = new Vector3(-0.2f, 1.55f, 0.25f);
+            curl.spineEuler = new Vector3(34f, 0f, 0f);
+            curl.chestEuler = new Vector3(16f, 0f, 0f);
+            curl.headEuler = new Vector3(30f, 0f, 0f);
+            curl.hips = new Vector3(0f, -0.3f, 0f);
+            var shudder = curl;
+            shudder.spineEuler = new Vector3(28f, 6f, -4f);
+            shudder.handR = new Vector3(0.35f, 1.4f, 0.3f);
+            var rise = roar;
+            rise.handR = new Vector3(0.95f, 1.7f, -0.05f);
+            rise.handL = new Vector3(-0.95f, 1.7f, -0.05f);
+            rise.chestEuler = new Vector3(-24f, 0f, 0f);
+            rise.headEuler = new Vector3(-40f, 0f, 0f);
+            rise.hips = new Vector3(0f, 0.05f, 0f);
+            var settle = b;
+            settle.spineEuler = new Vector3(18f, 0f, 0f);
+            settle.headEuler = new Vector3(-16f, 0f, 0f);
+            settle.hips = new Vector3(0f, -0.12f, 0f);
+            Clip("OniTransform", K(0.18f, curl, Ease.Out), K(0.32f, shudder), K(0.42f, curl), K(0.62f, rise, Ease.Snap), K(0.86f, rise), K(1f, settle, Ease.InOut));
             var cleaveA = Lean(Club(90f, 175f, -1f, 0.3f, 1f), -14f, -8f);
             var cleaveB = Lean(Stance(Club(90f, -62f, -1f, 0.4f, 1f), WideL * 1.2f, WideR * 1.2f, 0.4f), 30f, 10f);
             Attack("OniCleave", cleaveA, Club(90f, 80f, -1f, 0.2f, 1f), cleaveB);

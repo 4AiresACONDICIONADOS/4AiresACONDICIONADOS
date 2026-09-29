@@ -5,6 +5,29 @@ primera versión verificada como jugable dentro del Editor de Unity.**
 
 ---
 
+## v0.3.0 — Forms & Character Evolution (2026-09-29)
+
+Sin verificar todavía en Unity (NOT PLAYTESTED).
+
+### Added
+- 12 formas nuevas: Trueno IV Colmillo del Relámpago, VI Hilo Fulminante, VII Horizonte Quebrado; Brasas IV Martillo
+  de Magma, V Muralla de Brasas, VII Corazón del Volcán; Vendaval IV Cuchillas del Vendaval, VI Picado del Remolino,
+  VII Ojo de la Tormenta; Lunar IV Luna Gemela, V Órbita Plateada, VI Filo del Novilunio. Cada estilo tiene 7 formas.
+- Slots rápidos por estilo guardados (F + apuntar + 1-4); franja del HUD con todas las formas; título "FORM VII".
+- `BreathingInhaleSystem`: pose `SkillInhale`, corrientes por elemento, sonido de inhalación, foco en hoja y cuerpo.
+- `VoiceDirection` (emoción, intensidad estilo → postura → nombre, ritmo) por estilo y técnica; clips por estilo.
+- Generador de voz v2: Chatterbox Multilingual (MIT) + control con faster-whisper; proveedor ElevenLabs preparado.
+- Katana: hamon, hi, habaki, tsuba de hierro con borde dorado, tsuka con ito cruzado, saya con `SheathSocket`.
+- Menú *Characters*: importación Humanoid automática, Animator Controller por nombres de clip, perfil asignado.
+  IK de mano izquierda en el mango (Mecanim). Estados que faltan usan "Attack" / "Skill" sin errores.
+- Nightspawn: *Rending Cross* (pesado) y animación de tambaleo; Hollow Oni: transformación de fase 2.
+- `HitShape.AlongLastPath` / `VFXAnchor.LastPath` (cortes retardados a lo largo del recorrido).
+
+### Changed
+- Toda forma gasta BREATH (I 8 … VII 15); la respiración en reposo recupera hasta 40 %; la ultimate se gana en combate.
+  Coste y cooldown se pagan al terminar la inhalación.
+- Slots por defecto: Agua I / IV / VI / VII. La voz empieza tras la inhalación.
+
 ## v0.2.1 — Anime Visual Overhaul (2026-09-29)
 
 Sin verificar todavía en Unity (NOT PLAYTESTED).

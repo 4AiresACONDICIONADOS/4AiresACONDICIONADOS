@@ -22,6 +22,13 @@ namespace BreathOfEclipse.Characters
         [Tooltip("Katana pose inside the right hand bone.")]
         public Vector3 weaponLocalPosition = new Vector3(0f, 0.02f, 0.04f);
         public Vector3 weaponLocalEuler = new Vector3(0f, 90f, 90f);
+        [Tooltip("Left hand IK on the katana grip while idle / moving (two-handed stance). 0 = clips only.")]
+        [Range(0f, 1f)] public float leftHandGrip = 0.6f;
+        [Tooltip("Scabbard mouth on the hips (left side); the SheathSocket moves there.")]
+        public Vector3 sheathLocalPosition = new Vector3(-0.17f, 0.02f, 0.12f);
+        public Vector3 sheathLocalEuler = new Vector3(20f, 180f, 0f);
+        [Tooltip("Keep the game's katana scabbard on the imported hips (turn off if the model has its own).")]
+        public bool keepScabbard = true;
         [Tooltip("Convert the model's materials to the game's toon shader (keeps its textures) so it matches the art style.")]
         public bool toonMaterials = true;
         public float outline = 1.4f;
@@ -46,7 +53,7 @@ namespace BreathOfEclipse.Characters
             if (profile.controller != null) animator.runtimeAnimatorController = profile.controller;
 
             // The mannequin keeps the gameplay points (weapon, lock-on, eyes) but is no longer drawn.
-            rig.SetBodyVisible(false);
+            rig.SetBodyVisible(false, profile.keepScabbard);
             var hand = animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.RightHand) : FindDeep(model.transform, "RightHand");
             if (hand != null)
             {
@@ -66,12 +73,21 @@ namespace BreathOfEclipse.Characters
                 var head = animator.GetBoneTransform(HumanBodyBones.Head);
                 if (chest != null && rig.LockOnPoint != null) rig.LockOnPoint.SetParent(chest, false);
                 if (head != null && rig.EyePoint != null) rig.EyePoint.SetParent(head, false);
+                var hipsBone = animator.GetBoneTransform(HumanBodyBones.Hips);
+                if (hipsBone != null && rig.SheathSocket != null)
+                {
+                    // The mannequin's scabbard follows the imported hips (hidden with the body; the socket stays useful).
+                    rig.SheathSocket.SetParent(hipsBone, false);
+                    rig.SheathSocket.localPosition = profile.sheathLocalPosition;
+                    rig.SheathSocket.localRotation = Quaternion.Euler(profile.sheathLocalEuler);
+                }
             }
             if (profile.toonMaterials) Toonify(model, profile.outline);
 
             var adapter = animator.gameObject.GetComponent<MecanimCharacterAnimator>();
             if (adapter == null) adapter = animator.gameObject.AddComponent<MecanimCharacterAnimator>();
             adapter.SetWeaponPoints(rig.WeaponBase, rig.WeaponTip);
+            adapter.SetLeftHandGrip(profile.leftHandGrip);
             return adapter;
         }
 

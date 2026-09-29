@@ -17,6 +17,9 @@ namespace BreathOfEclipse.Characters
         [SerializeField] private Transform weaponTip = null;
         [SerializeField] private float crossFade = 0.06f;
         [SerializeField] private bool footIK = true;
+        [Tooltip("Left hand on the katana grip while moving / idle (two-handed kamae). 0 = leave it to the clips.")]
+        [SerializeField, Range(0f, 1f)] private float leftHandGrip = 0.6f;
+        private float _gripWeight;
 
         private static readonly int SpeedId = Animator.StringToHash("Speed");
         private static readonly int VelXId = Animator.StringToHash("VelocityX");
@@ -44,6 +47,9 @@ namespace BreathOfEclipse.Characters
             weaponBase = bladeBase;
             weaponTip = bladeTip;
         }
+
+        /// <summary>Two-handed grip IK weight during locomotion (profile setting).</summary>
+        public void SetLeftHandGrip(float weight) => leftHandGrip = Mathf.Clamp01(weight);
 
         private void Awake() => _animator = GetComponent<Animator>();
 
@@ -115,6 +121,25 @@ namespace BreathOfEclipse.Characters
             else
             {
                 _animator.SetLookAtWeight(0f);
+            }
+
+            // Weapon IK: the left hand rests on the grip just behind the guard (fades out during actions, whose
+            // clips own both hands).
+            float gripTarget = weaponBase != null && weaponTip != null && !IsActionPlaying ? leftHandGrip : 0f;
+            _gripWeight = Mathf.MoveTowards(_gripWeight, gripTarget, Time.deltaTime * 6f);
+            if (_gripWeight > 0.001f)
+            {
+                Vector3 blade = (weaponTip.position - weaponBase.position).normalized;
+                Vector3 grip = weaponBase.position - blade * 0.2f;
+                _animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, _gripWeight);
+                _animator.SetIKPosition(AvatarIKGoal.LeftHand, grip);
+                _animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, _gripWeight * 0.6f);
+                _animator.SetIKRotation(AvatarIKGoal.LeftHand, Quaternion.LookRotation(blade, Vector3.up));
+            }
+            else
+            {
+                _animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0f);
+                _animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0f);
             }
 
             if (!footIK || !_grounded) return;

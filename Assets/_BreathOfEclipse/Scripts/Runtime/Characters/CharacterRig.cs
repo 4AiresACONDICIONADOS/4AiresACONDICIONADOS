@@ -48,6 +48,8 @@ namespace BreathOfEclipse.Characters
         public RigProfile Profile { get; private set; }
         public Transform WeaponBase { get; private set; }
         public Transform WeaponTip { get; private set; }
+        /// <summary>Mouth of the scabbard on the left hip (+Z down the scabbard). Null for demons.</summary>
+        public Transform SheathSocket { get; private set; }
         public Transform LockOnPoint { get; private set; }
         public Transform EyePoint { get; private set; }
         public float Scale => Profile != null ? Profile.scale : 1f;
@@ -194,13 +196,22 @@ namespace BreathOfEclipse.Characters
                 Part("HaoriTrimL", cube, p.accent, chest, new Vector3(-p.torsoWidth * 0.36f, -0.36f, p.torsoDepth * 0.56f), new Vector3(8f, 0f, 0f), new Vector3(0.135f, 0.06f, 0.03f), true, false, true, 0.8f);
                 Part("Belt", cube, p.accent * 0.5f + Color.black * 0.5f, hips, new Vector3(0f, 0.07f, 0f), Vector3.zero, new Vector3(p.torsoWidth * 1.0f, 0.07f, p.torsoDepth * 1.08f), false, false, true, 0.8f);
                 Part("Collar", cube, p.secondary, chest, new Vector3(0f, p.chestLength * 0.86f, 0.02f), new Vector3(20f, 0f, 0f), new Vector3(0.2f, 0.06f, 0.16f), false, false, true);
-                // Scabbard (saya) on the left hip, mouth near the belt and tip trailing back and down.
+                // Scabbard (saya) on the left hip: SheathSocket sits at its mouth, +Z pointing down the scabbard
+                // (sheathe / draw effects, a future sheathing animation or an imported saya attach there).
                 var lacquer = new Color(0.07f, 0.05f, 0.1f);
                 var gold = new Color(0.72f, 0.55f, 0.2f);
-                Part("Saya", PrimitiveType.Cylinder, lacquer, hips, new Vector3(-p.torsoWidth * 0.62f, -0.13f, -0.33f), new Vector3(-110f, 0f, 10f), new Vector3(0.05f, 0.5f, 0.045f), false, false, false, 1f, null, 0.6f);
-                Part("SayaMouth", PrimitiveType.Cylinder, gold, hips, new Vector3(-p.torsoWidth * 0.62f, 0.04f, 0.12f), new Vector3(-110f, 0f, 10f), new Vector3(0.058f, 0.02f, 0.052f), false, false, false, 0.8f, null, 0.8f);
-                Part("SayaTip", PrimitiveType.Cylinder, gold, hips, new Vector3(-p.torsoWidth * 0.62f, -0.3f, -0.8f), new Vector3(-110f, 0f, 10f), new Vector3(0.056f, 0.025f, 0.05f), false, false, false, 0.8f, null, 0.8f);
-                Part("SageoCord", cube, p.accent, hips, new Vector3(-p.torsoWidth * 0.58f, -0.02f, 0.05f), new Vector3(30f, 0f, 0f), new Vector3(0.015f, 0.14f, 0.015f), true, false, false, 0.5f);
+                var sheath = new GameObject("SheathSocket").transform;
+                sheath.SetParent(hips, false);
+                sheath.localPosition = new Vector3(-p.torsoWidth * 0.62f, 0.04f, 0.14f);
+                sheath.localRotation = Quaternion.LookRotation(new Vector3(0.05f, -0.34f, -0.94f), Vector3.up);
+                SheathSocket = sheath;
+                Part("Saya", PrimitiveType.Cylinder, lacquer, sheath, new Vector3(0f, 0f, 0.5f), new Vector3(90f, 0f, 0f), new Vector3(0.05f, 0.5f, 0.042f), false, false, false, 1f, null, 0.6f);
+                Part("SayaSheen", PrimitiveType.Cylinder, p.accent * 0.35f, sheath, new Vector3(0f, 0.012f, 0.5f), new Vector3(90f, 0f, 0f), new Vector3(0.03f, 0.48f, 0.02f), true, false, false, 0f, null, 0.8f);
+                Part("Koiguchi", PrimitiveType.Cylinder, gold, sheath, new Vector3(0f, 0f, 0.01f), new Vector3(90f, 0f, 0f), new Vector3(0.056f, 0.018f, 0.048f), false, false, false, 0.8f, null, 0.8f);
+                Part("Kurikata", PrimitiveType.Cube, lacquer, sheath, new Vector3(0.028f, 0f, 0.12f), Vector3.zero, new Vector3(0.018f, 0.016f, 0.04f), false, false, false, 0.6f);
+                Part("Kojiri", PrimitiveType.Cylinder, gold, sheath, new Vector3(0f, 0f, 0.99f), new Vector3(90f, 0f, 0f), new Vector3(0.054f, 0.025f, 0.046f), false, false, false, 0.8f, null, 0.8f);
+                Part("SageoCord", cube, p.accent, sheath, new Vector3(0.035f, -0.02f, 0.14f), new Vector3(40f, 0f, 0f), new Vector3(0.012f, 0.16f, 0.012f), true, false, false, 0.5f);
+                Part("SageoKnot", PrimitiveType.Sphere, p.accent, sheath, new Vector3(0.035f, -0.075f, 0.2f), Vector3.zero, new Vector3(0.026f, 0.026f, 0.026f), true, false, false, 0.5f);
             }
             else if (demon)
             {
@@ -437,11 +448,34 @@ namespace BreathOfEclipse.Characters
                 case RigWeapon.Katana:
                 {
                     const float bladeLength = 1.0f;
-                    Part("Handle", PrimitiveType.Cylinder, new Color(0.12f, 0.08f, 0.14f), weapon, new Vector3(0f, 0f, -0.04f), new Vector3(90f, 0f, 0f), new Vector3(0.034f, 0.14f, 0.034f), false, false, false, 1f);
-                    Part("Pommel", PrimitiveType.Cylinder, new Color(0.72f, 0.55f, 0.2f), weapon, new Vector3(0f, 0f, -0.18f), new Vector3(90f, 0f, 0f), new Vector3(0.04f, 0.012f, 0.04f), false, false, false, 1f);
-                    Part("Guard", PrimitiveType.Cylinder, new Color(0.72f, 0.55f, 0.2f), weapon, new Vector3(0f, 0f, 0.105f), new Vector3(90f, 0f, 0f), new Vector3(0.1f, 0.008f, 0.085f), false, false, false, 1f);
-                    Part("Blade", ProceduralMeshes.KatanaBlade(bladeLength, 0.034f, 0.009f, 0.035f), new Color(0.78f, 0.82f, 0.9f), weapon,
-                        new Vector3(0f, 0f, 0.11f), Vector3.zero, Vector3.one, false, false, false, 1f, null, 0.8f);
+                    var gold = new Color(0.74f, 0.56f, 0.2f);
+                    var iron = new Color(0.1f, 0.1f, 0.12f);
+                    var silk = new Color(0.1f, 0.07f, 0.16f);
+                    // Tsuka: white ray skin under a crossed silk wrap (diamonds), gold menuki, iron kashira.
+                    Part("Samegawa", PrimitiveType.Cylinder, new Color(0.86f, 0.84f, 0.78f), weapon, new Vector3(0f, 0f, -0.04f), new Vector3(90f, 0f, 0f), new Vector3(0.03f, 0.14f, 0.03f), false, false, false, 0.8f);
+                    for (int i = 0; i < 7; i++)
+                    {
+                        float z = -0.165f + i * 0.042f;
+                        Part("Ito" + i + "a", PrimitiveType.Cube, silk, weapon, new Vector3(0f, 0f, z), new Vector3(0f, 0f, 38f), new Vector3(0.036f, 0.011f, 0.03f), false, false, false, 0.6f);
+                        Part("Ito" + i + "b", PrimitiveType.Cube, silk, weapon, new Vector3(0f, 0f, z + 0.021f), new Vector3(0f, 0f, -38f), new Vector3(0.036f, 0.011f, 0.03f), false, false, false, 0.6f);
+                    }
+                    Part("Menuki", PrimitiveType.Sphere, gold, weapon, new Vector3(0.018f, 0f, -0.05f), Vector3.zero, new Vector3(0.008f, 0.014f, 0.03f), false, false, false, 0.5f, null, 0.7f);
+                    Part("Kashira", PrimitiveType.Cylinder, iron, weapon, new Vector3(0f, 0f, -0.188f), new Vector3(90f, 0f, 0f), new Vector3(0.036f, 0.012f, 0.032f), false, false, false, 1f, null, 0.6f);
+                    Part("KashiraRim", PrimitiveType.Cylinder, gold, weapon, new Vector3(0f, 0f, -0.178f), new Vector3(90f, 0f, 0f), new Vector3(0.038f, 0.003f, 0.034f), false, false, false, 0.6f, null, 0.8f);
+                    Part("Fuchi", PrimitiveType.Cylinder, gold, weapon, new Vector3(0f, 0f, 0.088f), new Vector3(90f, 0f, 0f), new Vector3(0.036f, 0.008f, 0.032f), false, false, false, 0.8f, null, 0.8f);
+                    // Tsuba: dark iron guard with a gold rim, seppa washers either side, gold habaki collar on the blade.
+                    Part("Seppa0", PrimitiveType.Cylinder, gold, weapon, new Vector3(0f, 0f, 0.098f), new Vector3(90f, 0f, 0f), new Vector3(0.044f, 0.002f, 0.04f), false, false, false, 0.5f, null, 0.9f);
+                    Part("Guard", PrimitiveType.Cylinder, iron, weapon, new Vector3(0f, 0f, 0.105f), new Vector3(90f, 0f, 0f), new Vector3(0.088f, 0.0055f, 0.076f), false, false, false, 1f, null, 0.5f);
+                    Part("GuardRim", PrimitiveType.Cylinder, gold, weapon, new Vector3(0f, 0f, 0.105f), new Vector3(90f, 0f, 0f), new Vector3(0.094f, 0.0035f, 0.082f), false, false, false, 0.6f, null, 0.8f);
+                    Part("Seppa1", PrimitiveType.Cylinder, gold, weapon, new Vector3(0f, 0f, 0.112f), new Vector3(90f, 0f, 0f), new Vector3(0.044f, 0.002f, 0.04f), false, false, false, 0.5f, null, 0.9f);
+                    Part("Habaki", PrimitiveType.Cube, gold, weapon, new Vector3(0f, 0f, 0.128f), Vector3.zero, new Vector3(0.012f, 0.04f, 0.026f), false, false, false, 0.5f, null, 0.9f);
+                    // Blade: polished steel, a pale wavy hamon along the edge half and a dark hi groove near the spine.
+                    Part("Blade", ProceduralMeshes.KatanaBlade(bladeLength, 0.034f, 0.009f, 0.035f), new Color(0.74f, 0.78f, 0.86f), weapon,
+                        new Vector3(0f, 0f, 0.11f), Vector3.zero, Vector3.one, false, false, false, 1f, null, 0.85f);
+                    Part("Hamon", ProceduralMeshes.KatanaBlade(bladeLength * 0.985f, 0.015f, 0.0095f, 0.035f), new Color(0.95f, 0.97f, 1f), weapon,
+                        new Vector3(0f, 0.0085f, 0.112f), Vector3.zero, Vector3.one, false, false, false, 0f, null, 1f);
+                    Part("Hi", ProceduralMeshes.KatanaBlade(bladeLength * 0.7f, 0.004f, 0.0098f, 0.035f), new Color(0.3f, 0.33f, 0.4f), weapon,
+                        new Vector3(0f, -0.009f, 0.14f), Vector3.zero, Vector3.one, false, false, false, 0f, null, 0.6f);
                     // Emissive edge strip: glows with the breathing style color.
                     var edge = ProceduralMeshes.CreatePart("EdgeGlow", ProceduralMeshes.KatanaBlade(bladeLength * 0.98f, 0.012f, 0.012f, 0.035f),
                         MaterialFactory.Vfx(ProceduralTextures.SoftCircle, VfxBlend.Additive, 0f), weapon, new Vector3(0f, 0.012f, 0.12f), Quaternion.identity, Vector3.one);
@@ -501,13 +535,21 @@ namespace BreathOfEclipse.Characters
             _dirty = true;
         }
 
-        /// <summary>Hides every body part but keeps the weapon (an imported character model replaces the mannequin).</summary>
-        public void SetBodyVisible(bool visible)
+        /// <summary>
+        /// Hides every body part but keeps the weapon (an imported character model replaces the mannequin) and,
+        /// unless <paramref name="keepScabbard"/> is false, the scabbard on the SheathSocket.
+        /// </summary>
+        public void SetBodyVisible(bool visible, bool keepScabbard = true)
         {
             var weapon = Bone(RigBone.Weapon);
             foreach (var e in _renderers)
-                if (e.Renderer != null && (weapon == null || !e.Renderer.transform.IsChildOf(weapon)))
-                    e.Renderer.enabled = visible;
+            {
+                if (e.Renderer == null) continue;
+                var t = e.Renderer.transform;
+                if (weapon != null && t.IsChildOf(weapon)) continue;
+                if (keepScabbard && SheathSocket != null && t.IsChildOf(SheathSocket)) continue;
+                e.Renderer.enabled = visible;
+            }
         }
 
         /// <summary>White flash on hit (0..1).</summary>

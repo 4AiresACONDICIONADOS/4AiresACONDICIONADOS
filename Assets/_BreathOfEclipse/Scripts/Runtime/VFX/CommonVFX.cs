@@ -283,6 +283,39 @@ namespace BreathOfEclipse.VFX
                     .Shape(ParticleSystemShapeType.Sphere, 1.2f).Life(1f, 2f).Speed(0.2f, 0.8f).Size(0.05f, 0.1f).Color(pal.Bright).Gravity(-0.3f).Fade(0.1f, 0.5f);
             });
 
+            // Hollow Oni phase 2 transformation (~2.6 s): the ground cracks crimson, a dark spiral climbs the body,
+            // debris lifts, then everything bursts outward as it rises and roars (~1.6 s).
+            VFXLibrary.Register("oni_transform", b =>
+            {
+                b.Lifetime = 3.2f;
+                var pal = ElementPalette.Get(Combat.Element.Dark);
+                bool extra = VFXQuality.Secondary;
+                var cracks = b.Shape("Cracks", ProceduralMeshes.GroundQuad(), b.Additive(ProceduralTextures.Crack), new Vector3(0f, 0.05f, 0f), Vector3.zero,
+                    Vector3.one * 1.5f, new Vector3(9f, 1f, 9f), 2.6f, pal.Core * 1.2f);
+                cracks.ScaleCurve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.55f, 0.6f), new Keyframe(0.62f, 1f), new Keyframe(1f, 1f));
+                cracks.AlphaCurve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.2f, 0.6f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0f));
+                var spiral = b.Tube("Spiral", MaterialFactory.Ribbon("oni_dark", pal.Core, pal.Edge, VfxBlend.Additive, ProceduralTextures.Noise, 4f, 1.4f),
+                    PathUtil.Helix(4.2f, 1.6f, 0.6f, 3f, 0f), 0.14f, 1.4f, 0.4f, 0.6f);
+                spiral.Wobble = 0.15f;
+                spiral.WobbleSpeed = 10f;
+                b.Particles("Rise", b.Additive(ProceduralTextures.SoftCircle), new Vector3(0f, 0.2f, 0f)).Duration(1.5f).Rate(extra ? 90f : 40f)
+                    .Shape(ParticleSystemShapeType.Circle, 3f, 0f, 360f, null, new Vector3(-90f, 0f, 0f)).Life(0.8f, 1.4f).Speed(0.3f, 1f)
+                    .Size(0.05f, 0.12f).Color(pal.Accent, pal.Bright).Velocity(new Vector3(0f, 2.2f, 0f), 1.2f, -0.6f).Fade(0.05f, 0.6f);
+                b.Particles("Debris", b.Alpha(ProceduralTextures.SoftCircle), new Vector3(0f, 0.1f, 0f)).Duration(1.4f).Rate(extra ? 30f : 12f)
+                    .Shape(ParticleSystemShapeType.Circle, 3.5f, 0f, 360f, null, new Vector3(-90f, 0f, 0f)).Life(1f, 1.6f).Speed(0.1f, 0.3f)
+                    .Size(0.06f, 0.16f).Color(new Color(0.15f, 0.12f, 0.12f, 1f)).Velocity(new Vector3(0f, 1.4f, 0f), 0.8f, 0f).Fade(0.05f, 0.7f);
+                // The burst when it rises.
+                Glow(b, "Burst", pal.Core * 1.4f, 9f, 0.6f, new Vector3(0f, 2f, 0f), 1.55f);
+                var ring = FlatRing(b, "Shock", pal.Bright, 14f, 0.6f, 0.08f, 1.55f);
+                ring.AlphaCurve = PopFade;
+                Sparks(b, "Sparks", extra ? 70 : 30, pal.Bright, 6f, 16f, 0.8f, 0.09f, 0.4f, 180f, default, 1.55f);
+                Distortion(b, "Distort", 9f, 0.7f, 1.55f);
+                b.Light("Light", new Vector3(0f, 2f, 0f), pal.Core, 16f, 8f, 2.6f);
+                var l = b.Root.GetComponentInChildren<FlashLight>();
+                if (l != null) l.Curve = new AnimationCurve(new Keyframe(0f, 0.1f), new Keyframe(0.2f, 0.5f), new Keyframe(0.3f, 0.2f), new Keyframe(0.45f, 0.6f),
+                    new Keyframe(0.58f, 0.3f), new Keyframe(0.62f, 1f), new Keyframe(0.8f, 0.6f), new Keyframe(1f, 0f));
+            });
+
             VFXLibrary.Register("footstep_splash", b =>
             {
                 b.Lifetime = 0.8f;

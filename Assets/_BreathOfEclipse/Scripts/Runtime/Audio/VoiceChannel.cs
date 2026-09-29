@@ -95,6 +95,10 @@ namespace BreathOfEclipse.Audio
         public bool IsSpeaking => _index < _lines.Count || _busy;
 
         private AudioSource _source;
+        /// <summary>Carries the previous line while it fades out when a new call interrupts it (no clicks).</summary>
+        private AudioSource _tail;
+        private float _tailFrom, _tailStart;
+        private const float TailFade = 0.08f;
         private readonly List<Line> _lines = new List<Line>();
         private int _index;
         private float _nextAt;
@@ -112,20 +116,38 @@ namespace BreathOfEclipse.Audio
             go.transform.SetParent(owner, false);
             go.transform.localPosition = new Vector3(0f, 1.6f, 0f);
             var ch = go.AddComponent<VoiceChannel>();
-            ch._source = go.AddComponent<AudioSource>();
-            ch._source.playOnAwake = false;
-            ch._source.spatialBlend = positional ? 1f : 0f;
-            ch._source.rolloffMode = AudioRolloffMode.Linear;
-            ch._source.minDistance = 3f;
-            ch._source.maxDistance = 45f;
-            ch._source.priority = 16;
+            ch._source = NewSource(go, positional);
+            ch._tail = NewSource(go, positional);
             ch._baseVolume = volume;
             return ch;
         }
 
-        /// <summary>Speaks <paramref name="lines"/> in order; lines without a clip are skipped (their text still raises LineStarted).</summary>
+        private static AudioSource NewSource(GameObject go, bool positional)
+        {
+            var src = go.AddComponent<AudioSource>();
+            src.playOnAwake = false;
+            src.spatialBlend = positional ? 1f : 0f;
+            src.rolloffMode = AudioRolloffMode.Linear;
+            src.minDistance = 3f;
+            src.maxDistance = 45f;
+            src.priority = 16;
+            return src;
+        }
+
+        /// <summary>
+        /// Speaks <paramref name="lines"/> in order; lines without a clip are skipped (their text still raises
+        /// LineStarted). One call per character: a line still playing fades out quickly instead of overlapping.
+        /// </summary>
         public void Speak(IEnumerable<Line> lines)
         {
+            if (_source.isPlaying)
+            {
+                var old = _source;
+                _source = _tail;
+                _tail = old;
+                _tailFrom = _tail.volume;
+                _tailStart = Time.unscaledTime;
+            }
             _source.Stop();
             _fading = false;
             _lines.Clear();
@@ -157,6 +179,12 @@ namespace BreathOfEclipse.Audio
 
         private void Update()
         {
+            if (_tail.isPlaying)
+            {
+                float k = 1f - Mathf.Clamp01((Time.unscaledTime - _tailStart) / TailFade);
+                _tail.volume = _tailFrom * k;
+                if (k <= 0f) _tail.Stop();
+            }
             float volume = _baseVolume * (AudioManager.Instance != null ? AudioManager.Instance.CategoryVolume(AudioCategory.Voice) : 1f);
             if (_fading)
             {

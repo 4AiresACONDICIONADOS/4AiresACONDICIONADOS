@@ -517,13 +517,17 @@ namespace BreathOfEclipse.AI
         {
             E.Motor.SetDesiredVelocity(Vector3.zero);
             E.ReleaseToken();
-            E.Anim.StopAction(0.05f);
+            // Long staggers (poise break, stun) read as a real loss of balance; short ones stay additive flinches.
+            if (Duration >= 0.45f) E.Anim.PlayMotion("EnemyStagger", Duration, 0.05f);
+            else E.Anim.StopAction(0.05f);
         }
 
         public override void Tick(float dt)
         {
             if (E.StateTime >= Duration) E.ChangeState(E.Aware ? EnemyStateId.Chase : EnemyStateId.Idle);
         }
+
+        public override void Exit() => E.Anim.StopAction(0.12f);
     }
 
     public sealed class KnockdownState : EnemyState

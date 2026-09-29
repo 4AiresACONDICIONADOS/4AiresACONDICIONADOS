@@ -91,6 +91,35 @@ namespace BreathOfEclipse.Audio
             });
         }
 
+        /// <summary>
+        /// Human inhale before a form: turbulent air through the mouth (pink-ish noise shaped by two vocal-tract
+        /// formants that open up as the chest fills), a little flutter, rising intensity and a clean stop when the
+        /// lungs are full. <paramref name="tract"/> &lt; 1 = deeper / fuller, &gt; 1 = sharper (quick nose breath).
+        /// </summary>
+        private static AudioClip Inhale(string id, float len, float tract, float hiss)
+        {
+            var rng = new Rng((uint)id.GetHashCode());
+            OnePole pink = default;
+            OnePole rumble = default;
+            Biquad f1 = default, f2 = default, f3 = default;
+            float flutterPhase = 0f;
+            return Make(id, len, (t, i) =>
+            {
+                float k = Mathf.Clamp01(t / len);
+                float white = rng.Next();
+                float air = pink.LowPass(white, 0.35f) * 1.6f;
+                float open = Mathf.Lerp(0.85f, 1.15f, k) * tract;
+                float body = f1.BandPass(air, 900f * open, 1.6f, SampleRate) * 1.2f + f2.BandPass(air, 2300f * open, 2.4f, SampleRate) * 0.8f;
+                float edge = f3.BandPass(white, 5200f * tract, 1.1f, SampleRate) * hiss;
+                float low = rumble.LowPass(white, 0.02f) * 3f;
+                flutterPhase += (9f + 4f * rng.Next()) / SampleRate;
+                float flutter = 1f + 0.12f * Mathf.Sin(2f * Mathf.PI * flutterPhase);
+                // Swell in, keep filling, stop quickly at the top of the breath.
+                float env = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(k / 0.28f)) * Mathf.Lerp(0.75f, 1f, k) * Mathf.Clamp01((1f - k) / 0.07f);
+                return (body + edge + low) * flutter * env;
+            });
+        }
+
         public static AudioClip Generate(string id)
         {
             var rng = new Rng((uint)id.GetHashCode());
@@ -303,6 +332,17 @@ namespace BreathOfEclipse.Audio
                         float thud = Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(200f, 90f, t / 0.5f) * t) * Env(t, 0.002f, 0.07f);
                         float rattles = rng.Next() > 0.99f ? rng.Next() * Env(t, 0.05f, 0.2f) : 0f;
                         return crack + thud + rattles;
+                    });
+                case "inhale_short": return Inhale(id, 0.24f, 1.18f, 0.55f);
+                case "inhale": return Inhale(id, 0.42f, 1f, 0.4f);
+                case "inhale_deep": return Inhale(id, 0.66f, 0.86f, 0.32f);
+                case "breath_focus":
+                    return Make(id, 0.35f, (t, i) =>
+                    {
+                        // Held breath turning into focus: a soft low swell and a faint high shimmer.
+                        float swell = Mathf.Sin(2f * Mathf.PI * 146.8f * t) * 0.5f + Mathf.Sin(2f * Mathf.PI * 220f * t) * 0.3f;
+                        float shimmer = bp.BandPass(rng.Next(), 6200f, 3f, SampleRate) * 0.5f;
+                        return (swell + shimmer) * Env(t, 0.03f, 0.12f);
                     });
                 case "breath_full":
                     return Make(id, 0.8f, (t, i) => (Mathf.Sin(2f * Mathf.PI * 880f * t) + Mathf.Sin(2f * Mathf.PI * 1320f * t) * 0.6f + Mathf.Sin(2f * Mathf.PI * 1760f * t) * 0.3f) * Env(t, 0.01f, 0.25f) * 0.5f);

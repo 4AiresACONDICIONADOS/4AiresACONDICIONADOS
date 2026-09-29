@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace BreathOfEclipse.Core
@@ -19,6 +20,14 @@ namespace BreathOfEclipse.Core
         DirectionalJumpWhenLockedOn = 1,
         /// <summary>Direction + Space always dodges on the ground; Space without direction jumps.</summary>
         DirectionalJumpAlways = 2
+    }
+
+    /// <summary>Quick slots 1-4 chosen by the player for one breathing style (form indices, -1 = empty).</summary>
+    [Serializable]
+    public sealed class StyleQuickSlots
+    {
+        public string styleId = "";
+        public int[] forms = { -1, -1, -1, -1 };
     }
 
     /// <summary>
@@ -71,6 +80,16 @@ namespace BreathOfEclipse.Core
         public string voiceLanguage = "es-419";
         public bool showFps;
         public string lastEquippedStyle = "tidal";
+        [Tooltip("Per-style quick slot assignments made from the form wheel (hold F, press 1-4).")]
+        public List<StyleQuickSlots> quickSlots = new List<StyleQuickSlots>();
+
+        /// <summary>The saved quick slots of a style, or null when the player never changed them.</summary>
+        public StyleQuickSlots FindQuickSlots(string styleId)
+        {
+            if (quickSlots == null || string.IsNullOrEmpty(styleId)) return null;
+            foreach (var q in quickSlots) if (q != null && q.styleId == styleId) return q;
+            return null;
+        }
 
         public GraphicsQuality Quality
         {
@@ -102,6 +121,8 @@ namespace BreathOfEclipse.Core
             lastCameraMode = Mathf.Clamp(lastCameraMode, 0, 2);
             if (bindingOverrides == null) bindingOverrides = string.Empty;
             if (string.IsNullOrEmpty(lastEquippedStyle)) lastEquippedStyle = "tidal";
+            if (quickSlots == null) quickSlots = new List<StyleQuickSlots>();
+            quickSlots.RemoveAll(q => q == null || string.IsNullOrEmpty(q.styleId) || q.forms == null);
             version = CurrentVersion;
         }
 

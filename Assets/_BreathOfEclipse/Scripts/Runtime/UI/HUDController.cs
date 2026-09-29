@@ -27,6 +27,18 @@ namespace BreathOfEclipse.UI
             public Text Name;
             public Text Timer;
             public Image Glow;
+            public Text Numeral;
+            public Text Cost;
+        }
+
+        /// <summary>One entry of the forms strip: every form of the equipped style, not only the quick slots.</summary>
+        private sealed class FormChip
+        {
+            public RectTransform Root;
+            public Image Back;
+            public Image Cooldown;
+            public Text Numeral;
+            public Text Slot;
         }
 
         private Canvas _canvas;
@@ -37,6 +49,9 @@ namespace BreathOfEclipse.UI
         private Text _hpText, _styleText, _breathLabel, _cameraText;
         private Image _styleIcon;
         private readonly SkillSlot[] _slots = new SkillSlot[5];
+        private RectTransform _formsStrip;
+        private Text _formsLabel;
+        private readonly List<FormChip> _chips = new List<FormChip>();
         private RectTransform _bossRoot;
         private Image _bossFill, _bossTrail;
         private Text _bossName, _bossPhase;
@@ -106,6 +121,8 @@ namespace BreathOfEclipse.UI
             GameEvents.StyleChanged -= OnStyleChanged;
             GameEvents.TechniqueTitle -= OnTechniqueTitle;
             GameEvents.TechniqueSubtitle -= OnTechniqueSubtitle;
+            if (_boundBreathing != null) _boundBreathing.QuickSlotsChanged -= OnQuickSlotsChanged;
+            _boundBreathing = null;
         }
 
         // ------------------------------------------------------------------ build
@@ -167,11 +184,22 @@ namespace BreathOfEclipse.UI
                 slot.Cooldown.fillMethod = Image.FillMethod.Radial360;
                 slot.Cooldown.fillOrigin = (int)Image.Origin360.Top;
                 slot.Cooldown.fillClockwise = false;
-                slot.Key = UIFactory.Text("Key", slot.Root, keys[i], ult ? 34 : 28, UIColors.Text, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(size, size), TextAnchor.MiddleCenter, FontStyle.Bold);
+                // Form numeral in the middle, key as a small badge, BREATH cost under the numeral.
+                slot.Numeral = UIFactory.Text("Numeral", slot.Root, ult ? "R" : "", ult ? 34 : 30, UIColors.Text, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    new Vector2(0f, ult ? 0f : 6f), new Vector2(size, size), TextAnchor.MiddleCenter, FontStyle.Bold);
+                slot.Key = UIFactory.Text("Key", slot.Root, ult ? "" : keys[i], 17, new Color(1f, 0.9f, 0.55f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(-4f, 6f),
+                    new Vector2(28f, 24f), TextAnchor.MiddleCenter, FontStyle.Bold);
+                slot.Cost = UIFactory.Text("Cost", slot.Root, "", 14, UIColors.TextDim, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -22f),
+                    new Vector2(size, 20f), TextAnchor.MiddleCenter, FontStyle.Bold);
                 slot.Timer = UIFactory.Text("Timer", slot.Root, "", 22, new Color(1f, 0.9f, 0.6f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -24f), new Vector2(size, 30f));
                 slot.Name = UIFactory.Text("Name", slot.Root, "", 15, UIColors.TextDim, new Vector2(0.5f, 1f), new Vector2(0.5f, 0f), new Vector2(0f, 4f), new Vector2(150f, 22f));
                 _slots[i] = slot;
             }
+
+            // Every form of the equipped style (I … XI) above the quick slots: cooldown, availability, slot badge.
+            _formsStrip = UIFactory.Rect("Forms", skills, br, br, new Vector2(1f, 0f), new Vector2(-150f, 158f), new Vector2(560f, 44f));
+            _formsLabel = UIFactory.Text("Label", _formsStrip, "FORMS [F]", 15, UIColors.TextDim, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 0f),
+                new Vector2(96f, 24f), TextAnchor.MiddleRight, FontStyle.Bold);
 
             // Top: boss bar.
             _bossRoot = UIFactory.Rect("Boss", root, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(1000f, 80f));
@@ -224,7 +252,7 @@ namespace BreathOfEclipse.UI
 
             // Controls hint (fades after a while).
             _hints = UIFactory.Text("Hints", root,
-                "WASD move · Shift sprint · Space jump · Alt dodge · LMB/RMB attack · Q block/parry · Tab/MMB lock-on · 1-4 techniques · R ultimate · X/Z style · C camera · E interact · Esc menu · F1 debug",
+                "WASD move · Shift sprint · Space jump · Alt dodge · LMB/RMB attack · Q block/parry · Tab/MMB lock-on · 1-4 quick forms · hold F all forms (aim + 1-4 sets a slot) · R ultimate · X/Z style · C camera · E interact · Esc menu · F1 debug",
                 17, UIColors.TextDim, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 8f), new Vector2(1800f, 26f));
 
             // Death overlay.
@@ -319,6 +347,7 @@ namespace BreathOfEclipse.UI
         private float _cameraTextTimer = 4f;
 
         private void OnStyleChanged(string id, string displayName) => _styleDirty = true;
+        private void OnQuickSlotsChanged() => _styleDirty = true;
         private bool _styleDirty = true;
 
         // ------------------------------------------------------------------ update
@@ -329,7 +358,9 @@ namespace BreathOfEclipse.UI
             var pc = PlayerController.Instance;
             if (pc != null && pc.Breathing != _boundBreathing)
             {
+                if (_boundBreathing != null) _boundBreathing.QuickSlotsChanged -= OnQuickSlotsChanged;
                 _boundBreathing = pc.Breathing;
+                if (_boundBreathing != null) _boundBreathing.QuickSlotsChanged += OnQuickSlotsChanged;
                 _styleDirty = true;
             }
 
@@ -392,11 +423,52 @@ namespace BreathOfEclipse.UI
             _styleText.text = style.displayName + "   <size=18><color=#9aa0c0>[X / Z]</color></size>";
             _styleText.supportRichText = true;
             _styleIcon.color = c;
+            var b = pc.Breathing;
             for (int i = 0; i < 5; i++)
             {
-                var skill = pc.Breathing.GetSkill(i);
-                _slots[i].Name.text = skill != null ? skill.displayName : "";
-                _slots[i].Icon.color = new Color(c.r * 0.55f, c.g * 0.55f, c.b * 0.55f, 0.95f);
+                var skill = b.GetSkill(i);
+                var slot = _slots[i];
+                slot.Name.text = skill != null ? skill.displayName : "";
+                slot.Icon.color = new Color(c.r * 0.55f, c.g * 0.55f, c.b * 0.55f, 0.95f);
+                if (i < BreathingStyleData.QuickSlotCount)
+                {
+                    var form = b.GetForm(b.QuickSlotForm(i));
+                    slot.Numeral.text = form != null ? Roman.Of(form.formNumber) : "–";
+                }
+                slot.Cost.text = skill != null && skill.breathCost > 0f && i < BreathingStyleData.QuickSlotCount ? $"{skill.breathCost:0}" : "";
+            }
+            RebuildFormsStrip(b, style, c);
+        }
+
+        private void RebuildFormsStrip(BreathingStyleSystem b, BreathingStyleData style, Color accent)
+        {
+            foreach (var chip in _chips) Destroy(chip.Root.gameObject);
+            _chips.Clear();
+            int count = style.FormCount;
+            _formsLabel.text = $"{count} FORMS [F]";
+            var sprite = ProceduralTextures.UISprite("circle");
+            var right = new Vector2(1f, 0.5f);
+            const float step = 42f;
+            for (int i = 0; i < count; i++)
+            {
+                var form = style.GetForm(i);
+                var chip = new FormChip();
+                chip.Root = UIFactory.Rect("Form" + (i + 1), _formsStrip, right, right, right, new Vector2(-104f - (count - 1 - i) * step, 0f), new Vector2(38f, 38f));
+                chip.Back = UIFactory.Image("Back", chip.Root, new Color(accent.r * 0.35f, accent.g * 0.35f, accent.b * 0.35f, 0.9f), sprite);
+                UIFactory.Fill(chip.Back.rectTransform);
+                chip.Cooldown = UIFactory.Image("Cooldown", chip.Root, new Color(0f, 0f, 0f, 0.7f), sprite);
+                UIFactory.Fill(chip.Cooldown.rectTransform);
+                chip.Cooldown.type = Image.Type.Filled;
+                chip.Cooldown.fillMethod = Image.FillMethod.Radial360;
+                chip.Cooldown.fillOrigin = (int)Image.Origin360.Top;
+                chip.Cooldown.fillClockwise = false;
+                chip.Numeral = UIFactory.Text("Numeral", chip.Root, Roman.Of(form != null ? form.formNumber : i + 1), 15, UIColors.Text, TextAnchor.MiddleCenter, FontStyle.Bold);
+                UIFactory.Fill(chip.Numeral.rectTransform);
+                chip.Slot = UIFactory.Text("Slot", chip.Root, "", 12, new Color(1f, 0.9f, 0.55f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0f), new Vector2(0f, -2f),
+                    new Vector2(30f, 16f), TextAnchor.MiddleCenter, FontStyle.Bold);
+                int quick = b.SlotOfForm(i);
+                chip.Slot.text = quick >= 0 ? (quick + 1).ToString() : "";
+                _chips.Add(chip);
             }
         }
 
@@ -412,10 +484,30 @@ namespace BreathOfEclipse.UI
                 float remaining = b.CooldownRemaining(i);
                 slot.Timer.text = remaining > 0.05f ? remaining.ToString("0.0") : "";
                 bool usable = b.CanUse(i, out _);
-                bool active = b.ExecutingSkill != null && b.ExecutingSkill == b.GetSkill(i);
+                var skill = b.GetSkill(i);
+                bool active = b.ExecutingSkill != null && b.ExecutingSkill == skill;
                 float glow = active ? 0.8f : (i == 4 && usable) ? 0.35f + 0.3f * Mathf.Sin(Time.unscaledTime * 5f) : 0f;
                 slot.Glow.color = new Color(c.r, c.g, c.b, glow);
-                slot.Key.color = usable ? UIColors.Text : UIColors.TextDim * 0.8f;
+                slot.Numeral.color = usable ? UIColors.Text : UIColors.TextDim * 0.8f;
+                // Cost turns red when the gauge cannot pay it; hidden while the cooldown timer is shown.
+                bool affordable = skill == null || pc.Stats.Breath.CanSpend(skill.breathCost);
+                slot.Cost.color = affordable ? new Color(c.r, c.g, c.b, 0.95f) : new Color(1f, 0.35f, 0.35f, 0.95f);
+                slot.Cost.enabled = remaining <= 0.05f;
+            }
+
+            var style = b.Current;
+            for (int i = 0; i < _chips.Count && style != null; i++)
+            {
+                var chip = _chips[i];
+                var form = style.GetForm(i);
+                var skill = form != null ? form.skill : null;
+                bool usable = b.CanUseForm(i, out _);
+                chip.Cooldown.fillAmount = skill != null ? b.Cooldowns.NormalizedRemaining(skill.skillId, Time.time) : 0f;
+                chip.Numeral.color = usable ? UIColors.Text : UIColors.TextDim * 0.8f;
+                bool active = skill != null && b.ExecutingSkill == skill;
+                float s = Mathf.MoveTowards(chip.Root.localScale.x, active ? 1.25f : 1f, Time.unscaledDeltaTime * 5f);
+                chip.Root.localScale = new Vector3(s, s, 1f);
+                chip.Back.color = active ? new Color(c.r, c.g, c.b, 0.95f) : new Color(c.r * 0.35f, c.g * 0.35f, c.b * 0.35f, usable ? 0.9f : 0.55f);
             }
         }
 

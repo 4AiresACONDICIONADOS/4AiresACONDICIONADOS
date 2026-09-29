@@ -36,6 +36,8 @@ namespace BreathOfEclipse.Breathing
         public event Action<SkillData, string> TechniqueStarted;
         /// <summary>(style, form or null for the ultimate, skill) — voice, subtitles and title card.</summary>
         public event Action<BreathingStyleData, BreathingForm, SkillData> TechniqueAnnounced;
+        /// <summary>A quick slot of the equipped style was reassigned (HUD, wheel).</summary>
+        public event Action QuickSlotsChanged;
 
         private readonly List<BreathingStyleData> _styles = new List<BreathingStyleData>();
         private PlayerController _pc;
@@ -48,6 +50,7 @@ namespace BreathOfEclipse.Breathing
             _styles.Clear();
             foreach (var s in styles) if (s != null) _styles.Add(s);
             Executor = new SkillExecutor(pc);
+            Executor.OnCommit += OnCommitted;
             int index = Mathf.Max(0, _styles.FindIndex(s => s.styleId == equippedId));
             Equip(index, true);
         }
@@ -100,7 +103,66 @@ namespace BreathOfEclipse.Breathing
             if (i >= 0) Equip(i, false);
         }
 
-        public SkillData GetSkill(int slot) => Current != null ? Current.GetSkill(slot) : null;
+        /// <summary>Slots 0-3 = quick slots (keys 1-4, player assignment first), <see cref="UltimateSlot"/> = ultimate.</summary>
+        public SkillData GetSkill(int slot)
+        {
+            if (Current == null) return null;
+            if (slot == UltimateSlot) return Current.ultimate;
+            var form = GetForm(QuickSlotForm(slot));
+            return form != null ? form.skill : null;
+        }
+
+        /// <summary>Form index on a quick slot (0-3): the player's saved choice, else the style default. -1 = empty.</summary>
+        public int QuickSlotForm(int slot)
+        {
+            if (Current == null || slot < 0 || slot >= BreathingStyleData.QuickSlotCount) return -1;
+            var saved = SaveSystem.Settings.FindQuickSlots(Current.styleId);
+            if (saved != null && slot < saved.forms.Length)
+            {
+                int f = saved.forms[slot];
+                return f >= 0 && f < Current.FormCount ? f : -1;
+            }
+            return Current.QuickSlotForm(slot);
+        }
+
+        /// <summary>Quick slot (0-3) holding a form, or -1.</summary>
+        public int SlotOfForm(int formIndex)
+        {
+            for (int slot = 0; slot < BreathingStyleData.QuickSlotCount; slot++)
+                if (QuickSlotForm(slot) == formIndex) return slot;
+            return -1;
+        }
+
+        /// <summary>Puts a form on a quick slot of the equipped style (swapping if it was on another slot) and saves.</summary>
+        public void AssignQuickSlot(int slot, int formIndex)
+        {
+            if (Current == null || slot < 0 || slot >= BreathingStyleData.QuickSlotCount || formIndex < 0 || formIndex >= Current.FormCount) return;
+            var map = new int[BreathingStyleData.QuickSlotCount];
+            for (int i = 0; i < map.Length; i++) map[i] = QuickSlotForm(i);
+            int previous = Array.IndexOf(map, formIndex);
+            if (previous >= 0) map[previous] = map[slot];
+            map[slot] = formIndex;
+
+            var settings = SaveSystem.Settings;
+            var saved = settings.FindQuickSlots(Current.styleId);
+            if (saved == null)
+            {
+                saved = new StyleQuickSlots { styleId = Current.styleId };
+                settings.quickSlots.Add(saved);
+            }
+            saved.forms = map;
+            SaveSystem.SaveSettings();
+            QuickSlotsChanged?.Invoke();
+        }
+
+        /// <summary>Forgets the player's quick slots for the equipped style (back to the style defaults).</summary>
+        public void ResetQuickSlots()
+        {
+            if (Current == null) return;
+            SaveSystem.Settings.quickSlots.RemoveAll(q => q.styleId == Current.styleId);
+            SaveSystem.SaveSettings();
+            QuickSlotsChanged?.Invoke();
+        }
 
         public float CooldownNormalized(int slot)
         {
@@ -118,7 +180,19 @@ namespace BreathOfEclipse.Breathing
         public BreathingForm GetForm(int index) => Current != null ? Current.GetForm(index) : null;
 
         /// <summary>Checks whether a slot can be used now. <paramref name="reason"/> explains failures for the HUD.</summary>
-        public bool CanUse(int slot, out string reason) => CanUseSkill(GetSkill(slot), out reason);
+        public bool CanUse(int slot, out string reason)
+        {
+            if (slot != UltimateSlot && Current != null)
+            {
+                var form = GetForm(QuickSlotForm(slot));
+                if (form != null && !form.unlocked)
+                {
+                    reason = string.IsNullOrEmpty(form.unlockRequirement) ? "Form locked" : "Locked: " + form.unlockRequirement;
+                    return false;
+                }
+            }
+            return CanUseSkill(GetSkill(slot), out reason);
+        }
 
         public bool CanUseForm(int formIndex, out string reason)
         {
@@ -131,7 +205,15 @@ namespace BreathOfEclipse.Breathing
             return CanUseSkill(form != null ? form.skill : null, out reason);
         }
 
-        public bool TryUse(int slot, Transform target) => TryUseSkill(GetSkill(slot), target, out _);
+        public bool TryUse(int slot, Transform target)
+        {
+            if (!CanUse(slot, out var reason))
+            {
+                if (!string.IsNullOrEmpty(reason)) GameEvents.Notify(reason);
+                return false;
+            }
+            return TryUseSkill(GetSkill(slot), target, out _);
+        }
 
         public bool TryUseForm(int formIndex, Transform target)
         {
@@ -182,10 +264,7 @@ namespace BreathOfEclipse.Breathing
                 if (!string.IsNullOrEmpty(reason)) GameEvents.Notify(reason);
                 return false;
             }
-            _pc.Stats.Stamina.TrySpend(skill.staminaCost * Current.staminaCostMultiplier);
-            _pc.Stats.Breath.TrySpend(skill.breathCost);
-            Cooldowns.Start(skill.skillId, skill.cooldown, Time.time);
-
+            // Costs and cooldown are paid when the technique commits (after the inhale), see OnCommitted.
             string callout = string.IsNullOrEmpty(skill.callout) ? $"{Current.displayName} — {skill.displayName.ToUpperInvariant()}" : skill.callout;
             TechniqueStarted?.Invoke(skill, callout);
             TechniqueAnnounced?.Invoke(Current, Current.FindForm(skill), skill);
@@ -193,9 +272,19 @@ namespace BreathOfEclipse.Breathing
             if (skill.tier == SkillTier.Ultimate) GameEvents.RaiseUltimateActivated(skill.skillId, callout, element);
             else GameEvents.RaiseSkillUsed(skill.skillId, callout, element);
 
-            _pc.Rig.SetWeaponGlow(Current.glowColor * 1.2f);
-            Executor.Start(skill, Current, target);
+            Executor.Start(skill, Current, target, Current.InhaleFor(skill));
             return true;
+        }
+
+        /// <summary>The inhale is over and the technique really starts: stamina, BREATH and cooldown are paid now.</summary>
+        private void OnCommitted(SkillData skill)
+        {
+            var style = Executor.Style != null ? Executor.Style : Current;
+            float staminaMul = style != null ? style.staminaCostMultiplier : 1f;
+            _pc.Stats.Stamina.TrySpend(skill.staminaCost * staminaMul);
+            _pc.Stats.Breath.TrySpend(skill.breathCost);
+            Cooldowns.Start(skill.skillId, skill.cooldown, Time.time);
+            if (style != null) _pc.Rig.SetWeaponGlow(style.glowColor * 1.2f);
         }
 
         public void Tick(float dt)

@@ -197,7 +197,7 @@ namespace BreathOfEclipse.Playtest
                 yield return ctx.Settle();
                 float ground = enemy.transform.position.y;
                 float peak = ground;
-                ctx.Driver.Press(InputCommand.Skill1);
+                TechniqueSuite.CastForm(ctx, TechniqueSuite.RisingSerpentId);
                 yield return ctx.WaitUntil(() =>
                 {
                     if (enemy != null) peak = Mathf.Max(peak, enemy.transform.position.y);

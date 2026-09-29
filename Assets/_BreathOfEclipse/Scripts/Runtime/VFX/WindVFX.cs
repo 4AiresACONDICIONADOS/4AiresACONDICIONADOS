@@ -27,8 +27,91 @@ namespace BreathOfEclipse.VFX
                 .Color(b.Pal.Bright * 0.5f).Velocity(new Vector3(0f, 0f, speed), orbit, 0f).Stretch(4f, 0.08f).Fade(0.05f, 0.4f);
         }
 
+        // =================================================================== IV / VI / VII
+        // Gale Blades: volleys of air blades (projectile visual is wind_crescent).
+        // Whirlwind Dive: an updraft, a coiled hang in the air, then a drilling dive.
+        // Eye of the Storm: a wall of wind closes around the swordsman, a calm eye, then it bursts outward.
+
+        private static void RegisterForms()
+        {
+            // Air gathering into a coil around the body while hanging in the air (follows the player).
+            VFXLibrary.Register("wind_dive_charge", b =>
+            {
+                b.Lifetime = 0.8f;
+                var coil = b.Tube("Coil", Air(b), PathUtil.Helix(2f, 1.3f, 0.5f, 2f, 0f), 0.06f, 0.2f, 0.15f, 0.3f);
+                coil.Wobble = 0.05f;
+                Streaks(b, "Inflow", VFXQuality.Secondary ? 30 : 14, new Vector3(0f, 1f, 0f), new Vector3(2.2f, 2f, 2.2f), 0f, 0.3f, 6f);
+                Leaves(b, "Leaves", 12, new Vector3(0f, 1f, 0f), 1.4f, 5f, 0.7f, 0.5f);
+            });
+
+            // Downward drill of wind wrapped around the body during the dive (follows the player).
+            VFXLibrary.Register("wind_dive_drill", b =>
+            {
+                b.Lifetime = 1.2f;
+                for (int i = 0; i < 2; i++)
+                {
+                    var shell = b.Shape("Drill" + i, ProceduralMeshes.OpenCylinder(0.15f + i * 0.1f, 1.1f + i * 0.35f, 24, 8, 3f + i),
+                        MaterialFactory.Ribbon("wind_shell", b.Pal.Core * 0.35f, b.Pal.Edge * 0.4f, VfxBlend.Additive, ProceduralTextures.Noise, 5f, 3f),
+                        new Vector3(0f, 0.1f, 0f), Vector3.zero, new Vector3(0.6f, 0.6f, 0.6f), new Vector3(1f, 2.6f - i * 0.4f, 1f), 0.45f, Color.white);
+                    shell.ColorProperty = "_ColorA";
+                    shell.SpinDegreesPerSecond = new Vector3(0f, -900f + i * 200f, 0f);
+                    shell.ScaleCurve = CommonVFX.FastOut;
+                    shell.AlphaCurve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.1f, 1f), new Keyframe(0.7f, 0.8f), new Keyframe(1f, 0f));
+                }
+                Streaks(b, "Rush", VFXQuality.Secondary ? 40 : 18, new Vector3(0f, 1.2f, 0f), new Vector3(1.2f, 1.6f, 1.2f), 0f, 0.3f, -8f);
+                // Landing blast (0.18 s ≈ contact): a flat ring of wind and flying leaves.
+                var ring = CommonVFX.FlatRing(b, "Landing", b.Pal.Bright * 0.7f, 6f, 0.45f, 0.05f, 0.18f);
+                ring.AlphaCurve = CommonVFX.PopFade;
+                Leaves(b, "Leaves", VFXQuality.Secondary ? 36 : 16, new Vector3(0f, 0.4f, 0f), 1.5f, 3f, 1.2f, 2.2f, 0.18f);
+                CommonVFX.Dust(b, "Dust", 14, 1.8f, 1.2f, new Color(0.55f, 0.55f, 0.5f, 0.4f), 4f);
+            });
+
+            // Wall of wind closing around the swordsman (follows the player).
+            VFXLibrary.Register("wind_storm_eye", b =>
+            {
+                b.Lifetime = 1.4f;
+                var wall = b.Shape("Wall", ProceduralMeshes.OpenCylinder(5.5f, 6f, 48, 8, 1.5f),
+                    MaterialFactory.Ribbon("wind_shell", b.Pal.Core * 0.35f, b.Pal.Edge * 0.4f, VfxBlend.Additive, ProceduralTextures.Noise, 5f, 3f),
+                    Vector3.zero, Vector3.zero, new Vector3(1.3f, 0.2f, 1.3f), new Vector3(0.75f, 3.2f, 0.75f), 0.95f, Color.white);
+                wall.ColorProperty = "_ColorA";
+                wall.SpinDegreesPerSecond = new Vector3(0f, 420f, 0f);
+                wall.AlphaCurve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.15f, 1f), new Keyframe(0.85f, 1f), new Keyframe(1f, 0f));
+                var inner = b.Tube("Inflow", Air(b), PathUtil.Circle(4.2f, 1.2f, 0f, 540f, 0.6f, 0.2f, 4f), 0.08f, 0.5f, 0.2f, 0.3f);
+                inner.Wobble = 0.1f;
+                Streaks(b, "Pull", VFXQuality.Secondary ? 50 : 22, new Vector3(0f, 1f, 0f), new Vector3(8f, 2f, 8f), 0f, 0.5f, 5f);
+                Leaves(b, "Leaves", VFXQuality.Secondary ? 50 : 20, new Vector3(0f, 1.2f, 0f), 5f, 6f, 1.3f, 0.8f);
+                CommonVFX.Dust(b, "Dust", 16, 5f, 1.2f, new Color(0.55f, 0.55f, 0.5f, 0.35f), 2f);
+            });
+
+            // The eye bursts: blades of wind fly out in every direction.
+            VFXLibrary.Register("wind_storm_burst", b =>
+            {
+                b.Lifetime = 1.2f;
+                int blades = VFXQuality.Full ? 14 : VFXQuality.Secondary ? 10 : 6;
+                for (int i = 0; i < blades; i++)
+                {
+                    float a = i * 360f / blades;
+                    var dir = Quaternion.Euler(0f, a, 0f) * Vector3.forward;
+                    var blade = b.Shape("Blade" + i, ProceduralMeshes.Crescent(140f, 0.16f), b.Additive(ProceduralTextures.CrescentBand), dir * 1.2f + Vector3.up * 1.1f,
+                        new Vector3(0f, a, 0f), new Vector3(1.2f, 1f, 1.2f), new Vector3(2.4f, 1f, 2.4f), 0.5f, i % 2 == 0 ? b.Pal.Bright * 0.8f : b.Pal.Core);
+                    blade.ScaleCurve = CommonVFX.FastOut;
+                    blade.AlphaCurve = CommonVFX.PopFade;
+                    blade.Delay = (i % 3) * 0.02f;
+                }
+                var shock = CommonVFX.FlatRing(b, "Shock", b.Pal.Bright * 0.8f, 9f, 0.45f, 0.6f);
+                shock.AlphaCurve = CommonVFX.PopFade;
+                Streaks(b, "Out", VFXQuality.Secondary ? 60 : 24, new Vector3(0f, 1f, 0f), new Vector3(1f, 1.5f, 1f), 0f, 0.35f, 0f);
+                b.Particles("Radial", b.Additive(ProceduralTextures.Streak), new Vector3(0f, 1f, 0f)).Burst(VFXQuality.Secondary ? 50 : 20)
+                    .Shape(ParticleSystemShapeType.Circle, 0.8f, 0f, 360f, null, new Vector3(-90f, 0f, 0f)).Life(0.25f, 0.45f).Speed(14f, 22f)
+                    .Size(0.05f, 0.09f).Color(b.Pal.Bright * 0.6f).Stretch(4f, 0.05f).Fade(0.02f, 0.4f);
+                Leaves(b, "Leaves", 30, new Vector3(0f, 1f, 0f), 1.5f, 0f, 1.2f, 1.2f);
+                CommonVFX.Distortion(b, "Distort", 7f, 0.5f);
+            });
+        }
+
         public static void Register()
         {
+            RegisterForms();
             // Flying air crescent (projectile visual, travels along +Z).
             VFXLibrary.Register("wind_crescent", b =>
             {

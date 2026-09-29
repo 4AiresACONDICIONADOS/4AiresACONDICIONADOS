@@ -9,9 +9,10 @@ using UnityEngine;
 namespace BreathOfEclipse.Audio
 {
     /// <summary>
-    /// Voice clips by spoken text: Resources/BreathOfEclipse/Voice/&lt;language&gt;/&lt;key&gt;, where the key is the text
-    /// lower-cased without accents or punctuation ("¡Serpiente Ascendente!" → serpiente_ascendente). Replace a
-    /// placeholder by dropping a recorded clip with the same name into that folder.
+    /// Voice clips by spoken text: Resources/BreathOfEclipse/Voice/&lt;language&gt;/&lt;variant&gt;/&lt;key&gt; (a style's own
+    /// delivery, e.g. tidal/primera_postura) falling back to Resources/BreathOfEclipse/Voice/&lt;language&gt;/&lt;key&gt;. The
+    /// key is the text lower-cased without accents or punctuation ("¡Serpiente Ascendente!" → serpiente_ascendente).
+    /// Replace a placeholder by dropping a recorded clip with the same name into that folder.
     /// </summary>
     public static class VoiceLibrary
     {
@@ -21,11 +22,23 @@ namespace BreathOfEclipse.Audio
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => Cache.Clear();
 
-        public static AudioClip Get(string language, string text)
+        public static AudioClip Get(string language, string text) => Get(language, text, null);
+
+        /// <summary>The <paramref name="variant"/> delivery (a style id) when it exists, else the shared clip.</summary>
+        public static AudioClip Get(string language, string text, string variant)
         {
             string key = Key(text);
             if (string.IsNullOrEmpty(key)) return null;
-            string path = Root + language + "/" + key;
+            if (!string.IsNullOrEmpty(variant))
+            {
+                var own = Load(Root + language + "/" + variant + "/" + key);
+                if (own != null) return own;
+            }
+            return Load(Root + language + "/" + key);
+        }
+
+        private static AudioClip Load(string path)
+        {
             if (Cache.TryGetValue(path, out var clip)) return clip;
             clip = Resources.Load<AudioClip>(path);
             Cache[path] = clip;
@@ -70,6 +83,8 @@ namespace BreathOfEclipse.Audio
             public float Gap;
             /// <summary>Earliest start, in seconds after <see cref="VoiceChannel.Speak"/> (sync with a technique phase).</summary>
             public float NotBefore;
+            /// <summary>Loudness of this line (0 = 1): calls build up towards the technique name.</summary>
+            public float Volume;
         }
 
         /// <summary>(line index, line) when a line starts.</summary>
@@ -89,6 +104,7 @@ namespace BreathOfEclipse.Audio
         private float _fadeFrom, _fadeStart, _fadeDuration;
         private bool _fading;
         private float _baseVolume = 1f;
+        private float _lineVolume = 1f;
 
         public static VoiceChannel Create(Transform owner, bool positional, float volume = 1f)
         {
@@ -153,7 +169,7 @@ namespace BreathOfEclipse.Audio
                 }
                 return;
             }
-            _source.volume = volume;
+            _source.volume = volume * _lineVolume;
 
             float now = Time.unscaledTime;
             if (_busy)
@@ -173,8 +189,10 @@ namespace BreathOfEclipse.Audio
             var line = _lines[_index];
             _index++;
             _busy = true;
+            _lineVolume = line.Volume > 0f ? Mathf.Clamp01(line.Volume) : 1f;
             if (line.Clip != null)
             {
+                _source.volume = volume * _lineVolume;
                 _source.clip = line.Clip;
                 _source.Play();
                 _busyUntil = now;

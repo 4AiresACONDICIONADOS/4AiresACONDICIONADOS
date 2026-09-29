@@ -65,8 +65,15 @@ namespace BreathOfEclipse.Tests
                     Assert.Greater(form.formNumber, lastNumber, $"{style.styleId}: form numbers must increase");
                     Assert.LessOrEqual(form.formNumber, 11, style.styleId);
                     Assert.IsNotEmpty(form.skill.voiceTechniqueCall, $"{form.skill.skillId}: Spanish name call");
+                    // Playable in game: costs BREATH, has a cooldown, a motion and VFX.
+                    Assert.Greater(form.skill.breathCost, 0f, $"{form.skill.skillId}: BREATH cost");
+                    Assert.Greater(form.skill.cooldown, 0f, $"{form.skill.skillId}: cooldown");
+                    Assert.IsTrue(form.skill.phases.Exists(p => !string.IsNullOrEmpty(p.motionId)), $"{form.skill.skillId}: motion");
+                    Assert.IsTrue(form.skill.phases.Exists(p => p.vfx.Count > 0), $"{form.skill.skillId}: VFX");
+                    Assert.Greater(style.InhaleFor(form.skill), 0f, $"{form.skill.skillId}: visible inhale");
                     lastNumber = form.formNumber;
                 }
+                Assert.AreEqual(7, _db.FindStyle("tidal").FormCount, "Water: 7 forms");
                 Assert.IsNotEmpty(style.styleCall, style.styleId);
                 for (int slot = 0; slot < BreathingStyleData.QuickSlotCount; slot++)
                     Assert.IsNotNull(style.GetSkill(slot), $"{style.styleId} quick slot {slot + 1}");

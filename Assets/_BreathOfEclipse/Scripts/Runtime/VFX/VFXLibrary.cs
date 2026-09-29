@@ -193,6 +193,7 @@ namespace BreathOfEclipse.VFX
             FireVFX.Register();
             WindVFX.Register();
             MoonVFX.Register();
+            BreathingVFX.Register();
         }
 
         /// <summary>Spawns a pooled effect. Returns null for unknown ids (logged once).</summary>

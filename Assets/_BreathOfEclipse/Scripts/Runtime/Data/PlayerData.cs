@@ -12,6 +12,10 @@ namespace BreathOfEclipse.Data
         public float staminaRegen = 42f;
         public float staminaRegenDelay = 0.4f;
         public float maxBreath = 100f;
+        [Tooltip("Breath recovered per second by normal breathing (only up to breathRestingCap).")]
+        public float breathRestingRegen = 4f;
+        [Tooltip("Fraction of the BREATH gauge that normal breathing can refill; the rest is earned in combat.")]
+        [Range(0f, 1f)] public float breathRestingCap = 0.4f;
 
         [Header("Movement")]
         public float walkSpeed = 2.4f;

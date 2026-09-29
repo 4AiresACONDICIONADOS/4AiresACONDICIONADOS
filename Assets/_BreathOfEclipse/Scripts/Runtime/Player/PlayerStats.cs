@@ -49,7 +49,9 @@ namespace BreathOfEclipse.Player
         {
             Damageable = damageable;
             Stamina = new StaminaModel(data.maxStamina, data.staminaRegen, data.staminaRegenDelay, 0.3f);
-            Breath = new BreathGaugeModel(data.maxBreath, 0f);
+            // Starts at the resting level so forms are usable at once; the ultimate is earned in combat.
+            Breath = new BreathGaugeModel(data.maxBreath, 0f) { RestingRegen = data.breathRestingRegen, RestingCap = data.breathRestingCap };
+            Breath.SetValue(Breath.Max * Breath.RestingCap);
             Breath.Changed += (cur, max, delta, source) => GameEvents.RaiseBreathChanged(cur, max, delta);
             Breath.Filled += () =>
             {
@@ -89,6 +91,7 @@ namespace BreathOfEclipse.Player
             Stamina.RegenMultiplier = Buffs.GetMultiplier(StatType.StaminaRegen);
             Breath.GainMultiplier = Buffs.GetMultiplier(StatType.BreathGain);
             Stamina.Tick(dt);
+            Breath.Tick(dt);
             Buffs.Tick(dt);
             Combo.Tick(dt);
         }

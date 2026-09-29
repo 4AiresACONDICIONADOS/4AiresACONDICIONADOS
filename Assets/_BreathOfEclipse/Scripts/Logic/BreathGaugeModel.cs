@@ -11,7 +11,11 @@ namespace BreathOfEclipse.Core
         Parry = 3,
         DamageTaken = 4,
         Kill = 5,
-        Debug = 6
+        Debug = 6,
+        /// <summary>Slow recovery from normal breathing (up to <see cref="BreathGaugeModel.RestingCap"/>).</summary>
+        Resting = 7,
+        /// <summary>A technique interrupted before it committed gives its cost back.</summary>
+        Refund = 8
     }
 
     /// <summary>
@@ -32,6 +36,10 @@ namespace BreathOfEclipse.Core
         public float ParryGain { get; set; } = 18f;
         public float DamageTakenGainPerHp { get; set; } = 0.12f;
         public float KillGain { get; set; } = 5f;
+        /// <summary>Breath recovered per second by normal breathing, only while below <see cref="RestingCap"/>.</summary>
+        public float RestingRegen { get; set; } = 4f;
+        /// <summary>Fraction of the gauge normal breathing can refill; the rest must be earned in combat.</summary>
+        public float RestingCap { get; set; } = 0.4f;
 
         /// <summary>(current, max, delta, source)</summary>
         public event Action<float, float, float, BreathSource> Changed;
@@ -85,6 +93,15 @@ namespace BreathOfEclipse.Core
             Current = MathUtil.Max(0f, Current - amount);
             Changed?.Invoke(Current, Max, -amount, BreathSource.Debug);
             return true;
+        }
+
+        /// <summary>Resting recovery: forms always come back, the ultimate still needs combat.</summary>
+        public float Tick(float dt)
+        {
+            if (dt <= 0f || RestingRegen <= 0f) return 0f;
+            float cap = Max * MathUtil.Clamp(RestingCap, 0f, 1f);
+            if (Current >= cap) return 0f;
+            return Add(MathUtil.Min(RestingRegen * dt, cap - Current), BreathSource.Resting);
         }
 
         public void SetValue(float value)

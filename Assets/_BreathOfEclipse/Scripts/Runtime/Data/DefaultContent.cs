@@ -11,7 +11,7 @@ namespace BreathOfEclipse.Data
     /// </summary>
     public static class DefaultContent
     {
-        public const int ContentVersion = 2;
+        public const int ContentVersion = 3;
 
         public static GameDatabase Build()
         {
@@ -212,6 +212,8 @@ namespace BreathOfEclipse.Data
         {
             skill.formName = (number >= 1 && number <= EnglishOrdinals.Length ? EnglishOrdinals[number - 1] : "Form " + number) + " Form";
             skill.voiceTechniqueCall = techniqueCall;
+            // Every form draws on the BREATH gauge; higher forms cost more (advanced forms set their own cost).
+            if (skill.tier == SkillTier.Normal && skill.breathCost <= 0f) skill.breathCost = Mathf.Round(8f + 1.2f * (number - 1));
             return new BreathingForm { formNumber = number, skill = skill };
         }
 
@@ -380,6 +382,9 @@ namespace BreathOfEclipse.Data
             ring.phases.Add(Phase("Recover", 0.25f).Cancelable());
 
             style.styleCall = "Respiración del Agua";
+            style.voice = new VoiceDirection(VoiceEmotion.Calm, 0.3f, 0.5f, 0.9f, 0.9f);
+            style.inhaleDuration = 0.4f;
+            style.ultimateInhaleDuration = 0.6f;
             style.forms = new List<BreathingForm>
             {
                 Form(1, cutter, "Corte de Marea"),
@@ -390,8 +395,8 @@ namespace BreathOfEclipse.Data
                 Form(6, fang, "Colmillo del Abismo"),
                 Form(7, serpent, "Serpiente Ascendente")
             };
-            // Keys 1-4 keep the v0.1 layout: Rising Serpent, Crescent Tide, Wandering Current, Abyss Fang.
-            style.quickSlots = new[] { 6, 1, 2, 5 };
+            // Keys 1-4: I Tide Cutter, IV Parting Cascade, VI Abyss Fang, VII Rising Serpent (every form: hold F).
+            style.quickSlots = new[] { 0, 3, 5, 6 };
             Ultimate(style, ult, "Réquiem del Leviatán");
             return style;
         }
@@ -471,14 +476,70 @@ namespace BreathOfEclipse.Data
                 .Hit(Spec(HitShape.SphereAroundSelf, 5f, HitReaction.Knockdown, 12f, 0f, 0.05f, knockback: 10f, hitStop: 0.1f, shake: 1f, impact: "thunder_explosion", sfx: "thunder_big").Finisher().Crit())
                 .Cam(bloom: 1.5f).Shot(CinematicShot.WideArena, 9f, 3f));
 
+            // Fourth Form — a spear of light: pierce a whole line, the trail discharges a beat later.
+            var fang = Skill("thunder_lightning_fang", "Lightning Fang", "Fourth Form", S, SkillTier.Normal, 16f, 0f, 5f,
+                "A piercing lightning thrust that crosses a whole line of enemies; the trail discharges a moment later.");
+            fang.phases.Add(Phase("Coil", 0.14f, "SkillLowStance", 0.04f).Trail(TrailMode.Off)
+                .Vfx("thunder_charge", VFXAnchor.Sword, 0f, 0.7f, true).Sfx("charge", 0f, 0.5f));
+            fang.phases.Add(Phase("Fang", 0.16f, "SkillDash", 0.02f).Voice(VoiceCue.Name).Move(SkillMoveMode.DashForward, 8f).Invulnerable().Afterimages()
+                .Trail(TrailMode.SwordAndElement).Vfx("thunder_fang_head", VFXAnchor.Self, 0f, 1f, true).Sfx("thunder").Sfx("dash", 0f, 0.7f)
+                .Hit(Spec(HitShape.AlongPath, 1.3f, HitReaction.Heavy, 1.4f, 0f, 0.13f, knockback: 2f, hitStop: 0.04f, impact: "spark_thunder", sfx: "thunder"))
+                .Cam(fovPunch: 9f, chromatic: 0.4f, speedLines: true));
+            fang.phases.Add(Phase("Discharge", 0.3f, "SkillSheathe", 0.06f)
+                .Vfx("thunder_fang_burst", VFXAnchor.LastPath, 0.05f).Sfx("thunder_big", 0.05f)
+                .Hit(Spec(HitShape.AlongLastPath, 1.6f, HitReaction.Stun, 1.6f, 0f, 0.07f, knockback: 1f, hitStop: 0.06f, shake: 0.35f, impact: "thunder_cut", sfx: "thunder_big").Status(0.8f))
+                .Cam(bloom: 0.8f));
+            fang.phases.Add(Phase("Recover", 0.2f).Cancelable());
+
+            // Sixth Form — five flash cuts criss-cross one enemy, then the threads of light snap shut on it.
+            var thread = Skill("thunder_searing_thread", "Searing Thread", "Sixth Form", S, SkillTier.Normal, 18f, 0f, 7f,
+                "Five flash cuts criss-cross a single enemy; then every thread of light snaps shut on it.");
+            thread.phases.Add(Phase("Poise", 0.12f, "SkillSheathe", 0.04f).Trail(TrailMode.Off)
+                .Vfx("thunder_charge", VFXAnchor.Self, 0f, 0.7f, true).Sfx("charge", 0f, 0.5f));
+            thread.phases.Add(Phase("Threading", 0.55f, "SkillIaiDraw").Voice(VoiceCue.Name).Behaviour("blink_focus").Afterimages().Trail(TrailMode.SwordAndElement)
+                .Hit(Spec(HitShape.AtTarget, 0.75f, HitReaction.Light, 1.8f, 0f, 0f, 5, 0.1f, 0.5f, hitStop: 0.025f, impact: "spark_thunder", sfx: "thunder"))
+                .Cam(chromatic: 0.35f, speedLines: true));
+            thread.phases.Add(Phase("Snap", 0.26f, "SkillSheathe", 0.05f)
+                .Vfx("thunder_thread_snap", VFXAnchor.Target).Sfx("thunder_big", 0.2f)
+                .Hit(Spec(HitShape.AtTarget, 2.4f, HitReaction.Knockdown, 2f, 0f, 0.22f, knockback: 4f, hitStop: 0.08f, shake: 0.45f, impact: "thunder_cut", sfx: "thunder_big").Crit().Finisher())
+                .Cam(bloom: 1f));
+            thread.phases.Add(Phase("Recover", 0.22f).Cancelable());
+
+            // Seventh Form — one crossing through everything ahead, a silent sheathe, then the horizon breaks open.
+            var horizon = Skill("thunder_broken_horizon", "Broken Horizon", "Seventh Form", S, SkillTier.Advanced, 22f, 40f, 14f,
+                "Advanced form. One crossing through everything ahead, a silent sheathe, then the horizon itself breaks open.");
+            horizon.phases.Add(Phase("Horizon Stance", 0.3f, "SkillSheathe", 0.06f).Voice(VoiceCue.Style).Trail(TrailMode.Off)
+                .Vfx("thunder_flash_charge", VFXAnchor.Self, 0f, 1.1f, true).Sfx("charge").Sfx("thunder", 0.15f, 0.4f)
+                .Cam(zoom: 0.85f, slowScale: 0.8f, slowDuration: 0.25f, saturation: -60f, bloom: 0.4f));
+            horizon.phases.Add(Phase("Crossing", 0.2f, "SkillIaiDraw", 0.01f).MotionSpan(0.35f).Voice(VoiceCue.Name).Move(SkillMoveMode.DashForward, 12f)
+                .Invulnerable().Afterimages().Trail(TrailMode.Sword)
+                .Vfx("thunder_fang_head", VFXAnchor.Self, 0f, 1.2f, true).Sfx("thunder").Sfx("dash", 0f, 0.9f)
+                .Hit(Spec(HitShape.AlongPath, 0.8f, HitReaction.Light, 2f, 0f, 0.18f, knockback: 0.5f, hitStop: 0.02f, impact: "spark_thunder", sfx: "thunder"))
+                .Cam(fovPunch: 14f, chromatic: 0.6f, lens: -0.4f, speedLines: true, radialBlur: true));
+            horizon.phases.Add(Phase("Silence", 0.22f, "SkillSheathe", 0.05f).Vfx("thunder_flash_click", VFXAnchor.Self, 0.16f, 1f, true)
+                .Sfx("block", 0.16f, 0.4f, 1.8f).Cam(slowScale: 0.3f, slowDuration: 0.22f, saturation: -85f));
+            horizon.phases.Add(Phase("Horizon Breaks", 0.4f)
+                .Vfx("thunder_horizon", VFXAnchor.LastPath).Sfx("thunder_big").Sfx("explosion", 0.02f, 0.6f)
+                .Hit(Spec(HitShape.AlongLastPath, 3.6f, HitReaction.Knockdown, 2.2f, 0f, 0.06f, knockback: 5f, hitStop: 0.1f, shake: 0.7f, impact: "thunder_cut", sfx: "thunder_big").Crit().Finisher())
+                .Hit(Spec(HitShape.AlongLastPath, 0.5f, HitReaction.Light, 2.4f, 0f, 0.18f, 3, 0.08f, 0.3f, hitStop: 0.015f, shake: 0.1f, impact: "spark_thunder", sfx: "thunder"))
+                .Cam(chromatic: 0.4f, bloom: 1.4f, flashFrame: true));
+            horizon.phases.Add(Phase("Recover", 0.3f).Cancelable());
+
             style.styleCall = "Respiración del Trueno";
+            style.voice = new VoiceDirection(VoiceEmotion.Explosive, 0.55f, 0.65f, 1f, 1.4f);
+            style.inhaleDuration = 0.18f;
+            style.ultimateInhaleDuration = 0.35f;
             style.forms = new List<BreathingForm>
             {
                 Form(1, flash, "Destello Quebrantador"),
                 Form(2, chain, "Chispa Encadenada"),
                 Form(3, rolling, "Trueno Rodante"),
-                Form(5, drum, "Tambor Celestial")
+                Form(4, fang, "Colmillo del Relámpago"),
+                Form(5, drum, "Tambor Celestial"),
+                Form(6, thread, "Hilo Fulminante"),
+                Form(7, horizon, "Horizonte Quebrado")
             };
+            style.quickSlots = new[] { 0, 2, 3, 6 };
             Ultimate(style, ult, "Mil Destellos");
             return style;
         }
@@ -551,14 +612,61 @@ namespace BreathOfEclipse.Data
                 .Cam(shake: 0.5f, bloom: 1.5f, chromatic: 0.5f).Shot(CinematicShot.WideArena, 9f, 3f));
             ult.phases.Add(Phase("Embers", 0.5f, "SkillFocus"));
 
+            // Fourth Form — the smash splits the ground into a line of magma geysers.
+            var hammer = Skill("ember_magma_hammer", "Magma Hammer", "Fourth Form", S, SkillTier.Normal, 20f, 0f, 6f,
+                "A two-handed overhead smash; the ground splits and three magma geysers erupt in a line.");
+            hammer.phases.Add(Phase("Heft", 0.32f, "SkillOverhead", 0.06f).MotionSpan(0.6f).Trail(TrailMode.SwordAndElement)
+                .Vfx("fire_charge", VFXAnchor.Sword, 0f, 1.2f, true).Sfx("fire").Cam(zoom: 0.9f));
+            hammer.phases.Add(Phase("Smash", 0.28f).Voice(VoiceCue.Name)
+                .Vfx("fire_magma_line", VFXAnchor.Self).Vfx("ground_impact", VFXAnchor.InFront, 0f, 1.3f, false, new Vector3(0f, 0f, 1.2f))
+                .Sfx("slash_heavy").Sfx("explosion", 0.02f, 0.7f).Sfx("fire_big", 0.1f).Sfx("fire_big", 0.2f, 0.8f)
+                .Hit(Spec(HitShape.SphereInFront, 2.8f, HitReaction.Knockdown, 1.8f, 1.6f, 0.02f, knockback: 4f, hitStop: 0.09f, shake: 0.5f, impact: "impact_heavy").Status(2.5f))
+                .Hit(Spec(HitShape.SphereInFront, 1.4f, HitReaction.Launch, 1.5f, 3.3f, 0.12f, knockback: 1f, launch: 2f, impact: "impact_heavy").Detached().Status(2.5f))
+                .Hit(Spec(HitShape.SphereInFront, 1.4f, HitReaction.Launch, 1.5f, 5f, 0.22f, knockback: 1f, launch: 2f, impact: "impact_heavy").Detached().Status(2.5f))
+                .Cam(shake: 0.45f, bloom: 0.7f, chromatic: 0.2f));
+            hammer.phases.Add(Phase("Recover", 0.35f, "SkillFocus").Cancelable());
+
+            // Fifth Form — a sweeping cut raises a wall of fire that keeps burning.
+            var emberWall = Skill("ember_wall", "Ember Wall", "Fifth Form", S, SkillTier.Normal, 18f, 0f, 7f,
+                "A sweeping cut raises a curved wall of fire that keeps burning whoever crosses it.");
+            emberWall.phases.Add(Phase("Sweep", 0.4f, "SkillThrow", 0.05f).Trail(TrailMode.SwordAndElement)
+                .Vfx("fire_charge", VFXAnchor.Sword, 0f, 1f, true).Vfx("fire_wall", VFXAnchor.InFront, 0.18f, 1f, false, new Vector3(0f, 0f, 2.4f))
+                .Sfx("slash_heavy", 0.16f).Sfx("fire_big", 0.18f)
+                .Hit(Spec(HitShape.Cone, 1.8f, HitReaction.Knockback, 2f, 3.5f, 0.18f, knockback: 5f, impact: "impact_heavy", angle: 120f).Status(2f))
+                .Hit(Spec(HitShape.SphereInFront, 0.45f, HitReaction.Light, 2.6f, 2.4f, 0.4f, 5, 0.28f, 0.8f, hitStop: 0.015f, shake: 0.05f, impact: "spark_fire", sfx: "hit").Detached().Status(2f))
+                .Cam(shake: 0.2f, bloom: 0.5f));
+            emberWall.phases.Add(Phase("Recover", 0.3f).Cancelable());
+
+            // Seventh Form — the ground glows, cracks and erupts all around the swordsman.
+            var heart = Skill("ember_volcano_heart", "Volcano's Heart", "Seventh Form", S, SkillTier.Advanced, 24f, 40f, 13f,
+                "Advanced form. The blade is driven into the ground; the earth glows, cracks and erupts all around.");
+            heart.phases.Add(Phase("Kindle", 0.45f, "SkillFocus", 0.06f).Voice(VoiceCue.Style)
+                .Vfx("fire_charge", VFXAnchor.Sword, 0f, 1.5f, true).Vfx("fire_heart_build", VFXAnchor.Ground)
+                .Sfx("charge").Sfx("fire", 0.2f, 0.7f)
+                .Cam(zoom: 0.88f, saturation: -20f, bloom: 0.4f));
+            heart.phases.Add(Phase("Eruption", 0.5f, "SkillOverhead", 0.04f).MotionSpan(0.4f).Voice(VoiceCue.Name).Invulnerable()
+                .Vfx("fire_eruption", VFXAnchor.Ground, 0.05f).Vfx("ground_impact", VFXAnchor.Ground, 0.05f, 2f).Vfx("shockwave", VFXAnchor.Ground, 0.05f, 1.6f)
+                .Sfx("explosion", 0.05f).Sfx("fire_big", 0.08f)
+                .Hit(Spec(HitShape.SphereAroundSelf, 3.4f, HitReaction.Launch, 4.2f, 0f, 0.08f, knockback: 3f, launch: 3f, airHang: 0.8f, hitStop: 0.1f, shake: 0.7f, impact: "impact_heavy").Status(4f).Finisher())
+                .Hit(Spec(HitShape.SphereAroundSelf, 0.5f, HitReaction.Light, 5f, 0f, 0.2f, 4, 0.12f, 0.3f, hitStop: 0.015f, shake: 0.08f, impact: "spark_fire", sfx: "hit").Status(2f))
+                .Cam(shake: 0.4f, bloom: 1.2f, chromatic: 0.3f));
+            heart.phases.Add(Phase("Recover", 0.4f, "SkillFocus").Cancelable());
+
             style.styleCall = "Respiración de las Brasas";
+            style.voice = new VoiceDirection(VoiceEmotion.Deep, 0.5f, 0.65f, 0.95f, 0.9f);
+            style.inhaleDuration = 0.38f;
+            style.ultimateInhaleDuration = 0.6f;
             style.forms = new List<BreathingForm>
             {
                 Form(1, arc, "Arco Abrasador"),
                 Form(2, wheel, "Rueda de Cenizas"),
                 Form(3, burst, "Estallido de Brasas"),
-                Form(6, phoenix, "Ascenso del Fénix")
+                Form(4, hammer, "Martillo de Magma"),
+                Form(5, emberWall, "Muralla de Brasas"),
+                Form(6, phoenix, "Ascenso del Fénix"),
+                Form(7, heart, "Corazón del Volcán")
             };
+            style.quickSlots = new[] { 0, 3, 5, 6 };
             Ultimate(style, ult, "Cataclismo Solar");
             return style;
         }
@@ -623,14 +731,62 @@ namespace BreathOfEclipse.Data
                 .Hit(Spec(HitShape.SphereAroundSelf, 5f, HitReaction.Knockdown, 7f, 0f, 0.45f, knockback: 12f, hitStop: 0.1f, shake: 0.9f, impact: "impact_crit").Finisher().Crit())
                 .Shot(CinematicShot.FollowBehind, 5f, 2.5f));
 
+            // Fourth Form — two quick volleys of air blades fanning out.
+            var blades = Skill("gale_blades", "Gale Blades", "Fourth Form", S, SkillTier.Normal, 14f, 0f, 5f,
+                "Two quick volleys of air blades fanning out across the front.");
+            blades.phases.Add(Phase("First Volley", 0.28f, "SkillThrow", 0.04f).Trail(TrailMode.SwordAndElement).Sfx("wind", 0.12f).Sfx("slash", 0.14f)
+                .Projectile(new ProjectileSpec { vfxId = "wind_crescent", delay = 0.14f, count = 3, spreadAngle = 40f, speed = 20f, lifetime = 0.9f, radius = 1f, pierce = true,
+                    damageMultiplier = 0.9f, reaction = HitReaction.Heavy, knockback = 2f, impactVfx = "spark_wind" }));
+            blades.phases.Add(Phase("Second Volley", 0.3f, "SkillThrow", 0.03f).Voice(VoiceCue.Name).Trail(TrailMode.SwordAndElement)
+                .Vfx("wind_slash", VFXAnchor.Self, 0.14f).Sfx("wind", 0.12f).Sfx("slash", 0.14f)
+                .Projectile(new ProjectileSpec { vfxId = "wind_crescent", delay = 0.14f, count = 2, spreadAngle = 22f, speed = 24f, lifetime = 0.9f, radius = 1f, pierce = true,
+                    damageMultiplier = 1.1f, reaction = HitReaction.Knockback, knockback = 4f, impactVfx = "spark_wind" })
+                .Cam(fovPunch: 4f));
+            blades.phases.Add(Phase("Recover", 0.2f).Cancelable());
+
+            // Sixth Form — an updraft, a coiled hang in the air, then a drilling dive.
+            var dive = Skill("gale_whirlwind_dive", "Whirlwind Dive", "Sixth Form", S, SkillTier.Normal, 18f, 0f, 7f,
+                "An updraft lifts you high; you coil in the air and dive as a drill of wind that launches everything around the landing.");
+            dive.phases.Add(Phase("Updraft", 0.3f, "SkillFlip", 0.05f).Move(SkillMoveMode.Leap, 2f, 3.2f).Trail(TrailMode.SwordAndElement)
+                .Vfx("wind_step", VFXAnchor.Self).Sfx("wind").Sfx("jump", 0f, 0.6f).Cam(zoom: 1.15f));
+            dive.phases.Add(Phase("Coil", 0.15f, "SkillHover").Move(SkillMoveMode.Hover)
+                .Vfx("wind_dive_charge", VFXAnchor.Self, 0f, 1f, true).Sfx("wind", 0f, 0.6f));
+            dive.phases.Add(Phase("Dive", 0.24f, "SkillPlunge", 0.02f).Voice(VoiceCue.Name).Move(SkillMoveMode.Plunge).Invulnerable().Trail(TrailMode.SwordAndElement)
+                .Vfx("wind_dive_drill", VFXAnchor.Self, 0f, 1f, true).Vfx("ground_impact", VFXAnchor.Ground, 0.18f, 1.2f)
+                .Sfx("wind_big").Sfx("slash_heavy", 0.18f)
+                .Hit(Spec(HitShape.SphereAroundSelf, 2.4f, HitReaction.Launch, 3f, 0f, 0.18f, knockback: 2f, launch: 2.4f, airHang: 0.6f, hitStop: 0.07f, shake: 0.45f, impact: "wind_slash"))
+                .Cam(shake: 0.2f, speedLines: true));
+            dive.phases.Add(Phase("Recover", 0.3f, "SkillFocus").Cancelable());
+
+            // Seventh Form — a wall of wind closes in, a calm eye, then the storm bursts outward.
+            var eye = Skill("gale_storm_eye", "Eye of the Storm", "Seventh Form", S, SkillTier.Advanced, 22f, 40f, 13f,
+                "Advanced form. A wall of wind closes around you and drags enemies in; in the calm eye you turn, and the storm bursts outward.");
+            eye.phases.Add(Phase("Gather Storm", 0.6f, "SkillWhirl", 0.05f).Voice(VoiceCue.Style).Invulnerable().Trail(TrailMode.SwordAndElement)
+                .Vfx("wind_storm_eye", VFXAnchor.Self, 0f, 1f, true).Sfx("wind_big").Sfx("wind", 0.3f)
+                .Hit(Spec(HitShape.SphereAroundSelf, 0.4f, HitReaction.Light, 6f, 0f, 0.05f, 5, 0.11f, 0.2f, hitStop: 0.015f, shake: 0.08f, impact: "spark_wind", sfx: "hit").Pull(9f))
+                .Cam(zoom: 1.25f));
+            eye.phases.Add(Phase("Calm Eye", 0.25f, "SkillFocus", 0.05f).Voice(VoiceCue.Name).Cam(slowScale: 0.4f, slowDuration: 0.25f, saturation: -40f));
+            eye.phases.Add(Phase("Burst", 0.35f, "SkillSpinLong", 0.03f).Trail(TrailMode.SwordAndElement)
+                .Vfx("wind_storm_burst", VFXAnchor.Self).Sfx("wind_big").Sfx("slash_heavy", 0.02f)
+                .Hit(Spec(HitShape.SphereAroundSelf, 3.2f, HitReaction.Launch, 5.5f, 0f, 0.05f, knockback: 6f, launch: 2.6f, airHang: 0.6f, hitStop: 0.08f, shake: 0.5f, impact: "wind_slash").Finisher())
+                .Cam(shake: 0.3f, bloom: 0.5f));
+            eye.phases.Add(Phase("Recover", 0.3f).Cancelable());
+
             style.styleCall = "Respiración del Vendaval";
+            style.voice = new VoiceDirection(VoiceEmotion.Wild, 0.6f, 0.7f, 1f, 1.3f);
+            style.inhaleDuration = 0.25f;
+            style.ultimateInhaleDuration = 0.45f;
             style.forms = new List<BreathingForm>
             {
                 Form(1, rend, "Desgarro del Cielo"),
                 Form(2, cyclone, "Danza del Ciclón"),
                 Form(3, step, "Paso del Céfiro"),
-                Form(5, pillar, "Pilar de Tempestad")
+                Form(4, blades, "Cuchillas del Vendaval"),
+                Form(5, pillar, "Pilar de Tempestad"),
+                Form(6, dive, "Picado del Remolino"),
+                Form(7, eye, "Ojo de la Tormenta")
             };
+            style.quickSlots = new[] { 0, 1, 5, 6 };
             Ultimate(style, ult, "Vendaval Celestial");
             return style;
         }
@@ -699,14 +855,56 @@ namespace BreathOfEclipse.Data
                 .Shot(CinematicShot.OverShoulderTarget, 4f, 1.5f));
             ult.phases.Add(Phase("Afterglow", 0.4f, "SkillFocus"));
 
+            // Fourth Form — two spinning crescents fly out in a V; between them an X of moonlight cuts again.
+            var twin = Skill("moon_twin_moon", "Twin Moon", "Fourth Form", S, SkillTier.Normal, 15f, 0f, 5f,
+                "Two spinning crescents fly out in a V; between them, an X of moonlight cuts a moment later.");
+            twin.phases.Add(Phase("Twin Throw", 0.42f, "SkillThrow", 0.05f).Trail(TrailMode.SwordAndElement).Sfx("moon", 0.18f).Sfx("slash", 0.2f)
+                .Projectile(new ProjectileSpec { vfxId = "moon_twin_blade", delay = 0.2f, count = 2, spreadAngle = 26f, speed = 15f, lifetime = 0.7f, radius = 0.9f, pierce = true,
+                    damageMultiplier = 1f, reaction = HitReaction.Heavy, knockback = 2f, impactVfx = "spark_moon" })
+                .Vfx("moon_twin_cross", VFXAnchor.InFront, 0.36f, 1f, false, new Vector3(0f, 0f, 5f)).Sfx("moon_big", 0.36f, 0.6f)
+                .Hit(Spec(HitShape.SphereInFront, 1.9f, HitReaction.Knockback, 2f, 5f, 0.38f, knockback: 4f, impact: "moon_echo").Detached()));
+            twin.phases.Add(Phase("Recover", 0.3f).Cancelable());
+
+            // Fifth Form — crescents orbit wide, sweep out to mid range, then snap back.
+            var orbit = Skill("moon_silver_orbit", "Silver Orbit", "Fifth Form", S, SkillTier.Normal, 17f, 0f, 6f,
+                "Crescents orbit wide around you, sweep out to mid range, then snap back through everything in between.");
+            orbit.phases.Add(Phase("Orbit", 0.75f, "SkillWhirl", 0.05f).Trail(TrailMode.SwordAndElement)
+                .Vfx("moon_orbit_wide", VFXAnchor.Self, 0f, 1f, true).Sfx("moon").Sfx("moon_big", 0.55f, 0.6f)
+                .Hit(Spec(HitShape.SphereAroundSelf, 0.6f, HitReaction.Light, 4.5f, 0f, 0.2f, 3, 0.14f, 0.5f, hitStop: 0.02f, shake: 0.06f, impact: "spark_moon", sfx: "hit"))
+                .Hit(Spec(HitShape.SphereAroundSelf, 1.8f, HitReaction.Heavy, 4f, 0f, 0.68f, knockback: 0.5f, hitStop: 0.06f, shake: 0.3f, impact: "moon_echo").Pull(6f)));
+            orbit.phases.Add(Phase("Recover", 0.25f).Cancelable());
+
+            // Sixth Form — a precise draw: a silver line far ahead, small crescents bloom along it one by one.
+            var edge = Skill("moon_new_moon_edge", "New Moon Edge", "Sixth Form", S, SkillTier.Normal, 16f, 0f, 6f,
+                "A precise draw leaves a thin silver line far ahead; small crescents bloom along it one after another.");
+            edge.phases.Add(Phase("Silent Draw", 0.5f, "SkillIaiDraw", 0.04f).Voice(VoiceCue.Name).Trail(TrailMode.SwordAndElement)
+                .Vfx("moon_newmoon_line", VFXAnchor.Self, 0.1f).Sfx("slash", 0.1f).Sfx("moon", 0.12f).Sfx("moon_big", 0.3f, 0.5f)
+                .Vfx("moon_echo", VFXAnchor.InFront, 0.26f, 0.7f, false, new Vector3(0f, 0f, 2f))
+                .Vfx("moon_echo", VFXAnchor.InFront, 0.32f, 0.75f, false, new Vector3(0f, 0f, 3.8f))
+                .Vfx("moon_echo", VFXAnchor.InFront, 0.38f, 0.8f, false, new Vector3(0f, 0f, 5.6f))
+                .Vfx("moon_echo", VFXAnchor.InFront, 0.44f, 0.9f, false, new Vector3(0f, 0f, 7.4f))
+                .Hit(Spec(HitShape.SphereInFront, 1f, HitReaction.Heavy, 1.3f, 2f, 0.26f, knockback: 1f, hitStop: 0.03f, impact: "spark_moon").Detached())
+                .Hit(Spec(HitShape.SphereInFront, 1f, HitReaction.Heavy, 1.3f, 3.8f, 0.32f, knockback: 1f, hitStop: 0.03f, impact: "spark_moon").Detached())
+                .Hit(Spec(HitShape.SphereInFront, 1f, HitReaction.Heavy, 1.3f, 5.6f, 0.38f, knockback: 1f, hitStop: 0.03f, impact: "spark_moon").Detached())
+                .Hit(Spec(HitShape.SphereInFront, 1.6f, HitReaction.Knockback, 1.5f, 7.4f, 0.44f, knockback: 4f, hitStop: 0.06f, impact: "moon_echo").Detached().Crit()));
+            edge.phases.Add(Phase("Recover", 0.3f).Cancelable());
+
             style.styleCall = "Respiración Lunar";
+            style.voice = new VoiceDirection(VoiceEmotion.Cold, 0.25f, 0.4f, 0.7f, 0.85f);
+            style.inhaleDuration = 0.4f;
+            style.ultimateInhaleDuration = 0.6f;
             style.forms = new List<BreathingForm>
             {
                 Form(1, veil, "Velo Creciente"),
                 Form(2, echo, "Eco Menguante"),
                 Form(3, halo, "Halo Lunar"),
+                Form(4, twin, "Luna Gemela"),
+                Form(5, orbit, "Órbita Plateada"),
+                Form(6, edge, "Filo del Novilunio"),
                 Form(7, tide, "Marea del Eclipse")
             };
+            // Up to eleven forms: add Form(8 … 11, …) here; the wheel, HUD strip and voice adapt to the count.
+            style.quickSlots = new[] { 0, 3, 5, 6 };
             Ultimate(style, ult, "Eclipse Eterno");
             return style;
         }

@@ -35,6 +35,15 @@ namespace BreathOfEclipse.Breathing
         public Transform Target { get; private set; }
         public PlayerController Player => _pc;
         public Vector3 PhaseStartPosition { get; private set; }
+        /// <summary>Start / end of the path travelled by the last phase that moved (AlongLastPath, LastPath).</summary>
+        public Vector3 LastPathStart { get; private set; }
+        public Vector3 LastPathEnd { get; private set; }
+        /// <summary>The swordsman is drawing breath before the first phase (nothing has been paid yet).</summary>
+        public bool Inhaling { get; private set; }
+        public float InhaleDuration { get; private set; }
+        public float InhaleTime { get; private set; }
+        /// <summary>The inhale finished (or there was none): the technique is paid for and its phases run.</summary>
+        public bool Committed { get; private set; }
 
         private readonly PlayerController _pc;
         private readonly List<Scheduled> _scheduled = new List<Scheduled>();
@@ -48,6 +57,12 @@ namespace BreathOfEclipse.Breathing
         private bool _cinematicUsed;
 
         public event Action<SkillData> Finished;
+        /// <summary>(skill, duration) the inhale starts: pose, air streams, breath sound.</summary>
+        public event Action<SkillData, float> InhaleStarted;
+        /// <summary>(skill, completed) the inhale ended; completed = false when interrupted.</summary>
+        public event Action<SkillData, bool> InhaleEnded;
+        /// <summary>The technique commits: costs and cooldown are paid now (never for an interrupted inhale).</summary>
+        public event Action<SkillData> OnCommit;
 
         public SkillExecutor(PlayerController pc) => _pc = pc;
 
@@ -61,7 +76,7 @@ namespace BreathOfEclipse.Breathing
             }
         }
 
-        public void Start(SkillData skill, BreathingStyleData style, Transform target)
+        public void Start(SkillData skill, BreathingStyleData style, Transform target, float inhale = 0f)
         {
             Skill = skill;
             Style = style;
@@ -70,9 +85,33 @@ namespace BreathOfEclipse.Breathing
             Target = target;
             Running = true;
             PhaseIndex = -1;
+            Phase = null;
+            Committed = false;
+            LastPathStart = LastPathEnd = _pc.transform.position;
             _cinematicUsed = false;
             _registries.Clear();
-            EnterNext();
+            _scheduled.Clear();
+
+            InhaleDuration = Mathf.Max(0f, inhale);
+            InhaleTime = 0f;
+            Inhaling = InhaleDuration > 0.01f;
+            if (Inhaling)
+            {
+                // Plant the feet and face the enemy while breathing in; the first phase starts after the breath.
+                RefreshTarget();
+                FaceTarget(true);
+                _pc.Motor.StopForced();
+                InhaleStarted?.Invoke(skill, InhaleDuration);
+                return;
+            }
+            Commit();
+            if (Running) EnterNext();
+        }
+
+        private void Commit()
+        {
+            Committed = true;
+            OnCommit?.Invoke(Skill);
         }
 
         /// <summary>Raised when a running technique is cancelled (hit, dodge, death…) before it finished.</summary>
@@ -82,6 +121,11 @@ namespace BreathOfEclipse.Breathing
         {
             if (!Running) return;
             Interrupted?.Invoke(Skill);
+            if (Inhaling)
+            {
+                Inhaling = false;
+                InhaleEnded?.Invoke(Skill, false);
+            }
             ExitPhase();
             End(true);
             _pc.Animator.StopAction(0.1f);
@@ -89,7 +133,19 @@ namespace BreathOfEclipse.Breathing
 
         public void Tick(float dt)
         {
-            if (!Running || Phase == null) return;
+            if (!Running) return;
+            if (Inhaling)
+            {
+                InhaleTime += dt;
+                FaceTarget(false);
+                if (InhaleTime < InhaleDuration) return;
+                Inhaling = false;
+                InhaleEnded?.Invoke(Skill, true);
+                Commit();
+                if (Running) EnterNext();
+                return;
+            }
+            if (Phase == null) return;
             PhaseTime += dt;
 
             if (Phase.movement == SkillMoveMode.Weave)
@@ -217,6 +273,11 @@ namespace BreathOfEclipse.Breathing
         private void ExitPhase()
         {
             if (Phase == null) return;
+            if (Phase.movement != SkillMoveMode.None)
+            {
+                LastPathStart = PhaseStartPosition;
+                LastPathEnd = _pc.transform.position;
+            }
             _behaviour?.Exit(this);
             _behaviour = null;
             if (Phase.invulnerable) _pc.Defense.SkillInvulnerable = false;
@@ -465,6 +526,14 @@ namespace BreathOfEclipse.Breathing
                 case VFXAnchor.Path:
                     VFXLibrary.SpawnBetween(cue.vfxId, PhaseStartPosition + Vector3.up * cue.offset.y, t.position + Vector3.up * cue.offset.y, Element, cue.scale, cue.lifetime);
                     return;
+                case VFXAnchor.LastPath:
+                {
+                    Vector3 from = LastPathStart, to = LastPathEnd;
+                    // A path that did not move (blocked dash) still shows a short line ahead.
+                    if ((to - from).sqrMagnitude < 0.25f) to = from + Forward * 2f;
+                    VFXLibrary.SpawnBetween(cue.vfxId, from + Vector3.up * cue.offset.y, to + Vector3.up * cue.offset.y, Element, cue.scale, cue.lifetime);
+                    return;
+                }
                 case VFXAnchor.SkyAboveTarget:
                 {
                     Vector3 basePos = Target != null ? Target.position : t.position + Forward * 4f;
@@ -506,6 +575,9 @@ namespace BreathOfEclipse.Breathing
                     break;
                 case HitShape.AlongPath:
                     HitQuery.Capsule(PhaseStartPosition + Vector3.up, t.position + Vector3.up, spec.radius, Team.Player, _buffer);
+                    break;
+                case HitShape.AlongLastPath:
+                    HitQuery.Capsule(LastPathStart + Vector3.up, LastPathEnd + Vector3.up, spec.radius, Team.Player, _buffer);
                     break;
                 case HitShape.ChainLightning:
                     ChainLightning(spec);

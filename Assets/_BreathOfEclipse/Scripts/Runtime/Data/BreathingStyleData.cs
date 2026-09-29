@@ -65,6 +65,14 @@ namespace BreathOfEclipse.Data
 
         [Header("Voice (Spanish)")]
         [Tooltip("Spoken before a form, e.g. 'Respiración del Agua'.")] public string styleCall = "";
+        [Tooltip("Personality of the calls: Water calm, Thunder explosive, Ember deep, Gale wild, Moonlight cold.")]
+        public VoiceDirection voice = VoiceDirection.Default;
+
+        [Header("Breathing (visible inhale before techniques)")]
+        [Tooltip("Inhale before a form or advanced form (seconds). Water ~0.4, Thunder ~0.2 (keeps it fast).")]
+        [Range(0f, 1f)] public float inhaleDuration = 0.35f;
+        [Tooltip("Inhale before the ultimate (seconds).")]
+        [Range(0f, 1.5f)] public float ultimateInhaleDuration = 0.55f;
 
         [Header("Forms (any number, I … XI), quick slots 1-4 and ultimate (R)")]
         public List<BreathingForm> forms = new List<BreathingForm>();
@@ -130,6 +138,21 @@ namespace BreathOfEclipse.Data
         {
             if (index >= 0 && index < FormCount) return GetForm(index)?.skill;
             return index == FormCount ? ultimate : null;
+        }
+
+        /// <summary>Inhale before <paramref name="skill"/>: its own value, else the style default for its tier.</summary>
+        public float InhaleFor(SkillData skill)
+        {
+            if (skill == null) return 0f;
+            if (skill.inhaleDuration >= 0f) return skill.inhaleDuration;
+            return skill.tier == SkillTier.Ultimate ? ultimateInhaleDuration : inhaleDuration;
+        }
+
+        /// <summary>Voice direction for <paramref name="skill"/>: its override, else the style's.</summary>
+        public VoiceDirection VoiceFor(SkillData skill)
+        {
+            if (skill != null && skill.voiceDirection.IsSet) return skill.voiceDirection;
+            return voice.IsSet ? voice : VoiceDirection.Default;
         }
 
         /// <summary>The form that holds <paramref name="skill"/>, or null (ultimate / unknown).</summary>

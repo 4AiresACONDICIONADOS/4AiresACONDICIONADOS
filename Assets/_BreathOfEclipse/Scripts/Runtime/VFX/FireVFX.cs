@@ -37,8 +37,98 @@ namespace BreathOfEclipse.VFX
                 .Color(new Color(0.08f, 0.05f, 0.05f, 0.55f)).Gravity(-0.08f).Drag(0.1f).Fade(0.15f, 0.4f).Grow(0.6f, 1.8f);
         }
 
+        // =================================================================== IV / V / VII
+        // Magma Hammer: the smash splits the ground and three geysers erupt in a line.
+        // Ember Wall: a curved wall of fire that stays and burns whoever crosses it.
+        // Volcano's Heart: the ground glows and cracks under the swordsman, then erupts all around.
+
+        private static void RegisterForms()
+        {
+            VFXLibrary.Register("fire_magma_line", b =>
+            {
+                b.Lifetime = 2.2f;
+                bool extra = VFXQuality.Secondary;
+                for (int i = 0; i < 3; i++)
+                {
+                    float z = 1.6f + i * 1.7f;
+                    float delay = i * 0.1f;
+                    Flames(b, "Geyser" + i, extra ? 24 : 12, new Vector3(0f, 0.1f, z), 0.3f, 5f, 9f, 0.4f, 0.9f, 0.55f, delay, new Vector3(-90f, 0f, 0f), ParticleSystemShapeType.Cone, 12f);
+                    var column = b.Tube("Column" + i, HotCore(b), u => new Vector3(Mathf.Sin(u * 7f) * 0.08f, u * (2.2f - i * 0.3f), z), 0.22f, 0.12f, 0.2f, 0.4f);
+                    column.StartDelay = delay;
+                    column.RadiusProfile = new AnimationCurve(new Keyframe(0f, 1.2f), new Keyframe(1f, 0.3f));
+                    b.Decal("Crack" + i, ProceduralTextures.Crack, new Color(1f, 0.55f, 0.2f, 0.9f), 2f, 2.2f, new Vector3(0f, 0f, z));
+                    if (extra) Embers(b, "Embers" + i, 14, new Vector3(0f, 1f, z), 0.6f, 1.2f, delay);
+                    b.Light("Light" + i, new Vector3(0f, 1f, z), b.Pal.Core, 6f, 5f, 0.5f, delay);
+                }
+                var fissure = b.Tube("Fissure", FlameRibbon(b), u => new Vector3(Mathf.Sin(u * 11f) * 0.15f, 0.05f, 0.6f + u * 5f), 0.12f, 0.2f, 0.6f, 0.6f);
+                fissure.RadialSegments = 6;
+                Smoke(b, "Smoke", extra ? 10 : 5, new Vector3(0f, 1.2f, 3.2f), 1.5f, 0.25f);
+            });
+
+            VFXLibrary.Register("fire_wall", b =>
+            {
+                b.Lifetime = 2.4f;
+                bool extra = VFXQuality.Secondary;
+                // Curved wall across the front, 5 m wide, burning for ~1.6 s.
+                b.Particles("Wall", b.Additive(ProceduralTextures.Flame), new Vector3(0f, 0.2f, 0f)).Duration(1.6f).Rate(extra ? 140f : 60f)
+                    .Shape(ParticleSystemShapeType.Box, 0.5f, 0f, 360f, new Vector3(5f, 0.1f, 0.5f)).Life(0.5f, 0.9f).Speed(0.3f, 0.8f)
+                    .Size(0.5f, 1.1f).Rotation(-15f, 15f).Color(b.Pal.Core, b.Pal.Bright).Velocity(new Vector3(0f, 2.4f, 0f)).Noise(0.6f, 1.5f)
+                    .Fade(0.08f, 0.5f).SizeOverLife(new AnimationCurve(new Keyframe(0f, 0.5f), new Keyframe(0.25f, 1f), new Keyframe(1f, 0.25f)));
+                var baseLine = b.Tube("Base", FlameRibbon(b), u => new Vector3(Mathf.Lerp(-2.6f, 2.6f, u), 0.15f, -Mathf.Pow(Mathf.Lerp(-1f, 1f, u), 2f) * 0.5f), 0.18f, 0.15f, 1.3f, 0.5f);
+                baseLine.Wobble = 0.08f;
+                var crest = b.Tube("Crest", HotCore(b), u => new Vector3(Mathf.Lerp(-2.4f, 2.4f, u), 1.4f + Mathf.Sin(u * 9f) * 0.2f, -Mathf.Pow(Mathf.Lerp(-1f, 1f, u), 2f) * 0.5f), 0.1f, 0.2f, 1f, 0.5f);
+                crest.Wobble = 0.15f;
+                crest.WobbleSpeed = 12f;
+                Embers(b, "Embers", extra ? 40 : 16, new Vector3(0f, 1.2f, 0f), 2.4f, 1.6f);
+                if (extra) Smoke(b, "Smoke", 8, new Vector3(0f, 2.2f, 0f), 2f, 0.4f);
+                CommonVFX.Distortion(b, "Heat", 3f, 1.6f);
+                b.Light("Light", new Vector3(0f, 1f, 0f), b.Pal.Core, 9f, 5f, 1.8f);
+            });
+
+            VFXLibrary.Register("fire_heart_build", b =>
+            {
+                b.Lifetime = 1.2f;
+                var cracks = b.Shape("Cracks", ProceduralMeshes.GroundQuad(), b.Additive(ProceduralTextures.Crack), new Vector3(0f, 0.04f, 0f), Vector3.zero,
+                    new Vector3(1f, 1f, 1f), new Vector3(4.5f, 1f, 4.5f), 0.7f, b.Pal.Core);
+                cracks.ScaleCurve = CommonVFX.FastOut;
+                cracks.AlphaCurve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.3f, 0.7f), new Keyframe(0.6f, 0.4f), new Keyframe(1f, 1f));
+                b.Particles("Rise", b.Additive(ProceduralTextures.SoftCircle), new Vector3(0f, 0.1f, 0f)).Duration(0.6f).Rate(VFXQuality.Secondary ? 70f : 30f)
+                    .Shape(ParticleSystemShapeType.Circle, 2f, 0f, 360f, null, new Vector3(-90f, 0f, 0f)).Life(0.5f, 0.9f).Speed(0.5f, 1.5f)
+                    .Size(0.03f, 0.07f).Color(b.Pal.Accent, b.Pal.Bright).Velocity(new Vector3(0f, 1.8f, 0f), 1.5f, -0.8f).Fade(0.05f, 0.6f);
+                CommonVFX.Distortion(b, "Heat", 3.5f, 0.8f);
+                b.Light("Pulse", new Vector3(0f, 0.6f, 0f), b.Pal.Core, 6f, 5f, 0.7f);
+                var l = b.Root.GetComponentInChildren<FlashLight>();
+                if (l != null) l.Curve = new AnimationCurve(new Keyframe(0f, 0.1f), new Keyframe(0.3f, 0.6f), new Keyframe(0.45f, 0.3f), new Keyframe(0.7f, 0.9f), new Keyframe(0.8f, 0.5f), new Keyframe(1f, 1f));
+            });
+
+            VFXLibrary.Register("fire_eruption", b =>
+            {
+                b.Lifetime = 2.6f;
+                bool extra = VFXQuality.Secondary, full = VFXQuality.Full;
+                Flames(b, "Core", extra ? 50 : 24, new Vector3(0f, 0.2f, 0f), 0.6f, 8f, 14f, 0.7f, 1.5f, 0.7f, 0f, new Vector3(-90f, 0f, 0f), ParticleSystemShapeType.Cone, 18f);
+                var ring = b.Shape("FireRing", ProceduralMeshes.Ring(0.82f), FlameRibbon(b), new Vector3(0f, 0.08f, 0f), Vector3.zero,
+                    Vector3.one * 0.3f, new Vector3(5.5f, 1f, 5.5f), 0.55f, Color.white);
+                ring.ColorProperty = "_ColorA";
+                ring.ScaleCurve = CommonVFX.FastOut;
+                ring.AlphaCurve = CommonVFX.PopFade;
+                int pillars = full ? 8 : extra ? 6 : 4;
+                for (int i = 0; i < pillars; i++)
+                {
+                    float a = i / (float)pillars * Mathf.PI * 2f;
+                    Vector3 p = new Vector3(Mathf.Cos(a) * 3.2f, 0.1f, Mathf.Sin(a) * 3.2f);
+                    Flames(b, "Pillar" + i, extra ? 14 : 8, p, 0.3f, 6f, 10f, 0.4f, 0.9f, 0.5f, 0.08f + i * 0.02f, new Vector3(-90f, 0f, 0f), ParticleSystemShapeType.Cone, 10f);
+                }
+                Embers(b, "Embers", extra ? 70 : 30, new Vector3(0f, 1.5f, 0f), 2.5f, 2f, 0.1f);
+                Smoke(b, "Smoke", extra ? 16 : 8, new Vector3(0f, 2.5f, 0f), 2.5f, 0.2f);
+                CommonVFX.Dust(b, "Dust", 14, 2.5f, 1.4f, new Color(0.25f, 0.2f, 0.18f, 0.5f), 3.5f);
+                b.Decal("Scorch", ProceduralTextures.Scorch, new Color(0.2f, 0.1f, 0.05f, 0.9f), 6f, 4f);
+                b.Light("Light", new Vector3(0f, 1.5f, 0f), b.Pal.Core, 16f, 12f, 0.9f);
+            });
+        }
+
         public static void Register()
         {
+            RegisterForms();
             VFXLibrary.Register("fire_charge", b =>
             {
                 b.Lifetime = 1f;

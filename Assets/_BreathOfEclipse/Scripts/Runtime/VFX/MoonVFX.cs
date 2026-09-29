@@ -26,8 +26,95 @@ namespace BreathOfEclipse.VFX
                 .Gravity(-0.03f).Fade(0.1f, 0.5f);
         }
 
+        // =================================================================== IV / V / VI
+        // Twin Moon: two thrown crescents cross; where they meet, an X of light cuts again.
+        // Silver Orbit: crescents orbit wide, sweep outward, then snap back to the swordsman.
+        // New Moon Edge: a thin silver line reaches far ahead; small crescents bloom along it one by one.
+
+        private static void RegisterForms()
+        {
+            // Spinning vertical crescent (projectile visual, travels along +Z).
+            VFXLibrary.Register("moon_twin_blade", b =>
+            {
+                b.Lifetime = 1.3f;
+                var pivot = new GameObject("Spin");
+                pivot.transform.SetParent(b.Root, false);
+                pivot.transform.localPosition = new Vector3(0f, 1.15f, 0f);
+                pivot.AddComponent<ExpandingMeshSpinner>().DegreesPerSecond = new Vector3(0f, 0f, 900f);
+                var blade = Crescent(b, "Blade", Vector3.zero, new Vector3(90f, 0f, 0f), 1.3f, 1.2f, b.Pal.Core);
+                blade.transform.SetParent(pivot.transform, false);
+                var core = Crescent(b, "Core", new Vector3(0f, 0f, -0.03f), new Vector3(90f, 0f, 0f), 1.05f, 1.2f, b.Pal.Bright);
+                core.transform.SetParent(pivot.transform, false);
+                b.Particles("Trail", b.Additive(ProceduralTextures.Star), new Vector3(0f, 1.15f, 0f)).Duration(1.1f).Rate(VFXQuality.Secondary ? 40f : 18f)
+                    .Shape(ParticleSystemShapeType.Sphere, 0.4f).Life(0.3f, 0.6f).Speed(0f, 0.2f).Size(0.05f, 0.12f).Rotation(0f, 45f)
+                    .Color(b.Pal.Bright, b.Pal.Accent).Fade(0.05f, 0.4f);
+            });
+
+            // The X where the twin crescents meet.
+            VFXLibrary.Register("moon_twin_cross", b =>
+            {
+                b.Lifetime = 1f;
+                for (int i = 0; i < 2; i++)
+                {
+                    var c = Crescent(b, "X" + i, new Vector3(0f, 1.15f, 0f), new Vector3(90f, 0f, i == 0 ? 45f : -45f), 2.8f, 0.45f, i == 0 ? b.Pal.Bright : Color.white * 3f, i * 0.03f);
+                    c.StartScale = Vector3.one * 0.5f;
+                }
+                CommonVFX.Glint(b, "Glint", Color.white * 5f, 2.6f, 0.22f, new Vector3(0f, 1.15f, 0f));
+                Stars(b, "Stars", VFXQuality.Secondary ? 30 : 14, new Vector3(0f, 1.15f, 0f), 1f, 0.8f);
+                b.Light("Light", new Vector3(0f, 1.2f, 0f), b.Pal.Core, 7f, 6f, 0.35f);
+            });
+
+            // Crescents sweep out to ~4 m and snap back (follows the player).
+            VFXLibrary.Register("moon_orbit_wide", b =>
+            {
+                b.Lifetime = 1.4f;
+                var pivot = new GameObject("Orbit");
+                pivot.transform.SetParent(b.Root, false);
+                pivot.transform.localPosition = new Vector3(0f, 1.1f, 0f);
+                pivot.AddComponent<ExpandingMeshSpinner>().DegreesPerSecond = new Vector3(0f, 360f, 0f);
+                var radius = pivot.AddComponent<OrbitRadiusCurve>();
+                radius.Duration = 1f;
+                radius.Radius = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.55f, 4f), new Keyframe(0.8f, 3.6f), new Keyframe(1f, 0.8f));
+                int count = VFXQuality.Secondary ? 4 : 3;
+                for (int i = 0; i < count; i++)
+                {
+                    float a = i * 360f / count;
+                    var dir = Quaternion.Euler(0f, a, 0f) * Vector3.forward;
+                    var c = b.Shape("Moon" + i, ProceduralMeshes.Crescent(130f, 0.26f), b.Additive(ProceduralTextures.CrescentBand), dir,
+                        new Vector3(0f, a, 90f), Vector3.one * 0.6f, Vector3.one * 1.6f, 1.1f, i % 2 == 0 ? b.Pal.Core : b.Pal.Bright);
+                    c.transform.SetParent(pivot.transform, false);
+                    c.transform.localPosition = dir;
+                    c.ScaleCurve = CommonVFX.FastOut;
+                    c.AlphaCurve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.08f, 1f), new Keyframe(0.85f, 0.9f), new Keyframe(1f, 0f));
+                }
+                Stars(b, "Stars", VFXQuality.Secondary ? 36 : 16, new Vector3(0f, 1.1f, 0f), 3.5f, 1.2f);
+                var ring = CommonVFX.FlatRing(b, "Ring", b.Pal.Core * 0.7f, 8f, 0.6f, 0.05f, 0.05f);
+                ring.AlphaCurve = CommonVFX.PopFade;
+                CommonVFX.Glint(b, "Return", Color.white * 4f, 2f, 0.25f, new Vector3(0f, 1.1f, 0f), 0.95f);
+                b.Light("Light", new Vector3(0f, 1.2f, 0f), b.Pal.Core, 9f, 5f, 1.1f);
+            });
+
+            // Thin silver line 9 m ahead (+Z) that appears with the draw.
+            VFXLibrary.Register("moon_newmoon_line", b =>
+            {
+                b.Lifetime = 1.4f;
+                var line = b.Shape("Line", ProceduralMeshes.Primitive(PrimitiveType.Cylinder), b.Additive(ProceduralTextures.SoftCircle), new Vector3(0f, 1.1f, 4.6f),
+                    new Vector3(90f, 0f, 0f), new Vector3(0.03f, 0.2f, 0.03f), new Vector3(0.015f, 4.5f, 0.015f), 1.1f, Color.white * 5f);
+                line.ScaleCurve = new AnimationCurve(new Keyframe(0f, 0f, 0f, 8f), new Keyframe(0.15f, 1f), new Keyframe(1f, 1f));
+                line.AlphaCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.6f, 0.8f), new Keyframe(1f, 0f));
+                var halo = b.Shape("Halo", ProceduralMeshes.Primitive(PrimitiveType.Cylinder), b.Additive(ProceduralTextures.Glow), new Vector3(0f, 1.1f, 4.6f),
+                    new Vector3(90f, 0f, 0f), new Vector3(0.3f, 0.2f, 0.3f), new Vector3(0.15f, 4.5f, 0.15f), 0.8f, b.Pal.Core * 0.6f);
+                halo.ScaleCurve = line.ScaleCurve;
+                halo.AlphaCurve = CommonVFX.QuickFade;
+                b.Particles("Dust", b.Additive(ProceduralTextures.Star), new Vector3(0f, 1.1f, 4.6f)).Burst(VFXQuality.Secondary ? 40 : 18).Delay(0.1f)
+                    .Shape(ParticleSystemShapeType.Box, 0.1f, 0f, 360f, new Vector3(0.2f, 0.2f, 9f)).Life(0.5f, 1f).Speed(0f, 0.3f)
+                    .Size(0.04f, 0.09f).Rotation(0f, 45f).Color(b.Pal.Bright, b.Pal.Accent).Fade(0.05f, 0.5f);
+            });
+        }
+
         public static void Register()
         {
+            RegisterForms();
             // Crescent that lingers in the air, spinning slowly (Crescent Veil).
             VFXLibrary.Register("moon_crescent", b =>
             {
@@ -146,6 +233,42 @@ namespace BreathOfEclipse.VFX
                 b.Lifetime = 1.2f;
                 Stars(b, "Stars", 20, new Vector3(0f, 1f, 0f), 0.8f, 1f);
             });
+        }
+    }
+
+    /// <summary>Moves the children of an orbit pivot in and out along their directions over time (Silver Orbit).</summary>
+    public sealed class OrbitRadiusCurve : MonoBehaviour, IVfxPart
+    {
+        public AnimationCurve Radius = AnimationCurve.Constant(0f, 1f, 2f);
+        public float Duration = 1f;
+        private float _age;
+        private Vector3[] _dirs;
+
+        public void Restart()
+        {
+            _age = 0f;
+            Apply();
+        }
+
+        private void Update()
+        {
+            _age += Time.deltaTime;
+            Apply();
+        }
+
+        private void Apply()
+        {
+            if (_dirs == null || _dirs.Length != transform.childCount)
+            {
+                _dirs = new Vector3[transform.childCount];
+                for (int i = 0; i < _dirs.Length; i++)
+                {
+                    Vector3 p = transform.GetChild(i).localPosition;
+                    _dirs[i] = p.sqrMagnitude > 1e-4f ? p.normalized : Vector3.forward;
+                }
+            }
+            float r = Radius.Evaluate(Mathf.Clamp01(_age / Mathf.Max(0.01f, Duration)));
+            for (int i = 0; i < _dirs.Length; i++) transform.GetChild(i).localPosition = _dirs[i] * r;
         }
     }
 

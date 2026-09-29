@@ -404,6 +404,22 @@ namespace BreathOfEclipse.Characters
             sheathe.headEuler = new Vector3(-10f, 30f, 0f);
             Clip("SkillSheathe", K(1f, sheathe, Ease.Out));
 
+            // Visible inhale before a form: the stance settles, then the chest opens and rises, shoulders lift a
+            // little (hands follow) and the chin comes up slightly. Subtle on purpose: 0.15-0.6 s.
+            var inhaleA = Stance(b, new Vector3(-0.16f, 0f, 0.2f), new Vector3(0.18f, 0f, -0.2f), 0.1f, -14f);
+            inhaleA.spineEuler.x -= 2f;
+            inhaleA.chestEuler.x -= 5f;
+            inhaleA.headEuler.x -= 3f;
+            var inhaleB = Stance(b, new Vector3(-0.16f, 0f, 0.2f), new Vector3(0.18f, 0f, -0.2f), 0.06f, -14f);
+            inhaleB.spineEuler.x -= 4f;
+            inhaleB.chestEuler = new Vector3(inhaleB.chestEuler.x - 12f, inhaleB.chestEuler.y, 0f);
+            inhaleB.headEuler = new Vector3(inhaleB.headEuler.x - 8f, inhaleB.headEuler.y, 0f);
+            inhaleB.handR.y += 0.05f;
+            inhaleB.handL.y += 0.06f;
+            inhaleB.elbowHintR = new Vector3(0.75f, -0.6f, -0.3f);
+            inhaleB.elbowHintL = new Vector3(-0.75f, -0.6f, -0.3f);
+            Clip("SkillInhale", K(0.35f, inhaleA, Ease.Out), K(1f, inhaleB, Ease.InOut));
+
             var drawA = FreeLeft(Stance(Slash(b, -6f, -70f, 1f, 0.45f, 0f), new Vector3(-0.18f, 0f, 0.62f), new Vector3(0.24f, 0f, -0.5f), 0.3f, -10f), new Vector3(-0.3f, 0.85f, 0.05f));
             var drawB = FreeLeft(Stance(Slash(b, -6f, 40f, 1f, 0.52f, 0f), new Vector3(-0.18f, 0f, 0.62f), new Vector3(0.24f, 0f, -0.5f), 0.28f, 10f), new Vector3(-0.4f, 0.9f, -0.1f));
             var drawC = FreeLeft(Stance(Slash(b, -6f, 135f, 1f, 0.55f, 0f), new Vector3(-0.18f, 0f, 0.62f), new Vector3(0.24f, 0f, -0.5f), 0.3f, 25f), new Vector3(-0.45f, 0.95f, -0.2f));

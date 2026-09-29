@@ -154,6 +154,19 @@ namespace BreathOfEclipse.Tests
             b.Gain(BreathSource.Hit);
             Assert.AreEqual(b.HitGain * 2f, b.Current, 0.001f);
         }
+
+        [Test]
+        public void Tick_RestingBreathRefillsOnlyUpToCap()
+        {
+            var b = new BreathGaugeModel(100f) { RestingRegen = 10f, RestingCap = 0.4f };
+            b.Tick(1f);
+            Assert.AreEqual(10f, b.Current, 0.001f);
+            for (int i = 0; i < 20; i++) b.Tick(1f);
+            Assert.AreEqual(40f, b.Current, 0.001f);
+            b.Add(30f, BreathSource.Hit);
+            b.Tick(5f);
+            Assert.AreEqual(70f, b.Current, 0.001f, "resting breath never drains or tops up past the cap");
+        }
     }
 
     public class CooldownTrackerTests

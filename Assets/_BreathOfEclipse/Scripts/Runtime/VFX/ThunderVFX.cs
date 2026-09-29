@@ -153,6 +153,123 @@ namespace BreathOfEclipse.VFX
             });
 
             RegisterFlashBreaker();
+            RegisterForms();
+        }
+
+        // =================================================================== IV / VI / VII
+        // Lightning Fang: a spear of light that pierces a line, the line discharges a beat later.
+        // Searing Thread: five flash cuts around one enemy, then the threads snap shut on it.
+        // Broken Horizon: a long crossing, a silent sheathe, then the horizon itself cracks open.
+
+        private static void RegisterForms()
+        {
+            // Spearhead carried in front of the body during the piercing dash (+Z = facing).
+            VFXLibrary.Register("thunder_fang_head", b =>
+            {
+                b.Lifetime = 0.6f;
+                var tip = b.Shape("Tip", ProceduralMeshes.Cone(8), b.Additive(ProceduralTextures.Glow), new Vector3(0f, 1.05f, 0.9f), new Vector3(90f, 0f, 0f),
+                    new Vector3(0.3f, 0.6f, 0.3f), new Vector3(0.18f, 1.1f, 0.18f), 0.35f, Color.white * 4f);
+                tip.AlphaCurve = CommonVFX.QuickFade;
+                CommonVFX.Glint(b, "Point", Color.white * 5f, 1.1f, 0.2f, new Vector3(0f, 1.05f, 1.4f));
+                b.Particles("Wake", b.Additive(ProceduralTextures.Streak), new Vector3(0f, 1f, 0.4f)).Duration(0.25f).Rate(VFXQuality.Secondary ? 160f : 70f)
+                    .Shape(ParticleSystemShapeType.Sphere, 0.35f).Life(0.1f, 0.22f).Speed(0f, 0f).Velocity(new Vector3(0f, 0f, -14f))
+                    .Size(0.02f, 0.05f).Color(b.Pal.Bright, Color.white * 3f).Stretch(3f, 0.03f).Fade(0.01f, 0.3f);
+                for (int i = 0; i < 2; i++)
+                {
+                    var arc = b.Bolt("Arc" + i, new Vector3(i == 0 ? 0.3f : -0.3f, 0.9f, 0.2f), new Vector3(0f, 1.05f, 1.3f), 0.04f, 0.25f, b.Pal.Bright, i * 0.05f, 1);
+                    arc.Jaggedness = 0.8f;
+                }
+            });
+
+            // The pierced line discharges (authored along +Z 0..1, stretched by LastPath).
+            VFXLibrary.Register("thunder_fang_burst", b =>
+            {
+                b.Lifetime = 1.3f;
+                bool extra = VFXQuality.Secondary;
+                int pillars = extra ? 6 : 3;
+                for (int i = 0; i < pillars; i++)
+                {
+                    float z = (i + 0.5f) / pillars;
+                    var p = b.Bolt("Pillar" + i, new Vector3(Random.Range(-0.2f, 0.2f), 0.05f, z), new Vector3(Random.Range(-0.3f, 0.3f), Random.Range(2f, 2.8f), z),
+                        0.12f, 0.35f, i % 2 == 0 ? Color.white * 4f : b.Pal.Bright, i * 0.035f, 2);
+                    p.Points = 14;
+                    p.Jaggedness = 0.35f;
+                }
+                var line = b.Bolt("Line", new Vector3(0f, 1f, 0f), new Vector3(0f, 1f, 1f), 0.1f, 0.4f, b.Pal.Bright, 0f, 2);
+                line.Points = 22;
+                line.Jaggedness = 2.2f;
+                var ground = b.Bolt("Ground", new Vector3(0f, 0.05f, 0f), new Vector3(0f, 0.05f, 1f), 0.06f, 0.6f, b.Pal.Accent, 0.05f, 1);
+                ground.Points = 18;
+                ground.Jaggedness = 3f;
+                ground.Flat = true;
+                var sheet = b.Shape("Glow", ProceduralMeshes.Primitive(PrimitiveType.Cylinder), b.Additive(ProceduralTextures.Glow), new Vector3(0f, 1f, 0.5f),
+                    new Vector3(90f, 0f, 0f), new Vector3(0.9f, 0.5f, 0.9f), new Vector3(0.2f, 0.5f, 0.2f), 0.45f, b.Pal.Core);
+                sheet.AlphaCurve = CommonVFX.PopFade;
+                b.Particles("Sparks", b.Additive(ProceduralTextures.Streak), new Vector3(0f, 1f, 0.5f)).Burst(extra ? 70 : 30)
+                    .Shape(ParticleSystemShapeType.Box, 0.2f, 0f, 360f, new Vector3(0.4f, 0.6f, 1f)).Life(0.25f, 0.6f).Speed(3f, 9f)
+                    .Size(0.03f, 0.07f).Color(b.Pal.Bright, b.Pal.Accent).Stretch(1.5f, 0.05f).Gravity(0.8f).Fade(0.01f, 0.4f);
+                b.Decal("Scorch", ProceduralTextures.Crack, new Color(1f, 0.95f, 0.7f, 0.7f), 1.6f, 2f, new Vector3(0f, 0f, 0.5f));
+                b.Light("Light", new Vector3(0f, 1f, 0.5f), b.Pal.Bright, 12f, 10f, 0.35f);
+            });
+
+            // Threads snap shut on the target (authored at the target, centred at the chest).
+            VFXLibrary.Register("thunder_thread_snap", b =>
+            {
+                b.Lifetime = 1.2f;
+                int threads = VFXQuality.Secondary ? 8 : 5;
+                for (int i = 0; i < threads; i++)
+                {
+                    float a = i / (float)threads * Mathf.PI * 2f;
+                    Vector3 from = new Vector3(Mathf.Cos(a) * 2.4f, Random.Range(-0.6f, 1.2f), Mathf.Sin(a) * 2.4f);
+                    var t = b.Bolt("Thread" + i, from, Vector3.zero, 0.07f, 0.3f, i % 2 == 0 ? Color.white * 4f : b.Pal.Bright, i * 0.012f, 1);
+                    t.Points = 12;
+                    t.Jaggedness = 0.45f;
+                }
+                var cage = b.Shape("Cage", ProceduralMeshes.Primitive(PrimitiveType.Sphere), b.Additive(ProceduralTextures.Glow), Vector3.zero, Vector3.zero,
+                    Vector3.one * 4.5f, Vector3.one * 0.6f, 0.25f, b.Pal.Core * 0.7f);
+                cage.AlphaCurve = new AnimationCurve(new Keyframe(0f, 0.2f), new Keyframe(0.7f, 1f), new Keyframe(1f, 0f));
+                CommonVFX.Glint(b, "Snap", Color.white * 7f, 3.5f, 0.25f, Vector3.zero, 0.22f);
+                CommonVFX.Sparks(b, "Burst", VFXQuality.Secondary ? 60 : 25, b.Pal.Bright, 8f, 18f, 0.45f, 0.06f, 0.5f, 180f, default, 0.24f);
+                CommonVFX.FlatRing(b, "Ring", b.Pal.Bright, 4f, 0.3f, -1f, 0.24f);
+                b.Light("Light", Vector3.zero, b.Pal.Bright, 10f, 12f, 0.3f, 0.22f);
+            });
+
+            // The horizon breaks (authored along +Z 0..1, stretched over the crossing).
+            VFXLibrary.Register("thunder_horizon", b =>
+            {
+                b.Lifetime = 1.8f;
+                bool extra = VFXQuality.Secondary, full = VFXQuality.Full;
+                var line = b.Shape("Horizon", ProceduralMeshes.Primitive(PrimitiveType.Cylinder), b.Additive(ProceduralTextures.SoftCircle), new Vector3(0f, 1.15f, 0.5f),
+                    new Vector3(90f, 0f, 0f), new Vector3(0.05f, 0.5f, 0.05f), new Vector3(0.02f, 0.62f, 0.02f), 0.6f, Color.white * 9f);
+                line.ScaleCurve = new AnimationCurve(new Keyframe(0f, 0f, 0f, 10f), new Keyframe(0.1f, 1f), new Keyframe(1f, 1f));
+                line.AlphaCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.4f, 1f), new Keyframe(1f, 0f));
+                // A flat sheet of light opening above and below the line: the sky splits.
+                var split = b.Shape("Split", ProceduralMeshes.Primitive(PrimitiveType.Quad), b.Additive(ProceduralTextures.Band), new Vector3(0f, 1.15f, 0.5f),
+                    new Vector3(0f, 90f, 0f), new Vector3(1f, 0.02f, 1f), new Vector3(1f, 2.6f, 1f), 0.5f, b.Pal.Core);
+                split.ScaleCurve = CommonVFX.FastOut;
+                split.AlphaCurve = CommonVFX.PopFade;
+                split.Delay = 0.05f;
+                int branches = full ? 14 : extra ? 9 : 5;
+                for (int i = 0; i < branches; i++)
+                {
+                    float z = (i + Random.Range(0.2f, 0.8f)) / branches;
+                    float up = i % 2 == 0 ? 1f : -0.5f;
+                    var br = b.Bolt("Branch" + i, new Vector3(0f, 1.15f, z), new Vector3(Random.Range(-1.2f, 1.2f), 1.15f + up * Random.Range(1.2f, 2.6f), z + Random.Range(-0.04f, 0.04f)),
+                        0.09f, 0.45f, i % 3 == 0 ? b.Pal.Accent : Color.white * 4f, 0.08f + Random.Range(0f, 0.08f), 2);
+                    br.Points = 14;
+                    br.Jaggedness = 0.7f;
+                }
+                var crack = b.Bolt("Crack", new Vector3(0f, 0.05f, 0f), new Vector3(0f, 0.05f, 1f), 0.1f, 1f, b.Pal.Bright, 0.1f, 2);
+                crack.Points = 26;
+                crack.Jaggedness = 3.5f;
+                crack.Flat = true;
+                b.Particles("Sparks", b.Additive(ProceduralTextures.Streak), new Vector3(0f, 1.15f, 0.5f)).Burst(extra ? 120 : 45).Delay(0.08f)
+                    .Shape(ParticleSystemShapeType.Box, 0.2f, 0f, 360f, new Vector3(0.2f, 0.3f, 1f)).Life(0.3f, 0.8f).Speed(4f, 14f)
+                    .Size(0.03f, 0.08f).Color(b.Pal.Bright, Color.white * 3f).Stretch(1.6f, 0.05f).Gravity(0.7f).Fade(0.01f, 0.4f);
+                if (extra) CommonVFX.Dust(b, "Dust", 12, 1f, 1.2f, new Color(0.35f, 0.35f, 0.4f, 0.45f), 3f);
+                b.Decal("Scar", ProceduralTextures.Crack, new Color(1f, 0.95f, 0.7f, 0.85f), 2.4f, 3f, new Vector3(0f, 0f, 0.5f));
+                b.Light("Light", new Vector3(0f, 1.2f, 0.5f), b.Pal.Bright, 18f, 16f, 0.45f, 0.05f);
+            });
         }
 
         // =================================================================== FLASH BREAKER (First Form) — hero set

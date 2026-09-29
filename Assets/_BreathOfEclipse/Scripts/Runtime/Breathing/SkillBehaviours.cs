@@ -43,7 +43,8 @@ namespace BreathOfEclipse.Breathing
             if (_registry != null) return;
             _registry = new Dictionary<string, ISkillBehaviour>
             {
-                { "blink_chain", new BlinkChainBehaviour() }
+                { "blink_chain", new BlinkChainBehaviour() },
+                { "blink_focus", new BlinkChainBehaviour { FocusSingle = true } }
             };
         }
     }
@@ -51,10 +52,12 @@ namespace BreathOfEclipse.Breathing
     /// <summary>
     /// Flash-steps between several enemies in sequence (Rolling Thunder, Thousand Flashes). Each blink leaves a
     /// light path and afterimages; hits use the phase's first HitSpec. hitCount = number of blinks.
+    /// FocusSingle ("blink_focus"): every blink crosses the current target, criss-crossing it (Searing Thread).
     /// </summary>
     public sealed class BlinkChainBehaviour : ISkillBehaviour
     {
         public bool HandlesHits => true;
+        public bool FocusSingle;
 
         private readonly List<ITargetable> _targets = new List<ITargetable>();
         private readonly List<IDamageable> _buffer = new List<IDamageable>();
@@ -72,6 +75,15 @@ namespace BreathOfEclipse.Breathing
             _timer = 0f;
             _done = 0;
             TargetRegistry.InRadius(exec.Player.transform.position, Mathf.Max(8f, exec.Skill.autoTargetRange), _targets);
+            if (FocusSingle && exec.Target != null)
+            {
+                var focus = exec.Target.GetComponentInParent<ITargetable>();
+                if (focus != null && focus.IsTargetable)
+                {
+                    _targets.Clear();
+                    _targets.Add(focus);
+                }
+            }
             _targets.Sort((a, b) =>
                 Vector3.SqrMagnitude(a.LockOnPoint.position - exec.Player.transform.position)
                     .CompareTo(Vector3.SqrMagnitude(b.LockOnPoint.position - exec.Player.transform.position)));

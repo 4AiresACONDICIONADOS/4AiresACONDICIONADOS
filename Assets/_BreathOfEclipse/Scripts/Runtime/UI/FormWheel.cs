@@ -10,8 +10,9 @@ namespace BreathOfEclipse.UI
 {
     /// <summary>
     /// Breathing form wheel: hold the FormWheel key (F by default) to open a radial list of every form of the
-    /// equipped style (any number, I … XI), aim with the mouse or right stick, release to use it. Time slows
-    /// slightly while it is open. Keys 1-4 remain quick slots.
+    /// equipped style (any number, I … XI — one segment per form), aim with the mouse or right stick, release to
+    /// use it. While it is open, keys 1-4 put the aimed form on that quick slot (saved per style). Time slows
+    /// slightly while it is open.
     /// </summary>
     public sealed class FormWheel : MonoBehaviour
     {
@@ -28,6 +29,7 @@ namespace BreathOfEclipse.UI
             public Image Cooldown;
             public Text Numeral;
             public Text Name;
+            public Text Slot;
         }
 
         public static bool IsOpen { get; private set; }
@@ -74,7 +76,8 @@ namespace BreathOfEclipse.UI
                 ProceduralTextures.UISprite("diamond"));
             _title = UIFactory.Text("Title", _root, "", 30, UIColors.Text, center, center, new Vector2(0f, 18f), new Vector2(420f, 44f),
                 TextAnchor.MiddleCenter, FontStyle.BoldAndItalic);
-            _detail = UIFactory.Text("Detail", _root, "", 18, UIColors.TextDim, center, center, new Vector2(0f, -22f), new Vector2(420f, 60f));
+            _detail = UIFactory.Text("Detail", _root, "", 18, UIColors.TextDim, center, center, new Vector2(0f, -30f), new Vector2(460f, 70f));
+            _detail.supportRichText = true;
         }
 
         private void RebuildSegments(BreathingStyleData style)
@@ -102,6 +105,8 @@ namespace BreathOfEclipse.UI
                     new Vector2(0f, 12f), new Vector2(74f, 74f), TextAnchor.MiddleCenter, FontStyle.Bold);
                 string name = form != null && form.skill != null ? form.skill.displayName : "-";
                 seg.Name = UIFactory.Text("Name", rt, name, 17, UIColors.TextDim, center, center, new Vector2(0f, -40f), new Vector2(190f, 26f));
+                seg.Slot = UIFactory.Text("Slot", rt, "", 18, new Color(1f, 0.9f, 0.55f), center, center, new Vector2(40f, 42f), new Vector2(40f, 26f),
+                    TextAnchor.MiddleCenter, FontStyle.Bold);
                 _segments.Add(seg);
             }
         }
@@ -140,8 +145,25 @@ namespace BreathOfEclipse.UI
             _selected = _aim.magnitude < DeadZone ? -1 : IndexFromAim(_aim, _builtCount);
             _pointer.rectTransform.anchoredPosition = _aim * 0.7f;
 
+            AssignQuickSlots(input, pc);
             RefreshVisuals(pc, style);
             if (!input.FormWheelHeld) Close(input, _selected);
+        }
+
+        /// <summary>1-4 while aiming at a form: that form goes to the quick slot (swaps with its old slot).</summary>
+        private void AssignQuickSlots(InputReader input, PlayerController pc)
+        {
+            float now = Time.unscaledTime;
+            for (int slot = 0; slot < BreathingStyleData.QuickSlotCount; slot++)
+            {
+                var action = (BufferedAction)((int)BufferedAction.Skill1 + slot);
+                if (!input.Buffer.Consume(action, now)) continue;
+                if (_selected < 0) continue;
+                pc.Breathing.AssignQuickSlot(slot, _selected);
+                var form = pc.Breathing.GetForm(_selected);
+                if (form != null && form.skill != null) GameEvents.Notify($"Quick slot {slot + 1}: {Roman.Of(form.formNumber)} · {form.skill.displayName}");
+                Audio.Sfx.Play2D("ui_confirm", 0.5f);
+            }
         }
 
         private static int IndexFromAim(Vector2 aim, int count)
@@ -167,6 +189,8 @@ namespace BreathOfEclipse.UI
                 seg.Back.color = selected ? new Color(accent.r, accent.g, accent.b, 0.95f) : new Color(0.05f, 0.07f, 0.14f, usable ? 0.85f : 0.5f);
                 seg.Numeral.color = usable ? UIColors.Text : UIColors.TextDim;
                 seg.Name.color = selected ? UIColors.Text : UIColors.TextDim;
+                int quick = b.SlotOfForm(i);
+                seg.Slot.text = quick >= 0 ? (quick + 1).ToString() : "";
                 float scale = Mathf.MoveTowards(seg.Root.localScale.x, selected ? 1.18f : 1f, Time.unscaledDeltaTime * 6f);
                 seg.Root.localScale = new Vector3(scale, scale, 1f);
             }
@@ -176,12 +200,12 @@ namespace BreathOfEclipse.UI
             {
                 _title.text = $"{Roman.Of(pick.formNumber)} · {pick.skill.displayName.ToUpperInvariant()}";
                 string state = b.CanUseForm(_selected, out var reason) ? $"Stamina {pick.skill.staminaCost:0}   Breath {pick.skill.breathCost:0}   CD {pick.skill.cooldown:0.#}s" : reason;
-                _detail.text = state;
+                _detail.text = state + "\n<size=15>Release: use · 1-4: set quick slot</size>";
             }
             else
             {
                 _title.text = style.displayName;
-                _detail.text = "Aim at a form and release";
+                _detail.text = $"{style.FormCount} forms · aim and release\n<size=15>aim + 1-4: set quick slot</size>";
             }
         }
 
@@ -194,6 +218,7 @@ namespace BreathOfEclipse.UI
             _group.alpha = 1f;
             _lookWasSuppressed = input.PhysicalLookSuppressed;
             input.PhysicalLookSuppressed = true;
+            input.QuickSlotsCaptured = true;
             if (TimeController.Instance != null) TimeController.Instance.SlowMotion(OpenSlowScale, 30f, SlowId, 0.08f);
         }
 
@@ -201,7 +226,11 @@ namespace BreathOfEclipse.UI
         {
             IsOpen = false;
             _group.alpha = 0f;
-            if (input != null) input.PhysicalLookSuppressed = _lookWasSuppressed;
+            if (input != null)
+            {
+                input.PhysicalLookSuppressed = _lookWasSuppressed;
+                input.QuickSlotsCaptured = false;
+            }
             if (TimeController.Instance != null) TimeController.Instance.CancelSlowMotion(SlowId);
             var pc = PlayerController.Instance;
             if (confirmIndex >= 0 && pc != null) pc.RequestForm(confirmIndex);

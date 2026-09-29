@@ -29,7 +29,7 @@ namespace BreathOfEclipse.Playtest
 
         public static IEnumerable<PlaytestStep> Sweep()
         {
-            yield return new PlaytestStep(C.Techniques, "Technique sweep (20 normal + advanced forms)", TechniqueSweep, 150f);
+            yield return new PlaytestStep(C.Techniques, "Technique sweep (every form of every style)", TechniqueSweep, 300f);
         }
 
         /// <summary>Prepares a clean cast: style equipped, resources full, locked on the dummy at a medium distance.</summary>
@@ -52,6 +52,27 @@ namespace BreathOfEclipse.Playtest
             yield return ctx.LockOnto(dummy, w);
             yield return ctx.WaitGame(0.2f);
             ready.Success = pc.Breathing.Current != null && pc.Breathing.Current.styleId == styleId && ctx.IsLockedOn(dummy);
+        }
+
+        /// <summary>
+        /// Casts a technique of the equipped style the way a player would: its quick slot key when it has one,
+        /// otherwise through the form wheel request. Returns false when the style has no such form.
+        /// </summary>
+        public static bool CastForm(PlaytestContext ctx, string skillId)
+        {
+            var b = ctx.Player.Breathing;
+            var style = b.Current;
+            if (style == null) return false;
+            for (int i = 0; i < style.FormCount; i++)
+            {
+                var form = style.GetForm(i);
+                if (form == null || form.skill == null || form.skill.skillId != skillId) continue;
+                int slot = b.SlotOfForm(i);
+                if (slot >= 0) ctx.Driver.Press(SlotCommand(slot));
+                else ctx.Player.RequestForm(i);
+                return true;
+            }
+            return false;
         }
 
         private static InputCommand SlotCommand(int slot)
@@ -90,7 +111,7 @@ namespace BreathOfEclipse.Playtest
             Vector3 dashStart = Vector3.zero;
             string lastPhase = null;
 
-            ctx.Driver.Press(InputCommand.Skill1);
+            CastForm(ctx, RisingSerpentId);
             var w = new WaitResult();
             yield return ctx.WaitUntil(() => TelemetryRecorder.CountSince(ctx.Telemetry.Skills, mark, RisingSerpentId) > 0, 1f, w);
             bool started = w.Success;
@@ -176,7 +197,7 @@ namespace BreathOfEclipse.Playtest
             Vector3 before = pc.transform.position - dummy.transform.position;
             before.y = 0f;
             float minScale = 1f;
-            ctx.Driver.Press(InputCommand.Skill1);
+            CastForm(ctx, FlashBreakerId);
             var w = new WaitResult();
             bool shot = false;
             yield return ctx.WaitUntil(() =>
@@ -212,15 +233,17 @@ namespace BreathOfEclipse.Playtest
             var styles = pc.Breathing.Styles.ToList();
             foreach (var style in styles)
             {
-                for (int slot = 0; slot < 4 && !ctx.ShouldStop; slot++)
+                // Every form (I … XI), not only the four quick slots: this is what the form wheel exposes.
+                for (int formIndex = 0; formIndex < style.FormCount && !ctx.ShouldStop; formIndex++)
                 {
-                    var skill = style.GetSkill(slot);
+                    var form = style.GetForm(formIndex);
+                    var skill = form != null ? form.skill : null;
                     if (skill == null) continue;
                     total++;
                     var ready = new WaitResult();
                     yield return PrepareCast(ctx, style.styleId, dummy, 5f, ready);
                     float mark = ctx.Telemetry.Mark();
-                    ctx.Driver.Press(SlotCommand(slot));
+                    pc.RequestForm(formIndex);
                     var w = new WaitResult();
                     yield return ctx.WaitUntil(() => TelemetryRecorder.CountSince(ctx.Telemetry.Skills, mark, skill.skillId) > 0, 1f, w);
                     bool started = w.Success;
@@ -231,7 +254,7 @@ namespace BreathOfEclipse.Playtest
                     bool damaging = skill.phases.Any(p => p.hits.Count > 0 || (p.projectile != null && p.projectile.enabled));
                     TestStatus status = !started || !finished || vfx == 0 ? TestStatus.Fail : damaging && hits == 0 ? TestStatus.Warning : TestStatus.Pass;
                     if (status == TestStatus.Pass) ok++;
-                    ctx.Report(C.Techniques, $"{style.displayName} — {skill.displayName}", status,
+                    ctx.Report(C.Techniques, $"{style.displayName} — {Roman.Of(form.formNumber)} {skill.displayName}", status,
                         $"started {started}, finished {finished}, {vfx} VFX, {hits} hit(s){(damaging ? "" : " (no damage by design)")}");
                     yield return ctx.Observe(1f);
                 }

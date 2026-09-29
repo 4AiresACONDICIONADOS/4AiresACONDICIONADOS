@@ -131,6 +131,7 @@ namespace BreathOfEclipse.Player
             breathing.Initialize(this, db.styles, SaveSystem.Settings.lastEquippedStyle);
             breathing.Executor.Finished += OnSkillFinished;
             BreathingVoiceSystem.Attach(breathing);
+            BreathingInhaleSystem.Attach(breathing, this);
         }
 
         private void OnEnable()
@@ -387,7 +388,7 @@ namespace BreathOfEclipse.Player
                 if (fresh && StartForm(form)) return;
             }
 
-            if ((allowed & CancelFlags.Skill) != 0)
+            if ((allowed & CancelFlags.Skill) != 0 && !input.QuickSlotsCaptured)
             {
                 for (int slot = 0; slot < BreathingStyleData.QuickSlotCount; slot++)
                 {

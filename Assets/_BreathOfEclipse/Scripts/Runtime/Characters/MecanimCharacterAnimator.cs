@@ -61,15 +61,37 @@ namespace BreathOfEclipse.Characters
 
         public void PlayAttack(string motionId, float windup, float active, float recovery)
         {
-            _animator.CrossFadeInFixedTime(motionId, crossFade);
+            CrossFade(motionId, crossFade);
             _actionEnd = Time.time + windup + active + recovery;
         }
 
         public void PlayMotion(string motionId, float duration, float blendIn)
         {
-            _animator.CrossFadeInFixedTime(motionId, Mathf.Max(0.01f, blendIn));
+            CrossFade(motionId, Mathf.Max(0.01f, blendIn));
             _actionEnd = Time.time + duration;
         }
+
+        /// <summary>
+        /// Plays the state named after the motion id. Imported controllers rarely have every procedural motion:
+        /// missing states fall back to a family state ("Skill*" → "Skill", "L*"/"H*" → "Attack") and are reported
+        /// once instead of spamming Animator errors.
+        /// </summary>
+        private void CrossFade(string motionId, float blend)
+        {
+            if (string.IsNullOrEmpty(motionId) || _animator == null || _animator.runtimeAnimatorController == null) return;
+            string state = motionId;
+            if (!_animator.HasState(0, Animator.StringToHash(state)))
+            {
+                string family = motionId.StartsWith("Skill") ? "Skill" : "Attack";
+                if (_missingStates.Add(motionId))
+                    Debug.Log($"[MecanimCharacterAnimator] No state '{motionId}' in {_animator.runtimeAnimatorController.name}; using '{family}' when available.");
+                if (!_animator.HasState(0, Animator.StringToHash(family))) return;
+                state = family;
+            }
+            _animator.CrossFadeInFixedTime(state, blend);
+        }
+
+        private readonly System.Collections.Generic.HashSet<string> _missingStates = new System.Collections.Generic.HashSet<string>();
 
         public void StopAction(float blendOut) => _actionEnd = 0f;
 

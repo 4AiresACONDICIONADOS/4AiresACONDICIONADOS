@@ -32,6 +32,9 @@ namespace BreathOfEclipse.Breathing
         private float _announceTime = -100f;
         private float _firstStrikeDelay;
         private Color _color = Color.white;
+        private VoiceDirection _direction = VoiceDirection.Default;
+        private string _variant;
+        private float _styleAnchor;
 
         public static BreathingVoiceSystem Attach(BreathingStyleSystem breathing)
         {
@@ -65,9 +68,14 @@ namespace BreathOfEclipse.Breathing
             if (string.IsNullOrEmpty(style.styleCall)) callStyle = false;
 
             string lang = settings.voiceLanguage;
-            float strike = FirstStrikeDelay(skill);
-            float formAnchor = CueStart(skill, VoiceCue.Form);
-            float nameAnchor = CueStart(skill, VoiceCue.Name);
+            // The call starts once the breath is drawn: everything is shifted by the inhale.
+            float inhale = style.InhaleFor(skill);
+            _direction = style.VoiceFor(skill);
+            _variant = style.styleId;
+            float strike = inhale + FirstStrikeDelay(skill);
+            float formAnchor = inhale + CueStart(skill, VoiceCue.Form);
+            float nameAnchor = inhale + CueStart(skill, VoiceCue.Name);
+            _styleAnchor = inhale + CueStart(skill, VoiceCue.Style);
             // Longest phrasing whose name still lands while the technique is on screen; the attack never waits.
             // Full → "Respiración del Agua… ¡…!" (a style call is only due on first use / style switch, where naming the
             // style matters most) → "Séptima Postura… ¡Serpiente Ascendente!" → just the name.
@@ -89,7 +97,7 @@ namespace BreathOfEclipse.Breathing
                 _lastStyleCallTime = Time.unscaledTime;
             }
             _announceTime = Time.unscaledTime;
-            _firstStrikeDelay = FirstStrikeDelay(skill);
+            _firstStrikeDelay = strike;
             _spoken.Clear();
 
             bool voiced = settings.techniqueVoice;
@@ -111,10 +119,17 @@ namespace BreathOfEclipse.Breathing
         private void BuildLines(string styleCall, bool withStyle, string formCall, bool withForm, string nameCall, string lang, float formAnchor, float nameAnchor)
         {
             _lines.Clear();
-            if (withStyle) Add(styleCall, lang, 0f, 0f, "…");
-            if (withForm) Add(formCall, lang, _lines.Count > 0 ? 0.06f : 0f, formAnchor, string.IsNullOrEmpty(nameCall) ? "" : "…");
-            if (!string.IsNullOrEmpty(nameCall)) Add(nameCall, lang, _lines.Count > 0 ? 0.03f : 0f, nameAnchor, "!", "¡");
+            // Pace tightens (Thunder, Gale) or widens (Water, Moonlight) the gaps; intensity builds towards the name.
+            float gap = 1f / Mathf.Max(0.5f, _direction.pace);
+            float first = Mathf.Max(0f, _styleAnchor);
+            if (withStyle) Add(styleCall, lang, 0f, first, "…", "", Loudness(_direction.styleIntensity));
+            if (withForm) Add(formCall, lang, _lines.Count > 0 ? 0.06f * gap : 0f, Mathf.Max(first, formAnchor), string.IsNullOrEmpty(nameCall) ? "" : "…", "",
+                Loudness(_direction.formIntensity));
+            if (!string.IsNullOrEmpty(nameCall)) Add(nameCall, lang, _lines.Count > 0 ? 0.03f * gap : 0f, Mathf.Max(first, nameAnchor), "!", "¡",
+                Loudness(_direction.nameIntensity));
         }
+
+        private static float Loudness(float intensity) => Mathf.Lerp(0.8f, 1f, Mathf.Clamp01(intensity));
 
         /// <summary>When the last line (the technique name) would start with the current line list.</summary>
         private float NameStart()
@@ -128,12 +143,12 @@ namespace BreathOfEclipse.Breathing
             return start;
         }
 
-        private void Add(string text, string lang, float gap, float notBefore, string suffix, string prefix = "")
+        private void Add(string text, string lang, float gap, float notBefore, string suffix, string prefix, float volume)
         {
             string display = text.Trim();
             if (!string.IsNullOrEmpty(prefix) && !display.StartsWith(prefix)) display = prefix + display;
             if (!string.IsNullOrEmpty(suffix) && !display.EndsWith(suffix)) display += suffix;
-            _lines.Add(new VoiceChannel.Line { Text = display, Clip = VoiceLibrary.Get(lang, text), Gap = gap, NotBefore = notBefore });
+            _lines.Add(new VoiceChannel.Line { Text = display, Clip = VoiceLibrary.Get(lang, text, _variant), Gap = gap, NotBefore = notBefore, Volume = volume });
         }
 
         /// <summary>Start time of the first phase tagged with <paramref name="cue"/> (0 when untagged).</summary>
@@ -188,7 +203,7 @@ namespace BreathOfEclipse.Breathing
         {
             if (!settings.techniqueTitles) return;
             bool ultimate = skill.tier == SkillTier.Ultimate;
-            string formLabel = ultimate ? "FINAL FORM" : form != null ? $"{Roman.Of(form.formNumber)} FORM" : skill.formName.ToUpperInvariant();
+            string formLabel = ultimate ? "FINAL FORM" : form != null ? $"FORM {Roman.Of(form.formNumber)}" : skill.formName.ToUpperInvariant();
             GameEvents.RaiseTechniqueTitle(style.displayName, formLabel, skill.displayName.ToUpperInvariant(), _color, ultimate ? 2f : 1.2f);
         }
 

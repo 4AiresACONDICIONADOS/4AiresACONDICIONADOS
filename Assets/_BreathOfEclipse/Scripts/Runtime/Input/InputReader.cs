@@ -112,6 +112,8 @@ namespace BreathOfEclipse.Core
         /// Simulated look is still applied.
         /// </summary>
         public bool PhysicalLookSuppressed { get; set; }
+        /// <summary>Keys 1-4 assign quick slots (form wheel open) instead of using techniques.</summary>
+        public bool QuickSlotsCaptured { get; set; }
 
         /// <summary>Active simulated input, or null. Development tools only.</summary>
         public SimulatedInput Simulation { get; private set; }

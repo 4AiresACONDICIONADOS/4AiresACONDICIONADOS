@@ -48,7 +48,9 @@ namespace BreathOfEclipse.Data
         /// <summary>Arcs of lightning jumping between nearby enemies.</summary>
         ChainLightning = 7,
         /// <summary>Several strikes at random enemies/points around the target.</summary>
-        ScatterAroundTarget = 8
+        ScatterAroundTarget = 8,
+        /// <summary>Along the path travelled by the last phase that moved (the cut that appears after the dash).</summary>
+        AlongLastPath = 9
     }
 
     public enum VFXAnchor
@@ -62,7 +64,9 @@ namespace BreathOfEclipse.Data
         InFront = 6,
         /// <summary>Midpoint of the path travelled in this phase (flash-step lines).</summary>
         Path = 7,
-        SkyAboveTarget = 8
+        SkyAboveTarget = 8,
+        /// <summary>Stretched over the path travelled by the last phase that moved (delayed detonations).</summary>
+        LastPath = 9
     }
 
     /// <summary>Which part of the technique call should start (at the earliest) when this phase begins.</summary>
@@ -75,6 +79,50 @@ namespace BreathOfEclipse.Data
         Form = 2,
         /// <summary>"¡Serpiente Ascendente!"</summary>
         Name = 3
+    }
+
+    /// <summary>How the swordsman says a call (drives the voice generator and runtime delivery).</summary>
+    public enum VoiceEmotion
+    {
+        Neutral = 0,
+        /// <summary>Water: calm, controlled, elegant.</summary>
+        Calm = 1,
+        /// <summary>Thunder: fast, explosive, short final line.</summary>
+        Explosive = 2,
+        /// <summary>Ember: deep, powerful, intense.</summary>
+        Deep = 3,
+        /// <summary>Gale: wild, aggressive, quick.</summary>
+        Wild = 4,
+        /// <summary>Moonlight: cold, serene, threatening.</summary>
+        Cold = 5
+    }
+
+    /// <summary>
+    /// Voice direction of a call: emotion plus the intensity of each part (style → form → technique name build
+    /// up) and the pace (gap scale between parts). Used by the offline voice generator (expressiveness per clip)
+    /// and at runtime (gaps and loudness). Never shifts the pitch.
+    /// </summary>
+    [Serializable]
+    public struct VoiceDirection
+    {
+        public VoiceEmotion emotion;
+        [Range(0f, 1f)] public float styleIntensity;
+        [Range(0f, 1f)] public float formIntensity;
+        [Range(0f, 1f)] public float nameIntensity;
+        [Tooltip("1 = normal. Higher = tighter gaps between the parts of the call.")]
+        [Range(0.5f, 2f)] public float pace;
+
+        public VoiceDirection(VoiceEmotion emotion, float styleIntensity, float formIntensity, float nameIntensity, float pace)
+        {
+            this.emotion = emotion;
+            this.styleIntensity = styleIntensity;
+            this.formIntensity = formIntensity;
+            this.nameIntensity = nameIntensity;
+            this.pace = pace;
+        }
+
+        public bool IsSet => pace > 0f;
+        public static VoiceDirection Default => new VoiceDirection(VoiceEmotion.Neutral, 0.4f, 0.5f, 0.8f, 1f);
     }
 
     public enum TrailMode
@@ -290,6 +338,12 @@ namespace BreathOfEclipse.Data
         [Tooltip("e.g. 'Séptima Postura' / 'Forma Final'. Empty = built from the form number.")] public string voiceFormCall = "";
         [Tooltip("e.g. 'Serpiente Ascendente'. Empty = the name is not spoken.")] public string voiceTechniqueCall = "";
         [Tooltip("None = inherit the breathing style element.")] public Element element = Element.None;
+        [Tooltip("Overrides the style's voice direction for this technique when its pace is > 0.")]
+        public VoiceDirection voiceDirection;
+
+        [Header("Breathing (inhale)")]
+        [Tooltip("Seconds of visible inhale before the first phase. -1 = the style default (forms / ultimate).")]
+        public float inhaleDuration = -1f;
 
         [Header("Cost")]
         public float staminaCost = 12f;

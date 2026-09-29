@@ -17,7 +17,11 @@ namespace BreathOfEclipse.Characters
             public MotionClip Clip;
             public float[] Times;
             public bool IsAttack;
-            public float Windup, Active;
+            public float Windup, Active, Recovery;
+            /// <summary>-1..1: sword hand travels right→left (negative) or left→right (positive).</summary>
+            public float SwingSign;
+            /// <summary>Body involvement: heavier / longer swings drive the hips and torso further.</summary>
+            public float BodyAmount = 1f;
             public float Elapsed;
             public MotionPose Start;
             public float BlendOutStart = float.PositiveInfinity;
@@ -117,6 +121,9 @@ namespace BreathOfEclipse.Characters
                 IsAttack = true,
                 Windup = windup,
                 Active = active,
+                Recovery = Mathf.Max(0.05f, recovery),
+                SwingSign = Mathf.Clamp((clip.Keys[n - 1].pose.handR.x - clip.Keys[0].pose.handR.x) / 0.4f, -1f, 1f),
+                BodyAmount = Mathf.Clamp(0.8f + (windup + active) * 1.4f, 0.8f, 1.45f),
                 Start = _output,
                 BlendOutStart = windup + active + recovery * 0.35f,
                 BlendOutDuration = Mathf.Max(0.05f, recovery * 0.65f)
@@ -203,7 +210,17 @@ namespace BreathOfEclipse.Characters
         {
             if (_rig == null) return;
             float dt = Time.deltaTime;
-            if (dt <= 0f) return; // hit stop: freeze the pose
+            if (dt <= 0f)
+            {
+                // Hit stop: the pose freezes; a character that was just hit shudders so the contact reads.
+                if (_hitTimer > 0f && _visual != null)
+                {
+                    float j = 0.03f * _hitStrength * _rig.Scale;
+                    float tu = Time.unscaledTime;
+                    _visual.localPosition = _output.visualOffset * _rig.Scale + new Vector3(Mathf.Sin(tu * 95f) * j, 0f, Mathf.Cos(tu * 71f) * j * 0.5f);
+                }
+                return;
+            }
             _output = Evaluate(dt);
             ApplyPose(_output, false);
         }
@@ -253,6 +270,11 @@ namespace BreathOfEclipse.Characters
                 pose.hips.y -= (0.03f + 0.03f * (0.5f + 0.5f * Mathf.Cos(_phase * 2f))) * move;
                 pose.hipsEuler.y += sinL * 8f * move;
                 pose.chestEuler.y -= sinL * 6f * move;
+                // Shoulders rock with the stride, the head stays level, the pelvis rolls over the planted leg.
+                pose.chestEuler.z += cosL * 3f * move;
+                pose.headEuler.z -= cosL * 2f * move;
+                pose.hipsEuler.z -= cosL * 2.5f * move;
+                pose.headEuler.x += Mathf.Abs(sinL) * 1.5f * move * (1f + _sprintWeight);
                 if (pose.twoHand < 0.5f)
                 {
                     pose.handL += new Vector3(0f, 0f, -sinL * 0.2f * move);
@@ -262,11 +284,16 @@ namespace BreathOfEclipse.Characters
             }
             else
             {
-                // idle breathing
+                // idle breathing, plus a slow weight shift between the feet; the combat stance breathes deeper
+                // and bounces slightly on the balls of the feet, ready to move.
                 _breathTime += dt;
                 float br = Mathf.Sin(_breathTime * 2.1f);
-                pose.chestEuler.x += br * 1.3f;
-                pose.hips.y += br * 0.006f;
+                float shift = Mathf.Sin(_breathTime * 0.45f);
+                pose.chestEuler.x += br * (1.3f + _combatWeight * 0.9f);
+                pose.hips.y += br * 0.006f - _combatWeight * 0.012f * (0.5f + 0.5f * Mathf.Sin(_breathTime * 4.2f));
+                pose.hips.x += shift * 0.018f;
+                pose.hipsEuler.z += shift * 1.5f;
+                pose.headEuler.z -= shift * 1f;
                 pose.handR.y += br * 0.008f;
             }
 
@@ -297,6 +324,7 @@ namespace BreathOfEclipse.Characters
                 }
                 _action.Weight = w;
                 pose = MotionPose.Lerp(pose, actionPose, MotionPose.Evaluate(Ease.InOut, w));
+                if (_action.IsAttack) pose = BodyMechanics(pose, _action);
                 if (w <= 0f) _action = null;
             }
 
@@ -348,6 +376,52 @@ namespace BreathOfEclipse.Characters
                 pose.headEuler.x = Mathf.Lerp(pose.headEuler.x, lookPitch * 0.7f, w);
             }
 
+            return pose;
+        }
+
+        /// <summary>
+        /// Whole-body attack mechanics on top of the arm/blade clip: coil away from the cut and sink in the
+        /// anticipation, uncoil through hips → spine → chest (shoulders lead, head stays on the target) and step
+        /// into the strike, then settle through the follow-through. The legs, hips and torso sell the weight.
+        /// </summary>
+        private static MotionPose BodyMechanics(MotionPose pose, ActionTrack a)
+        {
+            float t = a.Elapsed;
+            float coil, drive;
+            if (t < a.Windup)
+            {
+                coil = Mathf.SmoothStep(0f, 1f, t / a.Windup);
+                drive = 0f;
+            }
+            else if (t < a.Windup + a.Active)
+            {
+                float u = (t - a.Windup) / a.Active;
+                float e = 1f - (1f - u) * (1f - u);
+                coil = 1f - e;
+                drive = e;
+            }
+            else
+            {
+                float u = Mathf.Clamp01((t - a.Windup - a.Active) / a.Recovery);
+                coil = 0f;
+                drive = 1f - Mathf.SmoothStep(0f, 1f, u);
+            }
+            float k = a.Weight * a.BodyAmount;
+            float s = a.SwingSign;
+            float twist = -10f * coil + 16f * drive;
+            pose.hipsEuler.y += twist * s * k;
+            pose.spineEuler.y += (-7f * coil + 10f * drive) * s * k;
+            pose.chestEuler.y += (-16f * coil + 24f * drive) * s * k;
+            pose.chestEuler.z += (4f * coil - 6f * drive) * s * k;
+            pose.headEuler.y += (8f * coil - 12f * drive) * s * k;
+            pose.hips.y -= (0.035f * coil + 0.055f * drive) * k;
+            pose.hips.z += 0.07f * drive * k;
+            pose.visualEuler.x += (-3f * coil + 7f * drive) * k;
+            // Step into the cut: the lead foot slides forward with a small lift, the rear foot pushes off.
+            pose.footL.z += 0.17f * drive * k;
+            pose.footL.y += 0.05f * Mathf.Sin(Mathf.Clamp01(drive) * Mathf.PI) * k;
+            pose.footR.z -= 0.06f * drive * k;
+            pose.elbowHintR += new Vector3(0f, 0.08f * coil, -0.05f * drive) * k;
             return pose;
         }
 

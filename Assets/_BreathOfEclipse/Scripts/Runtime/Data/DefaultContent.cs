@@ -57,7 +57,8 @@ namespace BreathOfEclipse.Data
             a.motionId = motion ?? id;
             a.poiseDamage = 8f + damage * 8f;
             bool heavy = cat != DamageCategory.Light;
-            a.hitStop = cat == DamageCategory.Light ? 0.025f : cat == DamageCategory.Heavy ? 0.045f : 0.07f;
+            // Contact weight: light ~3 frames, heavy ~4, finishers / counters ~6 of hit stop.
+            a.hitStop = cat == DamageCategory.Light ? 0.045f : cat == DamageCategory.Heavy ? 0.07f : 0.1f;
             a.cameraShake = heavy ? 0.28f : 0.1f;
             a.swingSfx = heavy ? "slash_heavy" : "slash";
             a.hitSfx = heavy ? "hit_heavy" : "hit";
@@ -69,9 +70,10 @@ namespace BreathOfEclipse.Data
 
         private static ComboData Combos()
         {
-            var L1 = Attack("L1", "Crescent Cut", DamageCategory.Light, 0.1f, 0.1f, 0.28f, 1f);
-            var L2 = Attack("L2", "Returning Cut", DamageCategory.Light, 0.08f, 0.1f, 0.28f, 1.05f);
-            var L3 = Attack("L3", "Rising Cut", DamageCategory.Light, 0.1f, 0.11f, 0.3f, 1.15f);
+            // Snappy lights: short anticipation, fast contact, follow-through that cancels early into the next cut.
+            var L1 = Attack("L1", "Crescent Cut", DamageCategory.Light, 0.085f, 0.09f, 0.25f, 1f);
+            var L2 = Attack("L2", "Returning Cut", DamageCategory.Light, 0.075f, 0.09f, 0.25f, 1.05f);
+            var L3 = Attack("L3", "Rising Cut", DamageCategory.Light, 0.09f, 0.1f, 0.27f, 1.15f);
             var L4 = Attack("L4", "Eclipse Whirl", DamageCategory.Finisher, 0.14f, 0.22f, 0.38f, 1.9f, HitReaction.Knockback, 6f, 1.2f);
             L4.isFinisher = true;
             L4.arcRadius = 2.4f;

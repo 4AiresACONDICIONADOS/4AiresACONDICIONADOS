@@ -119,7 +119,9 @@ namespace BreathOfEclipse.Data
             float start = comboStart < 0f ? activeEnd - 0.05f : comboStart;
             cancelWindows = new List<CancelWindow>
             {
-                new CancelWindow(CancelFlags.Attack | CancelFlags.Skill | CancelFlags.Ultimate, Mathf.Clamp01(start), 1f),
+                new CancelWindow(CancelFlags.Attack, Mathf.Clamp01(start), 1f),
+                // Attack → technique as soon as the blade connects (anime flow: cut, then breathing form).
+                new CancelWindow(CancelFlags.Skill | CancelFlags.Ultimate, Mathf.Clamp01(Mathf.Min(start, ActiveStartNormalized + 0.02f)), 1f),
                 new CancelWindow(CancelFlags.Dodge | CancelFlags.Block, Mathf.Clamp01(ActiveStartNormalized * 0.6f), 1f),
                 new CancelWindow(CancelFlags.Jump | CancelFlags.Move, Mathf.Clamp01(activeEnd + 0.12f), 1f)
             };

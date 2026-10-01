@@ -352,6 +352,94 @@ namespace BreathOfEclipse.Audio
                     return Make(id, 0.05f, (t, i) => Mathf.Sin(2f * Mathf.PI * 2200f * t) * Env(t, 0.001f, 0.01f) * 0.5f);
                 case "ui_confirm":
                     return Make(id, 0.35f, (t, i) => (Mathf.Sin(2f * Mathf.PI * (t < 0.1f ? 880f : 1320f) * t)) * Env(t, 0.002f, 0.12f));
+                // ---- v0.5 world one-shots (ambient creatures, village work, bells).
+                case "amb_bird":
+                    return Make(id, 0.9f, (t, i) =>
+                    {
+                        // Three to five quick upward chirps.
+                        float seg = t / 0.17f;
+                        int n = (int)seg;
+                        if (n > 4) return 0f;
+                        float k = seg - n;
+                        float f = 2600f + 1500f * k + 300f * n;
+                        return Mathf.Sin(2f * Mathf.PI * f * t) * Mathf.Sin(Mathf.Clamp01(k / 0.55f) * Mathf.PI) * 0.6f;
+                    });
+                case "amb_crow":
+                    return Make(id, 0.5f, (t, i) =>
+                    {
+                        float k = t / 0.5f;
+                        float saw = ((t * (520f - 140f * k)) % 1f) * 2f - 1f;
+                        return bp.BandPass(saw + rng.Next() * 0.3f, 1300f, 1.4f, SampleRate) * Mathf.Sin(k * Mathf.PI) * 2f;
+                    });
+                case "amb_owl":
+                    return Make(id, 1.4f, (t, i) =>
+                    {
+                        // "hoo — hoo-hoo": soft low sine bursts.
+                        float a = t < 0.35f ? Mathf.Sin(t / 0.35f * Mathf.PI) : t > 0.6f && t < 0.85f ? Mathf.Sin((t - 0.6f) / 0.25f * Mathf.PI) : t > 0.95f && t < 1.35f ? Mathf.Sin((t - 0.95f) / 0.4f * Mathf.PI) : 0f;
+                        return (Mathf.Sin(2f * Mathf.PI * 370f * t) + 0.25f * Mathf.Sin(2f * Mathf.PI * 740f * t)) * a * a;
+                    });
+                case "amb_frog":
+                    return Make(id, 0.45f, (t, i) =>
+                    {
+                        float pulse = Mathf.Max(0f, Mathf.Sin(2f * Mathf.PI * 22f * t));
+                        float body = Mathf.Sin(2f * Mathf.PI * (420f - 90f * t) * t) + 0.4f * Mathf.Sin(2f * Mathf.PI * 1250f * t);
+                        return body * pulse * Mathf.Sin(t / 0.45f * Mathf.PI);
+                    });
+                case "amb_growl_far":
+                    return Make(id, 1.8f, (t, i) =>
+                    {
+                        float k = t / 1.8f;
+                        float saw = ((t * (58f + 10f * Mathf.Sin(t * 9f))) % 1f) * 2f - 1f;
+                        float body = lp.LowPass(saw + rng.Next() * 0.5f, 0.04f) * 3f;
+                        return body * Mathf.Sin(k * Mathf.PI) * (0.7f + 0.3f * Mathf.Sin(t * 13f));
+                    });
+                case "hammer_clink":
+                    return Make(id, 0.7f, (t, i) =>
+                    {
+                        float ring = Mathf.Sin(2f * Mathf.PI * 1870f * t) + 0.6f * Mathf.Sin(2f * Mathf.PI * 4320f * t) + 0.3f * Mathf.Sin(2f * Mathf.PI * 6110f * t);
+                        return (ring * Env(t, 0.001f, 0.16f) + rng.Next() * Env(t, 0.0005f, 0.01f)) * 0.6f;
+                    });
+                case "wood_chop":
+                    return Make(id, 0.4f, (t, i) =>
+                    {
+                        float thud = Mathf.Sin(2f * Mathf.PI * (160f - 60f * t) * t) * Env(t, 0.001f, 0.06f);
+                        float crack = bp.BandPass(rng.Next(), 1800f, 1.2f, SampleRate) * Env(t, 0.0005f, 0.03f) * 3f;
+                        return thud + crack;
+                    });
+                case "amb_drip":
+                    return Make(id, 1.2f, (t, i) =>
+                    {
+                        // Drop plink with two cave echoes.
+                        float s0 = Mathf.Sin(2f * Mathf.PI * (1900f + 900f * Mathf.Exp(-t * 60f)) * t) * Env(t, 0.0005f, 0.05f);
+                        float t1 = t - 0.23f, t2 = t - 0.47f;
+                        float s1 = t1 > 0f ? Mathf.Sin(2f * Mathf.PI * 1900f * t1) * Env(t1, 0.001f, 0.07f) * 0.35f : 0f;
+                        float s2 = t2 > 0f ? Mathf.Sin(2f * Mathf.PI * 1900f * t2) * Env(t2, 0.001f, 0.09f) * 0.15f : 0f;
+                        return s0 + s1 + s2;
+                    });
+                case "bell":
+                    return Make(id, 5f, (t, i) =>
+                    {
+                        // Temple bell: inharmonic partials, slow beating, long decay.
+                        const float f = 196f;
+                        float b = Mathf.Sin(2f * Mathf.PI * f * t) * (1f + 0.15f * Mathf.Sin(t * 5f)) + 0.6f * Mathf.Sin(2f * Mathf.PI * f * 2.76f * t) * Mathf.Exp(-t * 0.9f)
+                                  + 0.35f * Mathf.Sin(2f * Mathf.PI * f * 5.4f * t) * Mathf.Exp(-t * 1.8f) + 0.2f * Mathf.Sin(2f * Mathf.PI * f * 8.93f * t) * Mathf.Exp(-t * 3f);
+                        return b * Env(t, 0.004f, 1.6f) + rng.Next() * Env(t, 0.001f, 0.015f) * 0.4f;
+                    });
+                case "bell_alarm":
+                    return Make(id, 1.1f, (t, i) =>
+                    {
+                        // Watchtower alarm: a hard strike on a small bronze bell.
+                        const float f = 640f;
+                        float b = Mathf.Sin(2f * Mathf.PI * f * t) + 0.7f * Mathf.Sin(2f * Mathf.PI * f * 2.4f * t) * Mathf.Exp(-t * 3f) + 0.4f * Mathf.Sin(2f * Mathf.PI * f * 4.1f * t) * Mathf.Exp(-t * 6f);
+                        return b * Env(t, 0.002f, 0.35f) + rng.Next() * Env(t, 0.0005f, 0.008f) * 0.6f;
+                    });
+                case "door_slide":
+                    return Make(id, 0.55f, (t, i) =>
+                    {
+                        float k = t / 0.55f;
+                        float rub = bp.BandPass(rng.Next(), 700f + 300f * k, 1.5f, SampleRate) * (0.6f + 0.4f * Mathf.Sin(t * 70f));
+                        return rub * Mathf.Sin(k * Mathf.PI) + Mathf.Sin(2f * Mathf.PI * 140f * t) * (k > 0.88f ? Env(t - 0.484f, 0.001f, 0.04f) : 0f) * 1.5f;
+                    });
                 default:
                     return null;
             }

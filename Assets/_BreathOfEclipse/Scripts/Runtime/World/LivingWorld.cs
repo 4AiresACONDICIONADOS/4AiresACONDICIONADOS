@@ -21,6 +21,7 @@ namespace BreathOfEclipse.World
         public WorldSectorSystem Sectors { get; private set; }
         public NavGraph Nav { get; private set; }
         public WorldHud Hud { get; private set; }
+        public WorldAmbience Ambience { get; private set; }
         public PlayerController Player { get; private set; }
         /// <summary>True when this session continued a saved world.</summary>
         public bool Continued { get; private set; }
@@ -72,6 +73,12 @@ namespace BreathOfEclipse.World
             Sectors.SectorChanged += OnSectorChanged;
             Sectors.LoadAround(focus, true);
             Hud = WorldHud.Create(this);
+            Ambience = WorldAmbience.Create(this);
+            // The shrine bell marks dawn and dusk.
+            Time.PhaseChanged += (from, to) =>
+            {
+                if (to == DayPhase.Dawn || to == DayPhase.Sunset) Ambience.ShrineBell();
+            };
         }
 
         public void BindPlayer(PlayerController player)

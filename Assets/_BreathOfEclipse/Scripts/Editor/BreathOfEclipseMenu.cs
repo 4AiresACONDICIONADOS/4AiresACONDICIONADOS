@@ -16,7 +16,7 @@ namespace BreathOfEclipse.EditorTools
 
         private static readonly string[] SceneOrder =
         {
-            SceneNames.Boot, SceneNames.MainMenu, SceneNames.MoonlitForest, SceneNames.CombatTest
+            SceneNames.Boot, SceneNames.MainMenu, SceneNames.MoonlitForest, SceneNames.CombatTest, SceneNames.FrontierRegion
         };
 
         private static string ScenePath(string name) => $"{SceneFolder}/{name}.unity";
@@ -41,6 +41,9 @@ namespace BreathOfEclipse.EditorTools
 
         [MenuItem("Breath of Eclipse/Scenes/03 Combat Test", priority = 23)]
         private static void OpenCombatTest() => Open(SceneNames.CombatTest);
+
+        [MenuItem("Breath of Eclipse/Scenes/04 Frontier Region (Living World)", priority = 24)]
+        private static void OpenFrontier() => Open(SceneNames.FrontierRegion);
 
         private static void Open(string scene)
         {

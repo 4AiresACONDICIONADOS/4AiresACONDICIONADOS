@@ -1,5 +1,6 @@
-// Breath of Eclipse — procedural night sky on a camera-following sphere: gradient, stars, a large moon with
-// craters and halo, moonlit wisps of cloud, horizon blended into the scene fog. Reacts to flash frames.
+// Breath of Eclipse — procedural sky on a camera-following sphere: gradient, stars, a large moon with craters and
+// halo, wisps of cloud, horizon blended into the scene fog, and (open world) a sun with daytime clouds; the
+// WorldTimeSystem drives sun / moon / star visibility through the day. Reacts to flash frames.
 Shader "BreathOfEclipse/SkyDome"
 {
     Properties
@@ -11,6 +12,12 @@ Shader "BreathOfEclipse/SkyDome"
         _MoonSize ("Moon Angular Radius (rad)", Range(0.01, 0.4)) = 0.08
         _NoiseTex ("Noise", 2D) = "gray" {}
         _StarDensity ("Star Density", Range(0, 1)) = 0.5
+        _StarVisibility ("Star Visibility", Range(0, 1)) = 1
+        _MoonVisibility ("Moon Visibility", Range(0, 1)) = 1
+        [HDR] _SunColor ("Sun (black = none)", Color) = (0, 0, 0, 1)
+        _SunDir ("Sun Direction", Vector) = (0, 1, 0, 0)
+        _CloudColor ("Day Cloud Color", Color) = (1, 1, 1, 1)
+        _CloudDay ("Day Clouds", Range(0, 1)) = 0
     }
 
     SubShader
@@ -39,6 +46,12 @@ Shader "BreathOfEclipse/SkyDome"
                 float _MoonSize;
                 float4 _NoiseTex_ST;
                 half _StarDensity;
+                half _StarVisibility;
+                half _MoonVisibility;
+                half4 _SunColor;
+                float4 _SunDir;
+                half4 _CloudColor;
+                half _CloudDay;
             CBUFFER_END
 
             TEXTURE2D(_NoiseTex);
@@ -96,7 +109,14 @@ Shader "BreathOfEclipse/SkyDome"
 
                 // Stars, hidden near the horizon and around the moon.
                 half starMask = smoothstep(0.05, 0.3, h) * (1.0 - smoothstep(0.9, 0.99, md));
-                color += Stars(dir) * starMask * half3(0.9, 0.95, 1.1) * 1.4;
+                color += Stars(dir) * starMask * half3(0.9, 0.95, 1.1) * 1.4 * _StarVisibility;
+
+                // Sun: small hot disc, warm glow, scattering toward the horizon at dawn and dusk.
+                float3 sunDir = normalize(_SunDir.xyz + float3(0, 1e-4, 0));
+                float sd = dot(dir, sunDir);
+                half sunDisc = smoothstep(0.9993, 0.9996, sd);
+                half sunGlow = pow(saturate(sd), 64.0) * 0.6 + pow(saturate(sd), 6.0) * 0.18;
+                color += _SunColor.rgb * (sunDisc * 4.0 + sunGlow) * smoothstep(-0.08, 0.02, sunDir.y);
 
                 // Moon disc with craters and a soft halo.
                 float angle = acos(clamp(md, -1.0, 1.0));
@@ -109,14 +129,16 @@ Shader "BreathOfEclipse/SkyDome"
                 half limb = saturate(1.0 - dot(moonUV, moonUV) * 0.35);
                 half3 moonColor = _MoonColor.rgb * (0.78 + 0.3 * crater) * (0.85 + 0.15 * limb);
                 half halo = exp(-angle / (_MoonSize * 2.5)) * 0.45 + exp(-angle / (_MoonSize * 9.0)) * 0.12;
-                color = lerp(color, moonColor, disc) + _MoonColor.rgb * halo * (1.0 - disc) * 0.35;
+                color = lerp(color, moonColor, disc * _MoonVisibility) + _MoonColor.rgb * halo * (1.0 - disc) * 0.35 * _MoonVisibility;
 
                 // Thin moonlit clouds near the horizon.
                 float2 cloudUV = dir.xz / max(h + 0.25, 0.08) * 0.08 + _Time.y * 0.002;
                 half cloud = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, cloudUV).r * SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, cloudUV * 2.3 + 0.1).r;
                 cloud = smoothstep(0.22, 0.55, cloud) * smoothstep(-0.02, 0.25, h) * (1.0 - smoothstep(0.5, 0.9, h));
                 half3 cloudLit = lerp(_HorizonColor.rgb * 0.8, _MoonColor.rgb * 0.35, pow(saturate(md * 0.5 + 0.5), 6.0));
-                color = lerp(color, cloudLit, cloud * 0.6);
+                half3 dayCloud = _CloudColor.rgb * (0.85 + 0.25 * pow(saturate(sd * 0.5 + 0.5), 4.0)) + _SunColor.rgb * 0.08 * pow(saturate(sd), 8.0);
+                cloudLit = lerp(cloudLit, dayCloud, _CloudDay);
+                color = lerp(color, cloudLit, cloud * lerp(0.6, 0.85, _CloudDay));
 
                 // Blend the horizon into the scene fog so distant geometry melts into the sky.
                 color = lerp(color, unity_FogColor.rgb, (1.0 - smoothstep(0.0, 0.22, abs(h))) * 0.65);

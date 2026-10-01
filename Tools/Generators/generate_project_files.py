@@ -5,7 +5,7 @@ Generates the Unity files that must exist before the project is opened for the f
   * .meta files for every asset/folder under Assets/ that has none, with DETERMINISTIC GUIDs
     (md5 of the project-relative path), so scenes can reference scripts by GUID and every clone agrees.
     Existing .meta files are never modified.
-  * The four scenes (00_Boot, 01_MainMenu, 02_MoonlitForest, 03_CombatTest). Each contains one root object with
+  * The scenes (00_Boot, 01_MainMenu, 02_MoonlitForest, 03_CombatTest, 04_FrontierRegion). Each contains one root object with
     its scene script; the world itself is built procedurally at runtime (see GameplaySceneBuilder).
   * ProjectSettings/EditorBuildSettings.asset (scene list, 00_Boot first).
   * The project's shaders in GraphicsSettings "Always Included Shaders" (they are created from code with
@@ -346,16 +346,23 @@ SCENES = [
      [("buildEnvironment", "1"), ("playerSpawn", "{x: 0, y: 0.5, z: -78}"), ("playerSpawnYaw", "0"), ("music", "forest")]),
     ("03_CombatTest", "CombatTest", f"{SCRIPTS}/Environment/CombatTestBuilder.cs",
      [("buildEnvironment", "1"), ("playerSpawn", "{x: 0, y: 0.5, z: -10}"), ("playerSpawnYaw", "0"), ("music", "combat")]),
+    ("04_FrontierRegion", "FrontierRegion", f"{SCRIPTS}/World/FrontierRegionBuilder.cs",
+     [("buildEnvironment", "1"), ("playerSpawn", "{x: -19, y: 0.5, z: -165}"), ("playerSpawnYaw", "90"), ("music", "")]),
 ]
 
 
-def write_scenes():
+def write_scenes(only_missing=False):
     os.makedirs(os.path.join(ROOT, SCENES_DIR), exist_ok=True)
+    written = 0
     for scene_name, object_name, script, fields in SCENES:
         script_guid = read_guid(script)
         path = os.path.join(ROOT, SCENES_DIR, scene_name + ".unity")
+        if only_missing and os.path.exists(path):
+            continue
+        written += 1
         with open(path, "w", encoding="utf-8", newline="\n") as f:
             f.write(scene_text(object_name, script_guid, fields))
+    return written
 
 
 def write_build_settings():
@@ -388,8 +395,8 @@ def write_always_included_shaders():
 def main():
     force_scenes = "--force-scenes=false" not in sys.argv
     created = ensure_metas()
-    if force_scenes or not os.path.exists(os.path.join(ROOT, SCENES_DIR, "00_Boot.unity")):
-        write_scenes()
+    # Without forcing, hand-edited scenes are kept and only scenes that do not exist yet are written.
+    if write_scenes(only_missing=not force_scenes):
         created += ensure_metas()
     write_build_settings()
     n = write_always_included_shaders()

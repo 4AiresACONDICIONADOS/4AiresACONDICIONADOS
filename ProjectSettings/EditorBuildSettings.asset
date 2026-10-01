@@ -17,5 +17,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_BreathOfEclipse/Scenes/03_CombatTest.unity
     guid: 45c92424edb1c166d723b797777d2900
+  - enabled: 1
+    path: Assets/_BreathOfEclipse/Scenes/04_FrontierRegion.unity
+    guid: 820d4dd670298548b663f82d040b9fca
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

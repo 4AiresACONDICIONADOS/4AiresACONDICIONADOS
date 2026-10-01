@@ -57,7 +57,7 @@ namespace BreathOfEclipse.Environment
             CursorManager.SetGameplay(true);
             if (InputReader.Instance != null) InputReader.Instance.SetGameplayEnabled(true);
             if (!string.IsNullOrEmpty(music)) Sfx.Music(music, 2f);
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayAmbient("ambient_forest");
+            if (AudioManager.Instance != null && !string.IsNullOrEmpty(AmbientLoop)) AudioManager.Instance.PlayAmbient(AmbientLoop);
             GameEvents.RaiseCameraModeChanged(Cam.Mode.ToString());
         }
 
@@ -69,6 +69,9 @@ namespace BreathOfEclipse.Environment
                 return hit.point + Vector3.up * 0.05f;
             return point;
         }
+
+        /// <summary>Ambient loop started with the scene (null: the scene manages its own ambience).</summary>
+        protected virtual string AmbientLoop => "ambient_forest";
 
         /// <summary>Static world (terrain, props). Called only when nothing is baked in the scene.</summary>
         public abstract void BuildEnvironment(Transform root);

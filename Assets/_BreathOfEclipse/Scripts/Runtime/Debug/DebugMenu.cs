@@ -229,6 +229,7 @@ namespace BreathOfEclipse.Core
             GUILayout.Label("SCENE", _header);
             if (GUILayout.Button("Reset Scene")) ReloadScene();
             GUILayout.BeginHorizontal();
+            if (GUILayout.Button("World")) LoadScene(SceneNames.FrontierRegion);
             if (GUILayout.Button("Forest")) LoadScene(SceneNames.MoonlitForest);
             if (GUILayout.Button("Combat Test")) LoadScene(SceneNames.CombatTest);
             if (GUILayout.Button("Menu")) LoadScene(SceneNames.MainMenu);

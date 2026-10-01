@@ -7,5 +7,6 @@ namespace BreathOfEclipse.Core
         public const string MainMenu = "01_MainMenu";
         public const string MoonlitForest = "02_MoonlitForest";
         public const string CombatTest = "03_CombatTest";
+        public const string FrontierRegion = "04_FrontierRegion";
     }
 }

@@ -17,7 +17,7 @@ namespace BreathOfEclipse.Scenes
 {
     /// <summary>
     /// 01_MainMenu: the swordsman practising katas on a moonlit hill behind the title, with PLAY / TRAINING /
-    /// SETTINGS / QUIT. Each kata shows a different breathing style's colours.
+    /// SETTINGS / QUIT (v0.5: PLAY LIVING WORLD first). Each kata shows a different breathing style's colours.
     /// </summary>
     public sealed class MainMenuController : MonoBehaviour
     {
@@ -52,7 +52,7 @@ namespace BreathOfEclipse.Scenes
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => MenuBuilt = null;
 
-        /// <summary>Main menu buttons by id: "Play", "Training", "Settings", "Quit" (+ entries added by tools).</summary>
+        /// <summary>Main menu buttons by id: "LivingWorld", "NewWorld" (with a save), "Play" (Moonlit Forest), "Training", "Settings", "Quit" (+ entries added by tools).</summary>
         public IReadOnlyDictionary<string, Button> Buttons => _buttons;
         public bool SettingsOpen => _settings != null && _settings.gameObject.activeSelf;
 
@@ -188,11 +188,29 @@ namespace BreathOfEclipse.Scenes
             UIFactory.Text("Title", _menu, "BREATH OF ECLIPSE", 92, Color.white, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(110f, 300f), new Vector2(1100f, 130f), TextAnchor.MiddleLeft, FontStyle.BoldAndItalic);
             UIFactory.Text("Subtitle", _menu, "ANIME SWORD ACTION RPG — VERTICAL SLICE", 26, UIColors.Accent, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(116f, 222f), new Vector2(1000f, 40f), TextAnchor.MiddleLeft, FontStyle.Normal);
 
-            var list = UIFactory.Rect("Buttons", _menu, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(110f, -60f), new Vector2(460f, 420f));
+            var list = UIFactory.Rect("Buttons", _menu, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(110f, -120f), new Vector2(460f, 420f));
             _buttonList = list;
             UIFactory.Vertical(list, 18f, TextAnchor.UpperLeft);
-            _first = UIFactory.Button("Play", list, "PLAY", new Vector2(420f, 74f), () => Load(SceneNames.MoonlitForest), 34);
-            _buttons["Play"] = _first;
+            // v0.5: the open region is the main way to play; the Moonlit Forest slice and Training stay available.
+            var saved = World.WorldSave.Load();
+            string worldLabel = saved != null ? $"CONTINUE LIVING WORLD — DAY {saved.day}" : "PLAY LIVING WORLD";
+            _first = UIFactory.Button("LivingWorld", list, worldLabel, new Vector2(420f, 74f), () =>
+            {
+                World.WorldSave.StartFresh = false;
+                Load(SceneNames.FrontierRegion);
+            }, saved != null ? 26 : 32);
+            _buttons["LivingWorld"] = _first;
+            if (saved != null)
+            {
+                _buttons["NewWorld"] = UIFactory.Button("NewWorld", list, "NEW LIVING WORLD", new Vector2(420f, 56f), () =>
+                {
+                    World.WorldSave.StartFresh = true;
+                    Load(SceneNames.FrontierRegion);
+                }, 24);
+                list.sizeDelta += new Vector2(0f, 74f);
+            }
+            _buttons["Play"] = UIFactory.Button("Play", list, "MOONLIT FOREST", new Vector2(420f, 74f), () => Load(SceneNames.MoonlitForest), 32);
+            list.sizeDelta += new Vector2(0f, 92f);
             _buttons["Training"] = UIFactory.Button("Training", list, "TRAINING", new Vector2(420f, 74f), () => Load(SceneNames.CombatTest), 34);
             _buttons["Settings"] = UIFactory.Button("Settings", list, "SETTINGS", new Vector2(420f, 74f), OpenSettings, 34);
             _buttons["Quit"] = UIFactory.Button("Quit", list, "QUIT", new Vector2(420f, 74f), Quit, 34);

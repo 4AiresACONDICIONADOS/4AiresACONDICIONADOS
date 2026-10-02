@@ -1,18 +1,30 @@
 # DEV STATUS — Breath of Eclipse
 
-**Versión actual: v0.4.0 — Full 3D Anime Evolution** · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
+**Versión actual: v0.5.0 — Living World** · Editor objetivo: Unity 6000.3.25f1 (6.3 LTS) · URP 17
 
-- **Working (probado por el usuario en Unity 6.3, v0.1.1):** arranque de `03_CombatTest`, personaje, escenario, ataques y técnicas.
+- **Working (probado por el usuario en Unity):** v0.4.0 (personaje 3D, combate, técnicas, demonios 3D).
 - **Working (código compilado, 0 errores / 0 warnings; SIN verificar en Unity):**
-  - Protagonista 3D real (cuerpo Quaternius CC0) vestido como espadachín anime original, con pelo, ropa, cara,
-    ojos y boca; animaciones reales Quaternius UAL 1+2 (Humanoid) + combate procedural retargeteado por IK.
-  - Nightspawn y Hollow Oni 3D (mismo cuerpo, aspecto demoníaco), fase 2 con marcas y ojos más intensos.
-  - F1: alternar 3D / procedural, pruebas de animación y demonios, Animation Lab; validación de esqueleto.
-  - v0.3.0: 7 formas por estilo, inhalación, voz natural, slots rápidos, katana y vaina.
-- **Incomplete:** formas VIII-XI (arquitectura lista, sin contenido); blendshapes faciales reales solo con modelos
-  VRoid (el cuerpo base usa texturas de ojos y boca procedurales).
-- **Next:** abrir en Unity, dejar que importe los FBX de `ThirdParty/Quaternius`, ejecutar *Characters → Validate
-  Character Models* y *Playtest → Full Visual Test* (incluye `3D MODEL`), revisar agarre / pelo / poses.
+  - `04_FrontierRegion`: región de 12 sectores con streaming, día/noche, audio por zonas.
+  - 24 NPC con rutinas, cuerpos anime ligeros, interacción (hablar, inspeccionar, puertas, descansar, hierbas).
+  - Demonios con IA de mundo y memoria; cazadores que combaten; 8 eventos + presencia excepcional.
+  - Guardado del mundo versionado; mapa (M); F1 WORLD LAB; playtest FULL WORLD TEST.
+- **Incomplete / deferred to v0.6:** reputación, facciones, relaciones, historia; economía de la tienda (sin
+  moneda); interiores de casas; clima más allá de niebla ligera.
+- **Next:** abrir en Unity → *Playtest → FULL WORLD TEST*; luego jugar con la lista manual de abajo.
+
+## MANUAL WORLD CHECKLIST (v0.5)
+
+1. Menú → PLAY LIVING WORLD: aparece en la aldea a las 07:00, gente moviéndose, sin caída al vacío.
+2. Hablar (E) con varios aldeanos; la tienda abierta de día y cerrada al atardecer; puertas que se abren.
+3. F1 → WORLD LAB: 06:00 / 12:00 / 17:30 / 20:00 / 00:00 — cielo, sol, luna, faroles, niebla y sonido cambian.
+4. Caminar al bosque y al río: transición de sectores sin cortes visibles; audio cambia.
+5. De noche fuera de la aldea: señales (gruñidos, ojos) antes de ver demonios; nunca aparecen delante.
+6. Pelear en el mundo: música de combate, el demonio no te persigue dentro de la aldea, puede huir herido.
+7. F1 → Caravan Attack / Village Attack / Lost Child: escenas, resultado, hechos en el log; descansar en la posada.
+8. Ver el carro destrozado / cerca rota y su reparación en días siguientes; diálogos que lo mencionan.
+9. Mapa (M): sólo zonas descubiertas; el santuario oculto no aparece hasta encontrarlo.
+10. Salir al menú y CONTINUE: misma hora, posición y memoria del mundo.
+11. FPS en F1 WORLD LAB en la aldea de noche (anotar; no hay medición previa).
 
 ## ✅ PLAYTEST INFRASTRUCTURE READY
 
@@ -31,7 +43,7 @@ Primera prueba recomendada al abrir el proyecto:
 | Compilación runtime (player build, sin `UNITY_EDITOR`) contra `UnityEngine.*.dll` de Unity 6.3 + Input System + uGUI + URP | ✅ 0 errores, 0 warnings |
 | Compilación del ensamblado de playtest como **Development build** separado (valida límites entre ensamblados) | ✅ 0 errores, 0 warnings |
 | Compilación editor + playtest + tests (con `UNITY_EDITOR`, `UnityEditor.*.dll`, NUnit de Unity) | ✅ 0 errores, 0 warnings |
-| Tests de la capa Logic (`dotnet test`) | ✅ 43/43 |
+| Tests de la capa Logic (`dotnet test`) | ✅ 100/100 |
 | Tests EditMode (lógica, guardado, contenido, planes de playtest) | ⏳ escritos; se ejecutan en el Test Runner de Unity |
 | Shaders (14) compilados con DXC contra la ShaderLibrary de URP 17.3 | ✅ 94 compilaciones, 0 fallos |
 | **Abrir y jugar en el Editor de Unity** | ❌ **No realizado** |

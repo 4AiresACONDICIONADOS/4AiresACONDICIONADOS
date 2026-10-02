@@ -5,6 +5,52 @@ primera versión verificada como jugable dentro del Editor de Unity.**
 
 ---
 
+## v0.5.0 — Living World (2026-10-02)
+
+Sin verificar todavía en Unity (NOT PLAYTESTED). Escena nueva `04_FrontierRegion`; `03_CombatTest` y
+`02_MoonlitForest` se conservan sin cambios de comportamiento.
+
+### Added
+- **Asagiri Frontier** (480 × 480 m, 12 sectores): aldea segura (casas, posada, tienda, herrería, puesto de
+  cazadores, campanario, pozo, santuario, huertos, arrozales), zona salvaje (bosque, río con puente, vado y
+  cascada, campamento, aserradero, estanque), exploración (ruinas, cueva, mirador, santuario ribereño, un lugar
+  secreto sin marcador) y la Hondonada de Ceniza (zona de alto riesgo sin muros invisibles: el aire avisa).
+- **Streaming por sectores**: terreno de detalle con colisión cocinada fuera del hilo principal, vistas lejanas
+  (terreno 10 m + siluetas de árboles), carga de uno en uno con histéresis, mallas liberadas al descargar; raíz
+  persistente (`LivingWorld`) que nunca se duplica.
+- **Día y noche** (24 h, Dawn…LateNight): sol / luna / rim, cielo con disco solar, estrellas, nubes de día,
+  ambiente, niebla, gradación, faroles y ventanas; niebla matinal ligera.
+- **Audio por zonas** (aldea, campos, bosque, río, cascada, tierra maldita, cueva) mezclado por posición y hora,
+  con sonidos puntuales (herrero, leñadores, aves, cuervos, búhos, ranas, gruñidos lejanos, campanas).
+- **Vida NPC**: 24 personas con rutinas data-driven sobre un grafo de navegación validado (nunca agua, edificios
+  ni acantilados), cuerpo anime ligero (cuerpos base CC0 masculino y femenino, 8 atuendos, peinados, cara que
+  parpadea y habla, herramientas), animaciones reales con LOD por un planificador central, simulación fuera de
+  pantalla, puertas que se abren, tienda con horario, forja, fogata y ropa tendida que siguen a sus dueños,
+  diálogos y comentarios en español, ayudar heridos, descanso (hasta la mañana / la tarde) con salto de tiempo.
+- **Demonios del mundo**: territorio, patrulla nocturna, acecho con señales previas, sin aparecer a la vista ni
+  cerca (≥ 38 m), correa / pérdida de interés, la aldea como refugio, huida al sol, huida herida con memoria
+  persistente (escapó, cicatriz, encuentros, respiraciones observadas) y regreso más agresivo; pooling.
+- **Cazadores NPC** (Kaede, Rokuro, Sora): detectan y combaten demonios con clips de espada reales, esquivan o
+  bloquean, defienden aldeanos, se retiran heridos, caen heridos; Sora muestra una técnica lunar.
+- **Eventos dinámicos** (8 + presencia excepcional): caravana atacada, familia perseguida, cazador herido,
+  cazador contra demonio, ataque nocturno a la aldea (campana, refugio, guardias y cazadores), demonio raro,
+  descubrimiento sin marcador, niño perdido; plazos suave / duro (los eventos no esperan), consecuencias
+  persistentes (hechos, carro destrozado y cerca rota con etapas de reparación), resolución fuera de pantalla.
+- **Memoria del mundo** (`WorldStateDatabase`, guardado versionado aparte), autoguardado al descansar, tras eventos
+  del jugador, al volver a zona segura y al salir; ganchos para v0.6 (hechos como `Saved_Caravan_001`).
+- **Mapa** (M) con niebla sobre lo no descubierto; **F1 WORLD LAB**; menú principal **PLAY LIVING WORLD**
+  (CONTINUE / NEW cuando hay partida); playtest **FULL WORLD TEST**; tests de lógica (100).
+
+### Changed
+- `EnemyController`: cerebro de mundo opcional, objetivo alternativo y estado `World` (las arenas no cambian).
+- Generador: escribe sólo las escenas que faltan; capa `Npc` (12).
+
+### Known Issues
+- Nada verificado en Unity: rendimiento NOT MEASURED; tiempos de carga, aspecto de los atuendos de los aldeanos,
+  sincronía de clips en NPCs y combate de cazadores pendientes de prueba real.
+
+---
+
 ## v0.4.0 — Full 3D Anime Evolution (2026-09-29)
 
 Sin verificar todavía en Unity (NOT PLAYTESTED).

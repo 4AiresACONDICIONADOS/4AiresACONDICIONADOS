@@ -215,7 +215,7 @@ namespace BreathOfEclipse.Scenes
             _buttons["Settings"] = UIFactory.Button("Settings", list, "SETTINGS", new Vector2(420f, 74f), OpenSettings, 34);
             _buttons["Quit"] = UIFactory.Button("Quit", list, "QUIT", new Vector2(420f, 74f), Quit, 34);
 
-            UIFactory.Text("Version", _menu, $"v{GameManager.Version}  —  prototype build (editable project)", 20, UIColors.TextDim,
+            UIFactory.Text("Version", _menu, $"{GameManager.VersionTitle}  —  prototype build (editable project)", 20, UIColors.TextDim,
                 new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-30f, 24f), new Vector2(800f, 30f), TextAnchor.LowerRight, FontStyle.Normal);
             UIFactory.Text("Hint", _menu, "F1 debug  ·  F2 FPS  ·  Esc pause", 18, UIColors.TextDim,
                 new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(30f, 24f), new Vector2(700f, 30f), TextAnchor.LowerLeft, FontStyle.Normal);

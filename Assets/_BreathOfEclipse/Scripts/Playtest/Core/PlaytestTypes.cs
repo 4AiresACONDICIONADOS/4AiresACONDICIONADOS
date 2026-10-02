@@ -21,7 +21,9 @@ namespace BreathOfEclipse.Playtest
         /// <summary>Everything: Boot, Main Menu, CombatTest suites, AI, boss, UI, audio, save, Moonlit Forest.</summary>
         Full = 6,
         /// <summary>VFX lab preset: Tidal Breath, Rising Serpent on auto-repeat.</summary>
-        RisingSerpentVisual = 7
+        RisingSerpentVisual = 7,
+        /// <summary>v0.5 FULL WORLD TEST: the living world (04_FrontierRegion) end to end.</summary>
+        WorldTest = 8
     }
 
     /// <summary>Pacing of automated tests.</summary>

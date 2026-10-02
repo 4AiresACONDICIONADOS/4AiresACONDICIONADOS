@@ -26,6 +26,11 @@ namespace BreathOfEclipse.Playtest
                     steps.AddRange(SystemsSuite.SaveSteps());
                     steps.AddRange(SystemsSuite.VfxLibrary());
                     steps.AddRange(SceneFlowSuite.Forest());
+                    steps.AddRange(WorldSuite.Steps());
+                    steps.AddRange(SystemsSuite.PerformanceSteps());
+                    break;
+                case PlaytestMode.WorldTest:
+                    steps.AddRange(WorldSuite.Steps());
                     steps.AddRange(SystemsSuite.PerformanceSteps());
                     break;
                 case PlaytestMode.Auto:
@@ -57,7 +62,7 @@ namespace BreathOfEclipse.Playtest
         }
 
         public static bool IsAutomated(PlaytestMode mode) =>
-            mode == PlaytestMode.Full || mode == PlaytestMode.Auto || mode == PlaytestMode.AiTest || mode == PlaytestMode.BossTest;
+            mode == PlaytestMode.Full || mode == PlaytestMode.Auto || mode == PlaytestMode.AiTest || mode == PlaytestMode.BossTest || mode == PlaytestMode.WorldTest;
 
         public static PlaytestStep EnsureCombatTestStep() =>
             new PlaytestStep(C.Scenes, "03_CombatTest ready", EnsureCombatTest, 45f, false);

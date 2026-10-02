@@ -427,7 +427,7 @@ namespace BreathOfEclipse.Playtest
 
         private void DrawDeveloperMenu(float width, float height)
         {
-            var r = new Rect(width - 560f, height * 0.5f - 330f, 520f, 660f);
+            var r = new Rect(width - 560f, height * 0.5f - 370f, 520f, 740f);
             Panel(r);
             GUILayout.BeginArea(new Rect(r.x + 16f, r.y + 12f, r.width - 32f, r.height - 24f));
             GUILayout.Label("DEVELOPER PLAYTEST", _title);
@@ -446,7 +446,8 @@ namespace BreathOfEclipse.Playtest
             Option("CAMERA TEST", "Camera lab: 1/2/3 camera modes, diagnostics, target-lost fallback.", PlaytestMode.CameraLab);
             Option("AI TEST", "Nightspawn: detection, chase, attack, reactions, death.", PlaytestMode.AiTest);
             Option("BOSS TEST", "Hollow Oni: phase 1, phase 2 at 50 %, Eclipse Cleave, ultimate, defeat.", PlaytestMode.BossTest);
-            Option("FULL TEST", "Boot → Menu → CombatTest → everything → Moonlit Forest (~3–5 min).", PlaytestMode.Full);
+            Option("FULL TEST", "Boot → Menu → CombatTest → everything → Moonlit Forest → Living World (~5–8 min).", PlaytestMode.Full);
+            Option("FULL WORLD TEST", "v0.5 Living World: village morning, day/night, routines, streaming, demons, events, presence, save.", PlaytestMode.WorldTest);
             GUILayout.Space(6);
             if (GUILayout.Button("BACK", GUILayout.Height(30))) CloseDeveloperMenu();
             GUILayout.EndArea();

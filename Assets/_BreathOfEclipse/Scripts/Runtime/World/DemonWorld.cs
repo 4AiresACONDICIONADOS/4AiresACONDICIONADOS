@@ -606,12 +606,13 @@ namespace BreathOfEclipse.World
         }
 
         /// <summary>Puts a demon in the world (pooled). Events pass their own spot (out of view) and id.</summary>
-        public DemonWorldAgent Spawn(Vector3 position, string sector, DemonRecordData record = null, string eventId = null)
+        public DemonWorldAgent Spawn(Vector3 position, string sector, DemonRecordData record = null, string eventId = null, EnemyData variant = null)
         {
             if (_nightspawn == null) return null;
-            record ??= _world.State.NewDemon("nightspawn", sector, Now);
+            record ??= _world.State.NewDemon(variant != null ? "rare_nightspawn" : "nightspawn", sector, Now);
             EnemyController e;
-            if (_pool.Count > 0)
+            if (variant != null) e = EnemyFactory.Spawn(variant, position + Vector3.up * 0.1f, Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f), false);
+            else if (_pool.Count > 0)
             {
                 e = _pool.Pop();
                 e.transform.SetParent(null, true);
@@ -672,6 +673,11 @@ namespace BreathOfEclipse.World
             e.SetAware(false);
             e.TargetOverride = null;
             e.ReleaseToken();
+            if (e.Data != _nightspawn)
+            {
+                Destroy(e.gameObject); // variants (rare demon) are not pooled
+                return;
+            }
             e.gameObject.SetActive(false);
             e.transform.SetParent(_poolRoot, true);
             _pool.Push(e);
@@ -683,6 +689,31 @@ namespace BreathOfEclipse.World
             _world.State.AddFact("Demons_Escaped", 1, Now);
             Despawn(a, false);
         }
+
+        /// <summary>
+        /// A ground point between <paramref name="minR"/> and <paramref name="maxR"/> from <paramref name="around"/> where a
+        /// demon may appear (>= 38 m from the player, out of view, not in water / buildings / the village). Null if none.
+        /// </summary>
+        public Vector3? HiddenSpot(Vector3 around, float minR, float maxR, bool allowVillageEdge = false)
+        {
+            Vector3 player = _world.PlayerPosition;
+            for (int i = 0; i < 40; i++)
+            {
+                float a = UnityEngine.Random.value * Mathf.PI * 2f;
+                float r = Mathf.Lerp(minR, maxR, UnityEngine.Random.value) + i * 0.5f;
+                float x = around.x + Mathf.Cos(a) * r, z = around.z + Mathf.Sin(a) * r;
+                if (Mathf.Abs(x) > L.HalfSize - 12f || Mathf.Abs(z) > L.HalfSize - 12f) continue;
+                if (L.IsWater(x, z) || L.Slope(x, z) > 0.6f || NpcPlaces.Blocked(x, z, 2f)) continue;
+                var p = RegionTerrain.OnGround(x, z);
+                if (DemonWorldAgent.InVillage(p, allowVillageEdge ? 4f : 15f)) continue;
+                if (!_world.Sectors.IsLoadedAt(p)) continue;
+                if (!DemonWorldRules.CanSpawnAt(Flat(p - player).magnitude, VisibleToPlayer(p))) continue;
+                return p;
+            }
+            return null;
+        }
+
+        public EnemyData NightspawnData => _nightspawn;
 
         public bool CanStalk(DemonWorldAgent a)
         {

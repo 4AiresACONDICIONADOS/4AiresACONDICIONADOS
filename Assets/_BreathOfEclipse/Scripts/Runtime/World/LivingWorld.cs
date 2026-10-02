@@ -24,6 +24,7 @@ namespace BreathOfEclipse.World
         public WorldAmbience Ambience { get; private set; }
         public NpcSystem Npcs { get; private set; }
         public WorldDemonDirector Demons { get; private set; }
+        public WorldEventDirector Events { get; private set; }
         public RestSystem Rest { get; private set; }
         public PlayerController Player { get; private set; }
         /// <summary>True when this session continued a saved world.</summary>
@@ -94,6 +95,7 @@ namespace BreathOfEclipse.World
             Ambience = WorldAmbience.Create(this);
             Npcs = NpcSystem.Create(this);
             Demons = WorldDemonDirector.Create(this);
+            Events = WorldEventDirector.Create(this);
             Rest = RestSystem.Create(this);
             // The shrine bell marks dawn and dusk.
             Time.PhaseChanged += (from, to) =>

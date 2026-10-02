@@ -361,13 +361,22 @@ namespace BreathOfEclipse.World
 
         public string Prompt => State.Injured ? $"Help — {State.Def.Name}" : $"Talk — {State.Def.Name}";
         public Vector3 Position => transform.position + Vector3.up * 0.9f;
-        public bool CanInteract => Shown && State.Alive && !State.Indoors && State.Mode != NpcMode.Fleeing && (State.Mode != NpcMode.Event || State.Injured) && Controller == null;
+        public bool CanInteract => Shown && State.Alive && !State.Indoors && State.Mode != NpcMode.Fleeing && (Controller == null || State.Injured);
 
         public void Interact(PlayerController player)
         {
+            if (_system.EventInteraction != null && _system.EventInteraction(this)) return;
             if (State.Injured)
             {
                 _system.Help(this);
+                return;
+            }
+            string eventLine = _system.EventLine != null ? _system.EventLine(this) : null;
+            if (eventLine != null)
+            {
+                State.Held = true;
+                _talkUntil = Time.time + 4.5f;
+                Say(eventLine, 4.5f);
                 return;
             }
             State.Held = true;

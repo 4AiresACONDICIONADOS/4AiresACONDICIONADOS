@@ -206,7 +206,8 @@ namespace BreathOfEclipse.World
 
         public void Tick(NpcSimState n, float hour, float seconds, float speedScale = 1f)
         {
-            if (!n.Alive || n.Mode == NpcMode.Dead || n.Mode == NpcMode.Injured || n.Mode == NpcMode.Afraid || n.Mode == NpcMode.Event) return;
+            // Events may still move an NPC (GoTo) but its routine waits.
+            if (!n.Alive || n.Mode == NpcMode.Dead || n.Mode == NpcMode.Injured || n.Mode == NpcMode.Afraid) return;
             if (n.Mode == NpcMode.Routine)
             {
                 int idx = n.Schedule.IndexAt(hour);

@@ -31,6 +31,12 @@ namespace BreathOfEclipse.World
         public int BuiltCount { get; private set; }
         /// <summary>An NPC fell (agent, killed) — events and consequences listen.</summary>
         public event Action<NpcAgent, bool> NpcDown;
+        /// <summary>The player helped an injured NPC up.</summary>
+        public event Action<NpcAgent> Helped;
+        /// <summary>Event hook: handles Interact on an NPC first (lost child follows the player…). True = handled.</summary>
+        public Func<NpcAgent, bool> EventInteraction;
+        /// <summary>Event hook: a line that replaces the normal talk ("¿Has visto a Kei?"). Null = none.</summary>
+        public Func<NpcAgent, string> EventLine;
         public IEnumerable<HunterBrain> Hunters
         {
             get
@@ -271,7 +277,13 @@ namespace BreathOfEclipse.World
             rec.savedByPlayer = true;
             _world.State.SetFact("Helped_" + s.Def.Id, 1, _world.Now);
             a.Say(NpcDialogue.Thanks(), 3f);
-            Sim.Release(s, Hour);
+            if (a.Controller == null)
+            {
+                var near = Sim.Graph.Nearest(s.X, s.Z);
+                if (near != null) s.AnchorNode = near.Index;
+                Sim.Release(s, Hour);
+            }
+            Helped?.Invoke(a);
         }
 
         /// <summary>An NPC was struck down (killed) or badly hurt (injured, can be helped).</summary>

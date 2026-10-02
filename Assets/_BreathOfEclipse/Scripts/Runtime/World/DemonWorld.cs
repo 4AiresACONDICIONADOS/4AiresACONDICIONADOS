@@ -30,6 +30,8 @@ namespace BreathOfEclipse.World
         public bool AllowVillage;
         /// <summary>Staged by an event (the event decides targets and outcome; the director does not despawn it).</summary>
         public string EventId;
+        /// <summary>Raiders: march on this point (village attack) instead of patrolling.</summary>
+        public Vector3? AssaultTarget;
         public string TargetName => Enemy == null ? "-" : Enemy.TargetOverride != null ? Enemy.TargetOverride.name : Enemy.Aware ? "Player" : "-";
         public bool Engaged => Enemy != null && Enemy.Aware && Enemy.IsAlive;
         /// <summary>Escaped this encounter and vanished.</summary>
@@ -53,6 +55,7 @@ namespace BreathOfEclipse.World
             Escaped = false;
             EventId = null;
             AllowVillage = false;
+            AssaultTarget = null;
             _hitThisEncounter = false;
             _attackers.Clear();
             enemy.Home = home;
@@ -139,6 +142,18 @@ namespace BreathOfEclipse.World
                 {
                     SetMode(DemonMode.Stalking);
                 }
+            }
+
+            if (AssaultTarget.HasValue && Mode != DemonMode.Stalking)
+            {
+                if (_route == null || _waypoint >= _route.PointCount)
+                {
+                    var t = AssaultTarget.Value;
+                    if (Flat(t - e.transform.position).magnitude < 4f) AssaultTarget = null;
+                    else PlanTo(e, _director.Nav.Nearest(t.x, t.z), true);
+                }
+                Follow(e, e.Data.runSpeed * 0.8f);
+                return;
             }
 
             switch (Mode)

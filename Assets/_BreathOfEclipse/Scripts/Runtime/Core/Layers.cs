@@ -18,6 +18,8 @@ namespace BreathOfEclipse.Core
         public const int Debris = 10;
         /// <summary>Renderers hidden from the main camera in first person (head, hair).</summary>
         public const int PlayerHidden = 11;
+        /// <summary>Villagers and other world NPCs (v0.5): solid for characters, hittable by demons (team rules keep the player's blade off them).</summary>
+        public const int Npc = 12;
 
         public static int Mask(params int[] layers)
         {
@@ -29,7 +31,7 @@ namespace BreathOfEclipse.Core
         /// <summary>Static world geometry used for ground checks and camera collision.</summary>
         public static readonly int EnvironmentMask = Mask(Default, Water);
         /// <summary>Everything a sword can hit.</summary>
-        public static readonly int HittableMask = Mask(Player, Enemy, Destructible);
+        public static readonly int HittableMask = Mask(Player, Enemy, Destructible, Npc);
         public static readonly int CameraObstacleMask = Mask(Default, Destructible);
         public static readonly int CharacterMask = Mask(Player, Enemy);
 
@@ -44,6 +46,7 @@ namespace BreathOfEclipse.Core
             Physics.IgnoreLayerCollision(Debris, Enemy, true);
             Physics.IgnoreLayerCollision(Debris, Debris, false);
             Physics.IgnoreLayerCollision(PlayerHidden, Player, true);
+            Physics.IgnoreLayerCollision(Debris, Npc, true);
         }
 
         public static void SetLayerRecursively(GameObject go, int layer)

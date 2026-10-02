@@ -6,14 +6,14 @@ namespace BreathOfEclipse.World
 {
     /// <summary>
     /// Quiet world HUD: a small clock, the name of the area when you enter it, discoveries, the autosave note and
-    /// the interaction prompt. No quest markers.
+    /// spoken lines (interaction prompts use the game HUD). No quest markers.
     /// </summary>
     public sealed class WorldHud : MonoBehaviour
     {
         private LivingWorld _world;
         private Text _clock;
-        private CanvasGroup _areaGroup, _savedGroup, _promptGroup, _lineGroup;
-        private Text _areaTitle, _areaSub, _prompt, _line;
+        private CanvasGroup _areaGroup, _savedGroup, _lineGroup;
+        private Text _areaTitle, _areaSub, _line;
         private float _areaUntil, _savedUntil, _lineUntil;
         private float _nextClock;
         private string _lastArea;
@@ -49,9 +49,6 @@ namespace BreathOfEclipse.World
             _savedGroup = Group("Saved", root);
             UIFactory.Text("SavedText", _savedGroup.transform, "World saved", 16, UIColors.TextDim, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-24f, 18f), new Vector2(300f, 24f), TextAnchor.MiddleRight, FontStyle.Italic);
 
-            _promptGroup = Group("Prompt", root);
-            _prompt = UIFactory.Text("PromptText", _promptGroup.transform, "", 22, new Color(1f, 0.95f, 0.8f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 250f), new Vector2(900f, 30f), TextAnchor.MiddleCenter, FontStyle.Bold);
-
             _lineGroup = Group("Line", root);
             _line = UIFactory.Text("LineText", _lineGroup.transform, "", 24, Color.white, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 300f), new Vector2(1300f, 34f), TextAnchor.MiddleCenter);
         }
@@ -78,17 +75,6 @@ namespace BreathOfEclipse.World
         }
 
         public void ShowSaved() => _savedUntil = Time.unscaledTime + 2.5f;
-
-        /// <summary>Interaction prompt ("[E] Talk — Ohara"); null hides it.</summary>
-        public void SetPrompt(string text)
-        {
-            if (string.IsNullOrEmpty(text)) _promptGroup.alpha = 0f;
-            else
-            {
-                _prompt.text = text;
-                _promptGroup.alpha = 1f;
-            }
-        }
 
         /// <summary>An ambient line or a short spoken answer ("Ohara: ¡Arroz fresco!").</summary>
         public void ShowLine(string speaker, string text, float seconds = 3.5f)

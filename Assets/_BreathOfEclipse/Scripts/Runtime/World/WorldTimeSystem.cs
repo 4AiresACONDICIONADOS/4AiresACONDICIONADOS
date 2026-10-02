@@ -33,6 +33,8 @@ namespace BreathOfEclipse.World
 
         public event Action<DayPhase, DayPhase> PhaseChanged;
         public event Action<int> NewDay;
+        /// <summary>The clock jumped (rest, debug set time): absolute hours before and after. Systems snap to the new time.</summary>
+        public event Action<double, double> TimeJumped;
 
         private Material _sky;
         private float _danger;
@@ -141,10 +143,23 @@ namespace BreathOfEclipse.World
 
         // ------------------------------------------------------------------ control
 
+        /// <summary>Jumps forward to the next <paramref name="hour"/> (debug: set morning / noon / sunset / night).</summary>
         public void SetHour(float hour)
         {
+            double from = Clock.TotalHours;
             Clock.SetHourForward(hour);
             Apply(true);
+            TimeJumped?.Invoke(from, Clock.TotalHours);
+        }
+
+        /// <summary>Skips <paramref name="hours"/> (rest).</summary>
+        public void Advance(double hours)
+        {
+            if (hours <= 0) return;
+            double from = Clock.TotalHours;
+            Clock.AdvanceHours(hours);
+            Apply(true);
+            TimeJumped?.Invoke(from, Clock.TotalHours);
         }
 
         public void SetPaused(bool paused) => Clock.Paused = paused;

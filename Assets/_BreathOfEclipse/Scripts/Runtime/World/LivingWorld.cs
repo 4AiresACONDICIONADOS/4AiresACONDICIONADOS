@@ -22,6 +22,8 @@ namespace BreathOfEclipse.World
         public NavGraph Nav { get; private set; }
         public WorldHud Hud { get; private set; }
         public WorldAmbience Ambience { get; private set; }
+        public NpcSystem Npcs { get; private set; }
+        public RestSystem Rest { get; private set; }
         public PlayerController Player { get; private set; }
         /// <summary>True when this session continued a saved world.</summary>
         public bool Continued { get; private set; }
@@ -34,6 +36,8 @@ namespace BreathOfEclipse.World
         public event Action<string> Saved;
 
         private Vector3 _fallbackFocus;
+        private float _startTime = -1f;
+        private bool _savedOnExit;
         private float _nextDiscovery;
         private float _lastSave = -999f;
         private readonly List<Action> _beforeSave = new List<Action>();
@@ -59,13 +63,26 @@ namespace BreathOfEclipse.World
 
         private void OnDestroy()
         {
+            SaveOnExit();
             if (Instance == this) Instance = null;
+        }
+
+        private void OnApplicationQuit() => SaveOnExit();
+
+        /// <summary>Leaving the world (main menu, training, quit) keeps where you were and what happened.</summary>
+        private void SaveOnExit()
+        {
+            if (_savedOnExit || State == null || Time == null || _startTime < 0f) return;
+            if (UnityEngine.Time.unscaledTime - _startTime < 5f) return;
+            _savedOnExit = true;
+            SaveWorld("exit", true);
         }
 
         private void Init(WorldStateData data, bool continued, Vector3 focus)
         {
             Continued = continued;
             _fallbackFocus = focus;
+            _lastPlayerPos = focus;
             State = new WorldStateDatabase(data);
             Nav = L.BuildNavGraph();
             Time = WorldTimeSystem.Create(transform, State.Data.day, State.Data.hour);
@@ -74,6 +91,8 @@ namespace BreathOfEclipse.World
             Sectors.LoadAround(focus, true);
             Hud = WorldHud.Create(this);
             Ambience = WorldAmbience.Create(this);
+            Npcs = NpcSystem.Create(this);
+            Rest = RestSystem.Create(this);
             // The shrine bell marks dawn and dusk.
             Time.PhaseChanged += (from, to) =>
             {
@@ -84,8 +103,11 @@ namespace BreathOfEclipse.World
         public void BindPlayer(PlayerController player)
         {
             Player = player;
+            _startTime = UnityEngine.Time.unscaledTime;
             var s = Sectors.Current;
             if (s != null) Visit(s);
+            // First spawn in the village at morning: people are already up and about (bodies built behind the fade).
+            if (Npcs != null) Npcs.Prewarm(player.transform.position);
         }
 
         /// <summary>Lets a system write its state into <see cref="State"/> right before saving.</summary>
@@ -112,14 +134,11 @@ namespace BreathOfEclipse.World
             var d = State.Data;
             d.day = Time.Clock.Day;
             d.hour = Time.Clock.Hour;
-            if (Player != null && Player.Damageable != null && Player.Damageable.IsAlive)
-            {
-                var p = Player.transform.position;
-                d.playerX = p.x;
-                d.playerY = p.y;
-                d.playerZ = p.z;
-                d.playerYaw = Player.transform.eulerAngles.y;
-            }
+            if (Player != null && Player.Damageable != null && Player.Damageable.IsAlive) RememberPlayer();
+            d.playerX = _lastPlayerPos.x;
+            d.playerY = _lastPlayerPos.y;
+            d.playerZ = _lastPlayerPos.z;
+            d.playerYaw = _lastPlayerYaw;
             d.lastSector = Sectors.Current != null ? Sectors.Current.Id : d.lastSector;
             bool ok = WorldSave.Save(d);
             if (ok)
@@ -148,8 +167,26 @@ namespace BreathOfEclipse.World
             if (Hud != null) Hud.ShowArea(s, first);
         }
 
+        private Vector3 _lastPlayerPos;
+        private float _lastPlayerYaw;
+        private float _nextRemember;
+
+        private void RememberPlayer()
+        {
+            var t = Player.transform;
+            // Never remember a spot in water or mid-air over the far view.
+            if (FrontierRegionLayout.IsWater(t.position.x, t.position.z) && !FrontierRegionLayout.InPaddy(t.position.x, t.position.z)) return;
+            _lastPlayerPos = t.position;
+            _lastPlayerYaw = t.eulerAngles.y;
+        }
+
         private void Update()
         {
+            if (Player != null && UnityEngine.Time.unscaledTime >= _nextRemember)
+            {
+                _nextRemember = UnityEngine.Time.unscaledTime + 1f;
+                if (Player.Damageable != null && Player.Damageable.IsAlive && Player.Motor != null && Player.Motor.Grounded) RememberPlayer();
+            }
             // Ash Hollow: the air itself warns the player (no invisible walls).
             if (Time != null)
             {

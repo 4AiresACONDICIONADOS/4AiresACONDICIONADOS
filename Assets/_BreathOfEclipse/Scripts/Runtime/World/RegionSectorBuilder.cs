@@ -120,6 +120,7 @@ namespace BreathOfEclipse.World
         {
             int seed = L.StableHash(p.Id);
             float y = RegionTerrain.SampleHeight(p.X, p.Z);
+            RegionProps.CurrentPlaceId = p.Id;
             c.PushWorld(new Vector3(p.X, y, p.Z), p.Yaw);
             switch (p.Kind)
             {
@@ -211,7 +212,7 @@ namespace BreathOfEclipse.World
                     break;
                 case "laundry":
                     c.Pop();
-                    RegionProps.LaundryLine(c, Ground(-40f, -128f), Ground(-31f, -133f), 5);
+                    inst.Handles["laundry"] = RegionProps.LaundryLine(c, Ground(-35.5f, -138f), Ground(-35.5f, -146.5f), 5);
                     c.PushWorld(Vector3.zero);
                     break;
                 case "play_yard":

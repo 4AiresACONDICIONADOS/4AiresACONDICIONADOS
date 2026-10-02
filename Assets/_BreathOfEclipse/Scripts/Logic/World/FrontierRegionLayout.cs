@@ -233,14 +233,15 @@ namespace BreathOfEclipse.World
         private static void BuildRoads()
         {
             // Main road: south end of the village → plaza → north gate → bridge → forest road → crossroads → giant tree.
-            Road("main_south", PathKind.Road, 3.2f, 0, -212, 0, -200, 0, -178, 0, -160, 0, -142, 0, -120, 0, -100, 1, -82, 0, -66);
+            Road("main_south", PathKind.Road, 3.2f, 0, -201.5f, 0, -190, 0, -178, 0, -160, 0, -142, 0, -120, 0, -100, 1, -82, 0, -66);
             Road("bridge", PathKind.Bridge, 2f, 0, -66, 0, -48, 0, -30);
             Road("main_north", PathKind.Road, 3f, 0, -30, 3, -12, 0, 6, -4, 20, -6, 35, -2, 48, 2, 60, 2, 72, 0, 85);
             Road("north_trail", PathKind.Trail, 1.6f, 0, 85, 1, 105, -2, 125, -3, 145, 0, 158);
             Road("deep_trail", PathKind.Forest, 1.3f, 0, 158, 18, 178, 45, 190, 75, 195, 108, 190, 140, 178, 165, 166, 178, 160);
             // Village lanes and gates.
-            Road("lane_plaza_w", PathKind.Village, 2f, 0, -160, -14, -160, -30, -163, -40, -165, -62, -165);
-            Road("lane_plaza_e", PathKind.Village, 2f, 0, -160, 14, -160, 30, -163, 40, -165, 62, -165);
+            // The plaza lanes pass between the inn / smithy and the houses to the north (never through a building).
+            Road("lane_plaza_w", PathKind.Village, 2f, 0, -158.5f, -14, -158.5f, -30, -158.5f, -40, -160, -62, -165);
+            Road("lane_plaza_e", PathKind.Village, 2f, 0, -158.5f, 14, -158.5f, 30, -158.5f, 40, -160, 62, -165);
             Road("lane_w", PathKind.Village, 1.6f, -40, -132, -40, -150, -40, -165, -40, -182, -40, -200);
             Road("lane_e", PathKind.Village, 1.6f, 40, -132, 40, -150, 40, -165, 40, -182, 40, -200);
             Road("lane_n", PathKind.Village, 1.6f, -40, -132, -22, -122, 0, -120, 22, -122, 40, -132);
@@ -306,12 +307,12 @@ namespace BreathOfEclipse.World
             AddPlace("village_shrine", "Village shrine", PlaceKind.Shrine, 0, -207, 0, 6, 5);
             AddPlace("hunter_post", "Hunters' post", PlaceKind.HunterPost, 17, -109, -90, 7, 6);
             AddPlace("watchtower", "Bell tower", PlaceKind.Watchtower, -14, -108, 90, 4, 4);
-            AddPlace("well", "Well", PlaceKind.Well, -7, -160, 0, 2, 2);
+            AddPlace("well", "Well", PlaceKind.Well, -7, -166, 0, 2, 2);
             AddPlace("stall", "Market stall", PlaceKind.Spot, 18, -145, -90, 4, 2);
             AddPlace("forge", "Forge", PlaceKind.Spot, 18.5f, -171, -90, 2, 2);
             AddPlace("plaza", "Plaza", PlaceKind.Spot, 6, -154, 0);
             AddPlace("plaza_bench", "Plaza bench", PlaceKind.Spot, -8, -152, 180);
-            AddPlace("laundry", "Laundry lines", PlaceKind.Spot, -36, -132, 0);
+            AddPlace("laundry", "Laundry lines", PlaceKind.Spot, -35, -142, 0);
             AddPlace("play_yard", "Play yard", PlaceKind.Spot, 8, -186, 0);
             AddPlace("gate_n", "North gate", PlaceKind.Spot, 0, -102, 0);
             AddPlace("gate_e", "East gate", PlaceKind.Spot, 60, -165, 90);
@@ -805,7 +806,8 @@ namespace BreathOfEclipse.World
             foreach (var place in Places)
             {
                 float fx, fz;
-                if (place.Kind == PlaceKind.Spot || place.Kind == PlaceKind.Dock) { fx = place.X; fz = place.Z; }
+                // Open spots: the node is the spot itself; spots with a footprint (stall, forge) are used from the front.
+                if ((place.Kind == PlaceKind.Spot && place.Width <= 0f) || place.Kind == PlaceKind.Dock) { fx = place.X; fz = place.Z; }
                 else FrontPoint(place, place.Kind == PlaceKind.Paddy || place.Kind == PlaceKind.Field || place.Kind == PlaceKind.Pond ? -place.Depth * 0.5f : 1.2f, out fx, out fz);
                 if (place.Kind == PlaceKind.Pond) { fx = 158f; fz = -186f; }
                 if (place.Kind == PlaceKind.Bridge || place.Kind == PlaceKind.Ford || place.Kind == PlaceKind.Waterfall) continue;
@@ -841,8 +843,9 @@ namespace BreathOfEclipse.World
             foreach (var n in g.Nodes)
             {
                 if (n == node || n.Edges.Count == 0) continue;
-                // Never link across the river.
+                // Never link across the river or through a building / stall / forge.
                 if (CrossesWater(n.X, n.Z, node.X, node.Z)) continue;
+                if (CrossesSolid(n.X, n.Z, node.X, node.Z)) continue;
                 float d = Sq(n.X - node.X) + Sq(n.Z - node.Z);
                 if (d < bestD)
                 {
@@ -851,6 +854,19 @@ namespace BreathOfEclipse.World
                 }
             }
             if (best != null) g.Link(node.Index, best.Index, kind);
+        }
+
+        /// <summary>True when a straight walk between two points passes through a building or a solid prop footprint.</summary>
+        public static bool CrossesSolid(float ax, float az, float bx, float bz)
+        {
+            float len = (float)Math.Sqrt(Sq(bx - ax) + Sq(bz - az));
+            int steps = Math.Max(2, (int)(len / 0.5f));
+            for (int i = 0; i <= steps; i++)
+            {
+                float t = i / (float)steps;
+                if (NpcPlaces.Blocked(ax + (bx - ax) * t, az + (bz - az) * t, 0.15f)) return true;
+            }
+            return false;
         }
 
         /// <summary>True when a straight walk between two points goes through river / pond water (bridge and ford excluded).</summary>

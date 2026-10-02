@@ -20,8 +20,14 @@ namespace BreathOfEclipse.World
 
         // ------------------------------------------------------------------ houses
 
-        /// <summary>Plaster-and-timber house with a tiled gable roof, porch, shoji door and windows that glow at night.</summary>
-        public static void House(PropContext c, float w, float d, int seed, bool thatched = false, bool smoke = true)
+        /// <summary>Place being built (set by the sector builder) so doors know which building they belong to.</summary>
+        public static string CurrentPlaceId;
+
+        private static Material _doorway;
+        private static Material Doorway => _doorway != null ? _doorway : _doorway = MaterialFactory.Toon(new Color(0.07f, 0.055f, 0.05f), 0f, false, null, 0.9f, 0f);
+
+        /// <summary>Plaster-and-timber house with a tiled gable roof, porch, sliding shoji door and windows that glow at night.</summary>
+        public static SlidingDoor House(PropContext c, float w, float d, int seed, bool thatched = false, bool smoke = true)
         {
             var rng = new System.Random(seed);
             const float floor = 0.5f, wallH = 2.6f;
@@ -50,13 +56,18 @@ namespace BreathOfEclipse.World
             c.Box(M.Wood, new Vector3(0f, 0.42f, d * 0.5f + 0.6f), new Vector3(w, 0.12f, 1.2f));
             c.Box(M.Stone, new Vector3(0f, 0.15f, d * 0.5f + 1.45f), new Vector3(1.4f, 0.3f, 0.5f));
             // Door and windows: live panels that glow at night.
-            var door = c.Live("Door", RegionMeshes.Panel(), M.Shoji, new Vector3(0f, floor + 1.05f, d * 0.5f + 0.02f), Vector3.zero, new Vector3(1.6f, 2.1f, 1f));
+            var door = c.Live("Door", RegionMeshes.Panel(), M.Shoji, new Vector3(0f, floor + 1.05f, d * 0.5f + 0.03f), Vector3.zero, new Vector3(1.6f, 2.1f, 1f));
+            // The dark interior seen when the door slides open (warm at night).
+            var doorway = c.Live("Doorway", RegionMeshes.Panel(), Doorway, new Vector3(0f, floor + 1.05f, d * 0.5f + 0.008f), Vector3.zero, new Vector3(1.5f, 2.05f, 1f));
             var winL = c.Live("Window", RegionMeshes.Panel(), M.Shoji, new Vector3(-w * 0.3f, floor + 1.55f, d * 0.5f + 0.02f), Vector3.zero, new Vector3(1.2f, 0.9f, 1f));
             var winR = c.Live("Window", RegionMeshes.Panel(), M.Shoji, new Vector3(w * 0.3f, floor + 1.55f, d * 0.5f + 0.02f), Vector3.zero, new Vector3(1.2f, 0.9f, 1f));
             var winB = c.Live("Window", RegionMeshes.Panel(), M.Shoji, new Vector3(0f, floor + 1.55f, -d * 0.5f - 0.02f), new Vector3(0f, 180f, 0f), new Vector3(1.6f, 0.9f, 1f));
             var lit = c.Light(new Vector3(0f, floor + 1.5f, d * 0.5f + 0.9f), WarmLight, 0f, 0f, new Color(1.2f, 0.75f, 0.35f),
-                door.GetComponent<Renderer>(), winL.GetComponent<Renderer>(), winR.GetComponent<Renderer>(), winB.GetComponent<Renderer>());
+                door.GetComponent<Renderer>(), winL.GetComponent<Renderer>(), winR.GetComponent<Renderer>(), winB.GetComponent<Renderer>(), doorway.GetComponent<Renderer>());
             lit.Flicker = 0.05f;
+            var sliding = door.AddComponent<SlidingDoor>();
+            sliding.PlaceId = CurrentPlaceId;
+            sliding.SlideWorld = door.transform.right * 1.5f;
             // Door lantern (every other house).
             if (rng.NextDouble() < 0.6) HangingLantern(c, new Vector3(w * 0.5f - 0.3f, floor + 2.2f, d * 0.5f + 0.5f), false);
             // Side clutter: barrels, firewood, pots.
@@ -72,6 +83,7 @@ namespace BreathOfEclipse.World
                 var ps = c.Smoke(new Vector3(w * 0.3f, floor + wallH + rh * 0.7f, -d * 0.2f), 1.6f);
                 ps.gameObject.AddComponent<HearthSmoke>().Smoke = ps;
             }
+            return sliding;
         }
 
         public static void Inn(PropContext c, float w, float d, int seed)
@@ -335,8 +347,11 @@ namespace BreathOfEclipse.World
             c.Pop();
         }
 
-        public static void LaundryLine(PropContext c, Vector3 a, Vector3 b, int seed)
+        /// <summary>Laundry line between two posts; returns the holder of the hanging clothes (taken in at dusk).</summary>
+        public static Transform LaundryLine(PropContext c, Vector3 a, Vector3 b, int seed)
         {
+            var holder = new GameObject("LaundryCloths").transform;
+            holder.SetParent(c.Root, false);
             var rng = new System.Random(seed);
             c.Cyl(M.Wood, a + Vector3.up * 1.1f, 0.05f, 2.2f);
             c.Cyl(M.Wood, b + Vector3.up * 1.1f, 0.05f, 2.2f);
@@ -350,8 +365,10 @@ namespace BreathOfEclipse.World
             {
                 var cloth = c.Live("Cloth", RegionMeshes.Panel(), M.Cloth(colors[rng.Next(colors.Length)]), new Vector3(0f, 1.6f, z), new Vector3(0f, 90f, 0f), new Vector3(0.7f, 0.85f, 1f));
                 cloth.AddComponent<ClothSway>();
+                cloth.transform.SetParent(holder, true);
             }
             c.Pop();
+            return holder;
         }
 
         public static void Campfire(PropContext c, Vector3 pos, out NightLight light, out ParticleSystem fire)

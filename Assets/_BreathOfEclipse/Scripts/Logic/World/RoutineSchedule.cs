@@ -150,6 +150,12 @@ namespace BreathOfEclipse.World
                     s.Add(0f, NpcActivity.Camp, home).Add(7f, NpcActivity.Travel, work).Add(17.5f, NpcActivity.Travel, home)
                      .Add(19f, NpcActivity.Camp, home);
                     break;
+                case NpcRole.Camper:
+                    // A wanderer living rough by a wayside shrine: prays at dawn, visits the camp, fishes, back at dusk.
+                    s.Add(0f, NpcActivity.Camp, home).Add(6f, NpcActivity.Pray, work).Add(8f, NpcActivity.Walk, social)
+                     .Add(9.5f, NpcActivity.Sit, social).Add(13f, NpcActivity.Walk, work).Add(14f, NpcActivity.Fish, work)
+                     .Add(18f, NpcActivity.Camp, home);
+                    break;
                 case NpcRole.Smith:
                     s.Add(0f, NpcActivity.Sleep, home, true).Add(6.5f, NpcActivity.Smith, work).Add(12f, NpcActivity.Eat, social)
                      .Add(13f, NpcActivity.Smith, work).Add(18f, NpcActivity.Talk, social).Add(19.5f, NpcActivity.Sleep, home, true);

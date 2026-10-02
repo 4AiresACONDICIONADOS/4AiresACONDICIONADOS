@@ -19,7 +19,22 @@ namespace BreathOfEclipse.Characters
             /// <summary>Hollow Oni: long wild mane down the back, no bangs (the mask covers the face).</summary>
             Mane = 1,
             /// <summary>Nightspawn: short ragged spikes.</summary>
-            Ragged = 2
+            Ragged = 2,
+            /// <summary>Villagers (v0.5): neat short cut with light bangs.</summary>
+            Short = 3,
+            /// <summary>Villagers: short sides and a small tied topknot.</summary>
+            Topknot = 4,
+            /// <summary>Villagers: hair swept back into a bun, parted bangs.</summary>
+            Bun = 5,
+            /// <summary>Villagers: long hair down the back (spring chain).</summary>
+            Long = 6,
+            /// <summary>Elders: thin, short, receding.</summary>
+            Elder = 7
+        }
+
+        private static void Register(CharacterRig rig, Renderer r, CharacterRig.ExternalPart flags, Color color)
+        {
+            if (rig != null) rig.RegisterExternal(r, flags, color);
         }
 
         private sealed class Builder
@@ -31,6 +46,7 @@ namespace BreathOfEclipse.Characters
 
         private static readonly Vector3 G = Vector3.down;
 
+        /// <summary><paramref name="rig"/> may be null (light NPC visuals have no combat rig).</summary>
         public static void Build(AnimeBodyMesh body, CharacterRig rig, Style style, Color color, Color tieColor, int layer, float outline, int seed)
         {
             var sk = body.Skeleton;
@@ -78,6 +94,23 @@ namespace BreathOfEclipse.Characters
             BuildCap(solid, c, Support, Dir, capGap, style);
 
             // ---- static locks
+            if (style == Style.Short || style == Style.Topknot || style == Style.Bun || style == Style.Long)
+            {
+                // villagers: lighter bangs (a centre part for buns / long hair)
+                bool parted = style == Style.Bun || style == Style.Long;
+                int count = style == Style.Long ? 6 : 5;
+                for (int i = 0; i < count; i++)
+                {
+                    float az = Mathf.Lerp(-44f, 44f, i / (float)(count - 1)) + R(-4f, 4f);
+                    if (parted && Mathf.Abs(az) < 9f) continue;
+                    var u = Dir(az, 32f);
+                    var p = OnCap(az, 32f);
+                    float side = parted ? Mathf.Sign(az) * 0.55f : 0f;
+                    Vector3 d = u * 0.3f + G * 0.8f + Vector3.forward * 0.2f + Vector3.right * side;
+                    float len = (style == Style.Long ? 0.085f : style == Style.Bun ? 0.06f : 0.05f) * k * R(0.85f, 1.15f);
+                    Lock(solid, p, d, len, 0.03f * k, Vector3.forward * 0.8f + Vector3.right * side, R(-0.2f, 0.2f), 0.4f, 5);
+                }
+            }
             if (style == Style.Swordsman)
             {
                 // bangs over the forehead, asymmetric
@@ -108,6 +141,34 @@ namespace BreathOfEclipse.Characters
                 rowsL = new[] { 0.07f, 0.08f, 0.08f, 0.07f };
                 rowsW = new[] { 0.04f, 0.04f, 0.038f, 0.034f };
             }
+            else if (style == Style.Short || style == Style.Topknot)
+            {
+                rowsEl = new[] { 72f, 48f, 24f, 2f };
+                rowsN = new[] { 5, 7, 8, 7 };
+                rowsL = new[] { 0.055f, 0.06f, 0.06f, 0.05f };
+                rowsW = new[] { 0.045f, 0.045f, 0.042f, 0.038f };
+            }
+            else if (style == Style.Elder)
+            {
+                rowsEl = new[] { 30f, 10f, -8f };
+                rowsN = new[] { 7, 8, 7 };
+                rowsL = new[] { 0.045f, 0.05f, 0.045f };
+                rowsW = new[] { 0.04f, 0.04f, 0.036f };
+            }
+            else if (style == Style.Bun)
+            {
+                rowsEl = new[] { 78f, 58f, 38f, 18f, 0f };
+                rowsN = new[] { 5, 8, 10, 10, 8 };
+                rowsL = new[] { 0.07f, 0.08f, 0.08f, 0.07f, 0.06f };
+                rowsW = new[] { 0.05f, 0.052f, 0.05f, 0.046f, 0.042f };
+            }
+            else if (style == Style.Long)
+            {
+                rowsEl = new[] { 78f, 60f, 40f, 18f, -5f, -25f };
+                rowsN = new[] { 5, 8, 10, 10, 9, 7 };
+                rowsL = new[] { 0.1f, 0.13f, 0.16f, 0.18f, 0.2f, 0.2f };
+                rowsW = new[] { 0.05f, 0.052f, 0.05f, 0.048f, 0.046f, 0.042f };
+            }
             else
             {
                 rowsEl = new[] { 78f, 60f, 40f, 18f, -5f, -25f };
@@ -130,9 +191,10 @@ namespace BreathOfEclipse.Characters
                     var p = OnCap(az, e);
                     var back = Vector3.back;
                     var side = new Vector3(Mathf.Sin(az * Mathf.Deg2Rad), 0f, 0f);
-                    float down = style == Style.Mane ? 0.9f : 0.35f + (el < 30f ? 0.25f : 0f);
+                    bool neat = style == Style.Short || style == Style.Topknot || style == Style.Bun || style == Style.Elder;
+                    float down = style == Style.Mane || style == Style.Long ? 0.9f : neat ? 0.55f + (el < 30f ? 0.3f : 0f) : 0.35f + (el < 30f ? 0.25f : 0f);
                     Vector3 d = u * (style == Style.Ragged ? 0.8f : 0.35f) + back * 0.55f + G * down + side * 0.25f;
-                    Vector3 bend = G * (style == Style.Mane ? 2.4f : 1.6f) + back * 0.2f;
+                    Vector3 bend = G * (style == Style.Mane || style == Style.Long ? 2.4f : neat ? 2.2f : 1.6f) + back * 0.2f;
                     Lock(solid, p, d, rowsL[row] * k * R(0.85f, 1.15f), rowsW[row] * k * R(0.9f, 1.1f), bend, R(-0.5f, 0.5f), 0.45f, style == Style.Mane ? 8 : 6);
                 }
             }
@@ -147,7 +209,7 @@ namespace BreathOfEclipse.Characters
             mf.sharedMesh = mesh;
             var mr = root.gameObject.AddComponent<MeshRenderer>();
             mr.sharedMaterial = hairMat;
-            rig.RegisterExternal(mr, CharacterRig.ExternalPart.FirstPersonHidden, color);
+            Register(rig, mr, CharacterRig.ExternalPart.FirstPersonHidden, color);
 
             // ---- swinging parts
             var headCollider = new SpringBoneChain.Collider { Bone = head, Offset = head.InverseTransformPoint(body.CanonToWorld.MultiplyPoint3x4(c)), Radius = 0.1f };
@@ -170,7 +232,7 @@ namespace BreathOfEclipse.Characters
                 cordGo.AddComponent<MeshFilter>().sharedMesh = ToMesh("HairCord", cord, cordGo.transform.worldToLocalMatrix * body.CanonToWorld);
                 var cr = cordGo.AddComponent<MeshRenderer>();
                 cr.sharedMaterial = MaterialFactory.AnimeCharacter(tieColor, MaterialFactory.CharacterSurface.Cloth, outline * 0.6f);
-                rig.RegisterExternal(cr, CharacterRig.ExternalPart.FirstPersonHidden | CharacterRig.ExternalPart.Accent, tieColor);
+                Register(rig, cr, CharacterRig.ExternalPart.FirstPersonHidden | CharacterRig.ExternalPart.Accent, tieColor);
                 // side locks framing the face
                 for (int s = -1; s <= 1; s += 2)
                 {
@@ -186,6 +248,37 @@ namespace BreathOfEclipse.Characters
                     var p = OnCap(180f + s * 35f, 5f);
                     BuildChain(root, rig, body, s < 0 ? "ManeL" : "ManeR", p, (Vector3.back * 0.6f + G + Vector3.right * s * 0.3f).normalized, G * 3f, 0.42f * k, 4, hairMat, color, layer, rng, k, 3, 0.06f, headCollider, backCollider);
                 }
+            }
+            else if (style == Style.Long)
+            {
+                var p = OnCap(180f, 2f);
+                BuildChain(root, rig, body, "LongHair", p, (Vector3.back * 0.35f + G).normalized, G * 2.5f, 0.3f * k, 3, hairMat, color, layer, rng, k, 4, 0.075f, headCollider, backCollider);
+            }
+            else if (style == Style.Topknot || style == Style.Bun)
+            {
+                // A tied knot: short locks around a point, closed with a cord.
+                bool bun = style == Style.Bun;
+                var tie = bun ? OnCap(180f, 22f, -0.012f) : OnCap(180f, 72f, -0.008f);
+                Vector3 axis = bun ? new Vector3(0f, 0.2f, -1f).normalized : new Vector3(0f, 0.6f, -0.8f).normalized;
+                var knot = new Builder();
+                int n = bun ? 9 : 5;
+                for (int i = 0; i < n; i++)
+                {
+                    float a = i * Mathf.PI * 2f / n;
+                    var side = Vector3.Cross(axis, Vector3.up).normalized;
+                    if (side.sqrMagnitude < 1e-4f) side = Vector3.right;
+                    var up = Vector3.Cross(side, axis);
+                    Vector3 dir = (axis * (bun ? 0.4f : 1f) + (side * Mathf.Cos(a) + up * Mathf.Sin(a)) * (bun ? 0.9f : 0.35f)).normalized;
+                    Lock(knot, tie + axis * 0.01f * k, dir, (bun ? 0.045f : 0.06f) * k, (bun ? 0.035f : 0.022f) * k, -dir * 6f + axis * 2f, R(-0.3f, 0.3f), 0.7f, 4);
+                }
+                Ring(knot, tie + axis * 0.008f * k, axis, (bun ? 0.026f : 0.016f) * k, 0.006f * k);
+                var knotGo = new GameObject(bun ? "HairBun" : "Topknot");
+                knotGo.transform.SetParent(head, false);
+                knotGo.layer = layer;
+                knotGo.AddComponent<MeshFilter>().sharedMesh = ToMesh(knotGo.name, knot, knotGo.transform.worldToLocalMatrix * body.CanonToWorld);
+                var kr = knotGo.AddComponent<MeshRenderer>();
+                kr.sharedMaterial = hairMat;
+                Register(rig, kr, CharacterRig.ExternalPart.FirstPersonHidden, color);
             }
         }
 
@@ -403,7 +496,7 @@ namespace BreathOfEclipse.Characters
             var bounds = mesh.bounds;
             bounds.Expand(length * 2f / Mathf.Max(1e-4f, go.transform.lossyScale.x));
             smr.localBounds = bounds;
-            rig.RegisterExternal(smr, CharacterRig.ExternalPart.FirstPersonHidden, color);
+            Register(rig, smr, CharacterRig.ExternalPart.FirstPersonHidden, color);
 
             var spring = chainRoot.gameObject.AddComponent<SpringBoneChain>();
             spring.stiffness = joints > 2 ? 0.1f : 0.18f;

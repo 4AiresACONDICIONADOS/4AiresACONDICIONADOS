@@ -519,8 +519,8 @@ namespace BreathOfEclipse.Characters
             return best;
         }
 
-        /// <summary>An anime mouth: a dark ellipse in front of the lips that opens vertically (scale y).</summary>
-        private static Transform BuildMouth(AnimeBodyMesh bm, CharacterRig rig, int layer, Color color)
+        /// <summary>An anime mouth: a dark ellipse in front of the lips that opens vertically (scale y). <paramref name="rig"/> may be null.</summary>
+        public static Transform BuildMouth(AnimeBodyMesh bm, CharacterRig rig, int layer, Color color)
         {
             var head = bm.Skeleton[HumanBodyBones.Head];
             if (head == null) return null;
@@ -566,11 +566,12 @@ namespace BreathOfEclipse.Characters
             mr.sharedMaterial = MaterialFactory.AnimeCharacter(color, MaterialFactory.CharacterSurface.Eye, 0f);
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mr.enabled = false;
-            rig.RegisterExternal(mr, CharacterRig.ExternalPart.FirstPersonHidden, color);
+            if (rig != null) rig.RegisterExternal(mr, CharacterRig.ExternalPart.FirstPersonHidden, color);
             return t;
         }
 
-        private static Material[] EyeMaterials(bool demon, Color iris, Color irisLow)
+        /// <summary>Eye materials for the five expressions (index = <see cref="AnimeFace.Expression"/>).</summary>
+        public static Material[] EyeMaterials(bool demon, Color iris, Color irisLow)
         {
             var mats = new Material[5];
             for (int i = 0; i < mats.Length; i++)

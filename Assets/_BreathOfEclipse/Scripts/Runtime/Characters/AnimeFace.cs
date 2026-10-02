@@ -25,6 +25,9 @@ namespace BreathOfEclipse.Characters
         public Expression Current { get; private set; }
         /// <summary>Debug: forces an expression (null = automatic).</summary>
         public Expression? Forced { get; set; }
+        /// <summary>Light characters without a procedural animator (NPCs): their mood and whether they are speaking.</summary>
+        public Expression Mood { get; set; }
+        public bool Speaking { get; set; }
 
         private ProceduralAnimator _src;
         private VoiceChannel _voice;
@@ -80,9 +83,13 @@ namespace BreathOfEclipse.Characters
 
         private void LateUpdate()
         {
-            if (_src == null) return;
             float dt = Time.deltaTime;
             if (dt <= 0f) return;
+            if (_src == null)
+            {
+                UpdateLight(dt);
+                return;
+            }
             // The voice channel is created after the visual (PlayerController / EnemyVoice): look it up lazily.
             if (_voice == null && Time.time >= _nextVoiceLookup)
             {
@@ -143,6 +150,38 @@ namespace BreathOfEclipse.Characters
                 SetShape(_bsAngry, e == Expression.Attack ? 70f : 0f);
                 SetShape(_bsSorrow, e == Expression.Pain ? 80f : 0f);
                 SetShape(_bsFocus, e == Expression.Focused ? 60f : 0f);
+            }
+        }
+
+        /// <summary>NPC face: mood, blinking and a talking mouth (no combat state).</summary>
+        private void UpdateLight(float dt)
+        {
+            Expression e = Forced ?? Mood;
+            Current = e;
+            bool blinking = false;
+            if (!_demon && e != Expression.Closed)
+            {
+                if (Time.time >= _nextBlink)
+                {
+                    _blinkUntil = Time.time + 0.11f;
+                    _nextBlink = Time.time + Random.Range(2f, 5.5f);
+                }
+                blinking = Time.time < _blinkUntil;
+            }
+            Expression shown = blinking ? Expression.Closed : e;
+            if (_eyes != null && _eyeMaterials != null)
+            {
+                var m = _eyeMaterials[Mathf.Clamp((int)shown, 0, _eyeMaterials.Length - 1)];
+                if (m != null && _eyes.sharedMaterial != m) _eyes.sharedMaterial = m;
+            }
+            float target = _restOpen;
+            if (Speaking) target = Mathf.Max(target, 0.15f + 0.4f * Mathf.Abs(Mathf.Sin(Time.time * 11f)) * (0.6f + 0.4f * Mathf.Sin(Time.time * 3.1f)));
+            if (e == Expression.Pain) target = Mathf.Max(target, 0.35f);
+            _mouthOpen = Mathf.Lerp(_mouthOpen, target, 1f - Mathf.Exp(-20f * dt));
+            if (_mouth != null)
+            {
+                _mouth.localScale = new Vector3(1f, Mathf.Max(0.02f, _mouthOpen), 1f);
+                if (_mouthRenderer != null) _mouthRenderer.enabled = _mouthOpen > 0.06f && _eyes != null && _eyes.enabled;
             }
         }
 

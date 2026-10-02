@@ -23,6 +23,7 @@ namespace BreathOfEclipse.World
         public WorldHud Hud { get; private set; }
         public WorldAmbience Ambience { get; private set; }
         public NpcSystem Npcs { get; private set; }
+        public WorldDemonDirector Demons { get; private set; }
         public RestSystem Rest { get; private set; }
         public PlayerController Player { get; private set; }
         /// <summary>True when this session continued a saved world.</summary>
@@ -92,6 +93,7 @@ namespace BreathOfEclipse.World
             Hud = WorldHud.Create(this);
             Ambience = WorldAmbience.Create(this);
             Npcs = NpcSystem.Create(this);
+            Demons = WorldDemonDirector.Create(this);
             Rest = RestSystem.Create(this);
             // The shrine bell marks dawn and dusk.
             Time.PhaseChanged += (from, to) =>
@@ -108,6 +110,7 @@ namespace BreathOfEclipse.World
             if (s != null) Visit(s);
             // First spawn in the village at morning: people are already up and about (bodies built behind the fade).
             if (Npcs != null) Npcs.Prewarm(player.transform.position);
+            if (Demons != null) Demons.Prewarm(3);
         }
 
         /// <summary>Lets a system write its state into <see cref="State"/> right before saving.</summary>

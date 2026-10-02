@@ -1,4 +1,5 @@
 using BreathOfEclipse.Characters;
+using BreathOfEclipse.Combat;
 using BreathOfEclipse.Core;
 using BreathOfEclipse.Player;
 using UnityEngine;
@@ -11,7 +12,7 @@ namespace BreathOfEclipse.World
     /// height, smooth turning, the pose and hand prop for what it is doing, stepping aside for the player — and
     /// talks when the player presses Interact. Built lazily and hidden indoors / far away by <see cref="NpcSystem"/>.
     /// </summary>
-    public sealed class NpcAgent : MonoBehaviour, IInteractable
+    public sealed class NpcAgent : MonoBehaviour, IInteractable, IHitReactor
     {
         public NpcSimState State { get; private set; }
         public NpcBody Body { get; private set; }
@@ -22,6 +23,16 @@ namespace BreathOfEclipse.World
         public float Height { get; private set; }
         /// <summary>Times the stuck watchdog had to move this NPC.</summary>
         public int StuckRecoveries { get; private set; }
+        /// <summary>Can be hurt (hunters always; villagers caught in events).</summary>
+        public Damageable Damageable { get; private set; }
+        public Transform LockOn { get; private set; }
+        /// <summary>
+        /// A component that drives this NPC directly (hunter fighting, event staging). While set, the routine is paused
+        /// and the controller moves the transform and sets poses; <see cref="ReleaseControl"/> hands back to the routine.
+        /// </summary>
+        public MonoBehaviour Controller { get; private set; }
+        /// <summary>Time.time when it died (the body stays a short while).</summary>
+        public float DiedAt { get; set; } = -999f;
 
         private NpcSystem _system;
         private CapsuleCollider _collider;
@@ -56,6 +67,9 @@ namespace BreathOfEclipse.World
             a._collider.height = h;
             a._collider.center = Vector3.up * h * 0.5f;
             a._collider.enabled = false;
+            a.LockOn = new GameObject("LockOn").transform;
+            a.LockOn.SetParent(go.transform, false);
+            a.LockOn.localPosition = Vector3.up * h * 0.72f;
             a.Place(true);
             return a;
         }
@@ -92,6 +106,51 @@ namespace BreathOfEclipse.World
             return true;
         }
 
+        /// <summary>Makes the NPC hittable by demons (team rules keep the player's blade off it).</summary>
+        public Damageable EnsureDamageable(float maxHealth)
+        {
+            if (Damageable != null) return Damageable;
+            Damageable = gameObject.AddComponent<Damageable>();
+            Damageable.Configure(Team.Player, maxHealth, LockOn, 2f);
+            Damageable.AddReactor(this);
+            return Damageable;
+        }
+
+        public void TakeControl(MonoBehaviour controller)
+        {
+            Controller = controller;
+            State.Mode = NpcMode.Event;
+            State.Travelling = false;
+            State.Route = null;
+            State.Held = false;
+        }
+
+        /// <summary>Back to the routine from where the NPC stands now.</summary>
+        public void ReleaseControl(NpcSimulation sim, float hour)
+        {
+            Controller = null;
+            var p = transform.position;
+            State.X = p.x;
+            State.Z = p.z;
+            var near = sim.Graph.Nearest(p.x, p.z);
+            State.AnchorNode = near != null ? near.Index : -1;
+            if (State.Injured) State.Mode = NpcMode.Injured;
+            else if (State.Alive) sim.Release(State, hour);
+            _avoid = Vector3.zero;
+        }
+
+        void IHitReactor.OnHitResolved(HitData hit, HitResult result)
+        {
+            if (!result.Landed) return;
+            if (Body != null) Body.SetPose(NpcPose.Hit, 0.05f);
+            if (result.Killed || Damageable == null || !Damageable.IsAlive)
+            {
+                _system.OnNpcDown(this, true);
+                return;
+            }
+            if (Controller == null && Damageable.Health.Normalized < 0.35f) _system.OnNpcDown(this, false);
+        }
+
         public void SetShown(bool shown)
         {
             if (Shown == shown) return;
@@ -107,6 +166,20 @@ namespace BreathOfEclipse.World
         public void Present(float dt, bool evaluate)
         {
             if (!Shown) return;
+            if (Controller != null)
+            {
+                // The controller moves and poses the body; keep the logical position in sync.
+                var p = transform.position;
+                State.X = p.x;
+                State.Z = p.z;
+                State.Heading = transform.eulerAngles.y;
+                if (Body != null)
+                {
+                    if (Body.Face != null) Body.Face.Speaking = Time.time < _speakUntil;
+                    Body.Tick(dt, evaluate);
+                }
+                return;
+            }
             UpdateAvoidance(dt);
             Place(false);
             UpdatePose(false);
@@ -288,7 +361,7 @@ namespace BreathOfEclipse.World
 
         public string Prompt => State.Injured ? $"Help — {State.Def.Name}" : $"Talk — {State.Def.Name}";
         public Vector3 Position => transform.position + Vector3.up * 0.9f;
-        public bool CanInteract => Shown && State.Alive && !State.Indoors && State.Mode != NpcMode.Fleeing && State.Mode != NpcMode.Event;
+        public bool CanInteract => Shown && State.Alive && !State.Indoors && State.Mode != NpcMode.Fleeing && (State.Mode != NpcMode.Event || State.Injured) && Controller == null;
 
         public void Interact(PlayerController player)
         {

@@ -12,11 +12,13 @@ namespace BreathOfEclipse.World
     public enum NpcPose
     {
         Idle, Walk, Jog, Sprint, Talk, FoldArms, Sit, SitTalk, Harvest, Plant, Water, Chop, Kneel, Hammer, Carry, CarryIdle,
-        Pray, Eat, Lantern, Torch, Cower, Lie, InjuredWalk, Dead, Nod, Wave, Hit, Rail
+        Pray, Eat, Lantern, Torch, Cower, Lie, InjuredWalk, Dead, Nod, Wave, Hit, Rail,
+        /// <summary>Hunters: guard stance, three cuts, block, roll.</summary>
+        SwordIdle, SlashA, SlashB, SlashC, SwordBlock, Roll, Knockback
     }
 
     /// <summary>What the NPC holds in its right hand.</summary>
-    public enum NpcProp { None, Hoe, Axe, Rod, Hammer, Spear, Lantern, Torch, Staff, Basket, Bundle }
+    public enum NpcProp { None, Hoe, Axe, Rod, Hammer, Spear, Lantern, Torch, Staff, Basket, Bundle, Katana }
 
     /// <summary>
     /// The visual of a light NPC: the CC0 base body dressed by <see cref="VillagerLook"/>, animated by real clips
@@ -66,6 +68,13 @@ namespace BreathOfEclipse.World
             { NpcPose.Wave, new[] { new ClipDef("Interact", false), new ClipDef("Idle_Talking_Loop") } },
             { NpcPose.Hit, new[] { new ClipDef("Hit_Chest", false) } },
             { NpcPose.Rail, new[] { new ClipDef("Idle_Rail_Loop"), new ClipDef("Idle_Loop") } },
+            { NpcPose.SwordIdle, new[] { new ClipDef("Sword_Idle"), new ClipDef("Idle_Loop") } },
+            { NpcPose.SlashA, new[] { new ClipDef("Sword_Regular_A", false, 1.15f), new ClipDef("Sword_Attack", false) } },
+            { NpcPose.SlashB, new[] { new ClipDef("Sword_Regular_B", false, 1.15f), new ClipDef("Sword_Attack", false) } },
+            { NpcPose.SlashC, new[] { new ClipDef("Sword_Regular_C", false, 1.1f), new ClipDef("Sword_Attack", false) } },
+            { NpcPose.SwordBlock, new[] { new ClipDef("Sword_Block", false, 1f, 0.12f), new ClipDef("Idle_Loop") } },
+            { NpcPose.Roll, new[] { new ClipDef("Roll", false, 1.1f), new ClipDef("Jog_Fwd_Loop") } },
+            { NpcPose.Knockback, new[] { new ClipDef("Hit_Knockback", false), new ClipDef("Hit_Chest", false) } },
         };
 
         private sealed class Slot
@@ -217,6 +226,26 @@ namespace BreathOfEclipse.World
         // ------------------------------------------------------------------ control
 
         /// <summary>Cross-fades to a pose. Gestures (nod, wave, hit) play once and return to the previous pose.</summary>
+        /// <summary>Length (s) of the clip a pose plays (attack timing for hunters).</summary>
+        public float PoseLength(NpcPose pose)
+        {
+            if (!Clips.TryGetValue(pose, out var defs)) return 0.6f;
+            foreach (var d in defs)
+            {
+                var s = Get(d.Clip);
+                if (s != null) return s.Length / Mathf.Max(0.1f, d.Speed);
+            }
+            return 0.6f;
+        }
+
+        /// <summary>Restarts a one-shot pose from its first frame (consecutive sword cuts).</summary>
+        public void Restart(NpcPose pose)
+        {
+            Pose = NpcPose.Idle;
+            _current = null;
+            SetPose(pose, 0.08f);
+        }
+
         public void SetPose(NpcPose pose, float fade = 0.3f)
         {
             bool gesture = pose == NpcPose.Nod || pose == NpcPose.Wave || pose == NpcPose.Hit;
@@ -374,6 +403,11 @@ namespace BreathOfEclipse.World
                     break;
                 case NpcProp.Staff:
                     Part(PrimitiveType.Cylinder, shaft, new Vector3(0f, 0f, 0.2f), new Vector3(90f, 0f, 0f), new Vector3(0.04f, 0.8f, 0.04f));
+                    break;
+                case NpcProp.Katana:
+                    Part(PrimitiveType.Cylinder, RegionMats.Cloth(new Color(0.12f, 0.12f, 0.16f)), new Vector3(0f, 0f, -0.06f), new Vector3(90f, 0f, 0f), new Vector3(0.032f, 0.13f, 0.028f));
+                    Part(PrimitiveType.Cylinder, RegionMats.Bronze, new Vector3(0f, 0f, 0.08f), new Vector3(90f, 0f, 0f), new Vector3(0.075f, 0.006f, 0.065f));
+                    Part(ProceduralMeshes.KatanaBlade(0.74f, 0.033f, 0.009f, 0.035f), Rendering.MaterialFactory.Toon(new Color(0.74f, 0.78f, 0.86f), 0.6f, false, null, 0.6f, 0.6f, 0.6f), new Vector3(0f, 0f, 0.09f), Vector3.zero, Vector3.one);
                     break;
                 case NpcProp.Lantern:
                 case NpcProp.Torch:

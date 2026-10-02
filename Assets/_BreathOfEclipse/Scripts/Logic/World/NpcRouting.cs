@@ -100,9 +100,9 @@ namespace BreathOfEclipse.World
         /// <summary>
         /// Plans from (<paramref name="fromX"/>, <paramref name="fromZ"/>) — standing near nav node
         /// <paramref name="fromNode"/> — to the slot (<paramref name="toX"/>, <paramref name="toZ"/>) of node
-        /// <paramref name="toNode"/>. Null when the graph has no path.
+        /// <paramref name="toNode"/>. Null when the graph has no path. Demons weigh paths differently (they prefer the forest).
         /// </summary>
-        public static NpcRoute Plan(NavGraph g, int fromNode, float fromX, float fromZ, int toNode, float toX, float toZ)
+        public static NpcRoute Plan(NavGraph g, int fromNode, float fromX, float fromZ, int toNode, float toX, float toZ, bool demon = false)
         {
             var route = new NpcRoute();
             route.AddPoint(fromX, fromZ);
@@ -119,7 +119,7 @@ namespace BreathOfEclipse.World
                 route.EndNode = toNode;
                 return route;
             }
-            var path = g.FindPath(fromNode, toNode);
+            var path = g.FindPath(fromNode, toNode, demon);
             if (path == null || path.Count == 0) return null;
             for (int i = 0; i < path.Count; i++)
             {

@@ -11,6 +11,20 @@ using UnityEngine;
 namespace BreathOfEclipse.AI
 {
     /// <summary>
+    /// Open-world behaviour plugged into an enemy (v0.5): owns what the demon does outside combat (patrol its
+    /// territory, stalk, rest, flee), supervises fights (leash, retreat) and hears about every hit.
+    /// Arenas and the Combat Test leave it unset, so their enemies behave exactly as before.
+    /// </summary>
+    public interface IEnemyWorldBrain
+    {
+        /// <summary>Out of combat (replaces Idle / Patrol).</summary>
+        void TickWorld(EnemyController enemy, float dt);
+        /// <summary>Every frame while alive, before the state ticks.</summary>
+        void Supervise(EnemyController enemy, float dt);
+        void OnHit(EnemyController enemy, HitData hit, HitResult result);
+    }
+
+    /// <summary>
     /// Demon enemy: owns the finite state machine and reacts to hits (flinch, stagger, knockback, launch,
     /// knockdown, death). Behaviour is data driven by <see cref="EnemyData"/>.
     /// </summary>
@@ -43,6 +57,14 @@ namespace BreathOfEclipse.AI
         /// </summary>
         public string ForcedNextAttackId { get; set; }
 
+        /// <summary>v0.5 world behaviour (null in arenas): Idle / Patrol become <see cref="EnemyStateId.World"/>.</summary>
+        public IEnemyWorldBrain WorldBrain { get; set; }
+        /// <summary>Fight someone other than the player (a hunter, a villager). Null = the player.</summary>
+        public Transform TargetOverride { get; set; }
+        /// <summary>Whether the overridden target is still alive (null = assume alive).</summary>
+        public System.Func<bool> TargetOverrideAlive { get; set; }
+        public bool TargetIsPlayer => TargetOverride == null;
+
         public Transform LockOnPoint => Rig != null ? Rig.LockOnPoint : transform;
         public bool IsTargetable => IsAlive && gameObject.activeInHierarchy;
         public bool IsBoss => Data != null && Data.isBoss;
@@ -58,7 +80,8 @@ namespace BreathOfEclipse.AI
         private float _lastPlayerAttackSeen;
         private int _lastPlayerAttackInstance = -1;
 
-        public Transform Player => PlayerController.Instance != null ? PlayerController.Instance.transform : null;
+        /// <summary>The current opponent: the player, or <see cref="TargetOverride"/>.</summary>
+        public Transform Player => TargetOverride != null ? TargetOverride : PlayerController.Instance != null ? PlayerController.Instance.transform : null;
         public PlayerController PlayerController => PlayerController.Instance;
 
         public void Initialize(EnemyData data, CharacterRig rig, ProceduralAnimator anim, EnemyMotor motor, Damageable damageable)
@@ -89,6 +112,7 @@ namespace BreathOfEclipse.AI
             Add(new AirborneState());
             Add(new DeadState());
             Add(new SpecialState());
+            Add(new WorldState());
             ChangeState(EnemyStateId.Idle);
         }
 
@@ -112,6 +136,7 @@ namespace BreathOfEclipse.AI
 
         public void ChangeState(EnemyStateId id)
         {
+            if (WorldBrain != null && (id == EnemyStateId.Idle || id == EnemyStateId.Patrol)) id = EnemyStateId.World;
             if (!_states.TryGetValue(id, out var next)) return;
             if (_current != null && _current.Id == EnemyStateId.Dead) return;
             var previous = _current != null ? _current.Id : id;
@@ -130,6 +155,7 @@ namespace BreathOfEclipse.AI
             if (dt <= 0f || _current == null) return;
             _stateTime += dt;
             Poise.Tick(dt);
+            if (WorldBrain != null && IsAlive) WorldBrain.Supervise(this, dt);
             _current.Tick(dt);
             WatchPlayerAttacks();
             Anim.SetLocomotion(new LocomotionState
@@ -143,7 +169,23 @@ namespace BreathOfEclipse.AI
             Anim.SetLookTarget(Aware && IsAlive ? PlayerLockPoint : null);
         }
 
-        private Transform PlayerLockPoint => PlayerController != null && PlayerController.Rig != null ? PlayerController.Rig.LockOnPoint : Player;
+        private Transform PlayerLockPoint => TargetLockPoint;
+
+        /// <summary>Where to aim at the current opponent (chest of the player / the override's own transform).</summary>
+        public Transform TargetLockPoint
+        {
+            get
+            {
+                if (TargetOverride != null)
+                {
+                    var t = TargetOverride.GetComponent<ITargetable>();
+                    if (t != null && t.LockOnPoint != null) return t.LockOnPoint;
+                    var chest = TargetOverride.Find("LockOn");
+                    return chest != null ? chest : TargetOverride;
+                }
+                return PlayerController != null && PlayerController.Rig != null ? PlayerController.Rig.LockOnPoint : Player;
+            }
+        }
 
         // ------------------------------------------------------------------ perception
 
@@ -171,7 +213,9 @@ namespace BreathOfEclipse.AI
             }
         }
 
-        public bool PlayerAlive => PlayerController != null && PlayerController.State != PlayerState.Dead;
+        public bool PlayerAlive => TargetOverride != null
+            ? TargetOverride.gameObject.activeInHierarchy && (TargetOverrideAlive == null || TargetOverrideAlive())
+            : PlayerController != null && PlayerController.State != PlayerState.Dead;
 
         public bool CanSeePlayer()
         {
@@ -194,7 +238,7 @@ namespace BreathOfEclipse.AI
         {
             if (Aware || !IsAlive) return;
             Aware = true;
-            if (StateId == EnemyStateId.Idle || StateId == EnemyStateId.Patrol) ChangeState(EnemyStateId.Alert);
+            if (StateId == EnemyStateId.Idle || StateId == EnemyStateId.Patrol || StateId == EnemyStateId.World) ChangeState(EnemyStateId.Alert);
         }
 
         public void SetAware(bool aware) => Aware = aware;
@@ -335,6 +379,7 @@ namespace BreathOfEclipse.AI
 
         public void OnHitResolved(HitData hit, HitResult result)
         {
+            if (WorldBrain != null) WorldBrain.OnHit(this, hit, result);
             if (result.Killed || !IsAlive) return;
             if (result.Outcome == HitOutcome.Blocked)
             {

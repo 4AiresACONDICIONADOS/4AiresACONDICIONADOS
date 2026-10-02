@@ -1,3 +1,5 @@
+using System;
+using Random = UnityEngine.Random;
 using System.Collections.Generic;
 using BreathOfEclipse.Player;
 using UnityEngine;
@@ -27,6 +29,20 @@ namespace BreathOfEclipse.World
         public int ShownCount { get; private set; }
         public int LogicalCount => _agents.Count - ShownCount;
         public int BuiltCount { get; private set; }
+        /// <summary>An NPC fell (agent, killed) — events and consequences listen.</summary>
+        public event Action<NpcAgent, bool> NpcDown;
+        public IEnumerable<HunterBrain> Hunters
+        {
+            get
+            {
+                foreach (var a in _agents)
+                {
+                    var h = a.GetComponent<HunterBrain>();
+                    if (h != null) yield return h;
+                }
+            }
+        }
+
         public int StuckRecoveries
         {
             get
@@ -85,6 +101,7 @@ namespace BreathOfEclipse.World
                 var a = NpcAgent.Create(this, n);
                 _agents.Add(a);
                 _byState[n] = a;
+                if (n.Def.Role == NpcRole.Hunter) HunterBrain.Attach(a, this);
             }
             Sim.WentInside += n => OpenDoor(n, 1.6f);
             Sim.CameOut += n => OpenDoor(n, 2.2f);
@@ -189,7 +206,8 @@ namespace BreathOfEclipse.World
         {
             var s = a.State;
             if (s.Indoors) return false;
-            if (!s.Alive && s.Mode != NpcMode.Dead) return false;
+            // The fallen stay where they fell only while the player is around.
+            if (!s.Alive) return a.Shown && Time.time - a.DiedAt < 45f;
             float limit = a.Shown ? HideDistance : ShowDistance;
             if (a.DistanceToPlayer > limit) return false;
             // Only where the detailed ground exists (the far view has no colliders and coarse heights).
@@ -254,6 +272,30 @@ namespace BreathOfEclipse.World
             _world.State.SetFact("Helped_" + s.Def.Id, 1, _world.Now);
             a.Say(NpcDialogue.Thanks(), 3f);
             Sim.Release(s, Hour);
+        }
+
+        /// <summary>An NPC was struck down (killed) or badly hurt (injured, can be helped).</summary>
+        public void OnNpcDown(NpcAgent a, bool killed)
+        {
+            var s = a.State;
+            var rec = _world.State.Npc(s.Def.Id);
+            if (killed)
+            {
+                if (!s.Alive) return;
+                Sim.Kill(s);
+                a.DiedAt = Time.time;
+                rec.alive = false;
+                _world.State.SetFact("Npc_Died_" + s.Def.Id, 1, _world.Now);
+            }
+            else
+            {
+                if (s.Injured) return;
+                Sim.SetInjured(s, true);
+                rec.injured = true;
+                rec.injuredAt = _world.Now;
+                a.Say(NpcDialogue.Bark(s, Phase, 0), 2.5f);
+            }
+            NpcDown?.Invoke(a, killed);
         }
 
         private void WriteState()

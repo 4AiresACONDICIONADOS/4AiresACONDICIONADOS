@@ -22,7 +22,9 @@ namespace BreathOfEclipse.AI
         Knockdown = 9,
         Airborne = 10,
         Dead = 11,
-        Special = 12
+        Special = 12,
+        /// <summary>v0.5 open world: territory, stalking, resting, fleeing (driven by <see cref="IEnemyWorldBrain"/>).</summary>
+        World = 13
     }
 
     /// <summary>Base class of the enemy finite state machine.</summary>
@@ -416,7 +418,7 @@ namespace BreathOfEclipse.AI
             var spec = _a.projectile;
             int count = Mathf.Max(1, spec.count);
             Vector3 origin = E.Anim.WeaponTip.position;
-            var target = E.PlayerController != null ? E.PlayerController.Rig.LockOnPoint : null;
+            var target = E.TargetLockPoint;
             for (int i = 0; i < count; i++)
             {
                 float angle = count == 1 ? 0f : Mathf.Lerp(-spec.spreadAngle * 0.5f, spec.spreadAngle * 0.5f, i / (float)(count - 1));
@@ -613,6 +615,31 @@ namespace BreathOfEclipse.AI
                 Object.Destroy(E.gameObject);
             }
         }
+    }
+
+    /// <summary>Open-world behaviour outside fights: the enemy's <see cref="IEnemyWorldBrain"/> moves it.</summary>
+    public sealed class WorldState : EnemyState
+    {
+        public override EnemyStateId Id => EnemyStateId.World;
+
+        public override void Enter()
+        {
+            E.IsBlocking = false;
+            E.ReleaseToken();
+            E.Motor.SetDesiredVelocity(Vector3.zero);
+        }
+
+        public override void Tick(float dt)
+        {
+            if (E.WorldBrain == null)
+            {
+                E.ChangeState(EnemyStateId.Idle);
+                return;
+            }
+            E.WorldBrain.TickWorld(E, dt);
+        }
+
+        public override void Exit() => E.Motor.SetDesiredVelocity(Vector3.zero);
     }
 
     /// <summary>Scripted moments (boss phase transition). Driven by <see cref="BossController"/>.</summary>
